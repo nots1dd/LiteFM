@@ -1,0 +1,90 @@
+.\" Man page for LiteFM
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.TH LiteFM 1 "July 2024" "1.0" "Lite File Manager in NCurses"
+.SH NAME
+LiteFM \- A terminal-based file explorer using NCurses
+.SH SYNOPSIS
+.B LiteFM
+.SH DESCRIPTION
+.B LiteFM
+is a simple file explorer that runs in the terminal using the NCurses library. It allows users to navigate directories, view file information, create and delete files and directories, and extract archives.
+.SH USAGE
+The following keys are used to navigate and perform actions within 
+.B LiteFM:
+.TP
+.B UP/k
+Move the selection up.
+.TP
+.B DOWN/j
+Move the selection down.
+.TP
+.B LEFT/h
+Move to the parent directory.
+.TP
+.B RIGHT/l
+Enter the selected subdirectory.
+.TP
+.B .
+Toggle the display of hidden files and directories.
+.TP
+.B a
+Add a new file or directory. To create a directory, append a '/' to the name.
+.TP
+.B d
+Delete the selected file or directory.
+.TP
+.B /
+Search for a file or directory.
+.TP
+.B e
+Extract the selected archive (zip or tar).
+.TP
+.B Enter
+Display information about the selected file.
+.TP
+.B q
+Quit the application.
+.SH OPTIONS
+.B LiteFM
+does not take any command-line options.
+.SH FILES
+.B LiteFM
+operates on the file system and does not rely on any specific configuration files.
+.SH EXAMPLES
+To start 
+.B LiteFM,
+simply run:
+.PP
+.EX
+LiteFM
+.EE
+.PP
+Navigate to the desired directory using the arrow keys or 
+.B h
+and 
+.B l.
+Create or delete files and directories using 
+.B a
+and 
+.B d.
+Extract archives using 
+.B e,
+and search for files or directories using 
+.B /.
+.SH AUTHOR
+.B LiteFM
+was developed as an example application using the NCurses library.
+.SH SEE ALSO
+.BR ncurses (3), 
+.BR dirent (3), 
+.BR unzip (1), 
+.BR tar (1)
+.SH BUGS
+No known bugs. Report any issues to the project maintainer.
+.SH COPYRIGHT
+This is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
