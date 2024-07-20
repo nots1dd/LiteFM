@@ -14,6 +14,8 @@
 #include <time.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include "src/getFreeSpace.c"
+// #include "src/filePreview.c"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -27,6 +29,9 @@ typedef struct {
     char path[PATH_MAX];
     int highlight;
 } DirHistory;
+
+// function prototypes
+void show_term_message(const char *message);
 
 void list_dir(const char *path, FileItem items[], int *count, int show_hidden) {
     DIR *dir;
@@ -55,6 +60,8 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     } else {
         hidden_dir = "OFF";
     }
+    // getting system free space from / dir 
+    double systemFreeSpace = system_free_space("/");
 
     // Define color pairs
     init_pair(1, COLOR_GREEN, COLOR_BLACK);  // File color (Green)
@@ -68,8 +75,9 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
 
     // Print current path and hidden directories status
     wattron(win, A_BOLD);
-    mvwprintw(win, 3, 2, "Browsing: %s", current_path);
-    mvwprintw(win, 5, 2, "Hidden Dirs: %s", hidden_dir);
+    mvwprintw(win, 3, 2, "Browsing: %s ", current_path);
+    mvwprintw(win, LINES - 3, COLS - 35, "Hidden Dirs: %s", hidden_dir);
+    mvwprintw(win, LINES - 3, COLS - 15, "%.2f GiB", systemFreeSpace);
     wattroff(win, A_BOLD);
 
     // Print items
@@ -78,7 +86,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
         mvwprintw(win, 7, 2, "No files or directories.");
         wattroff(win, COLOR_PAIR(3));
     } else {
-        for (int i = 0; i < height - 8 && i + scroll_position < count; i++) {
+        for (int i = 0; i < height - 7 && i + scroll_position < count; i++) {
             int index = i + scroll_position;
             if (index == highlight)
                 wattron(win, A_REVERSE);
@@ -90,7 +98,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
                 wattron(win, COLOR_PAIR(1));
                 wattron(win, A_BOLD);
 
-            mvwprintw(win, i + 7, 4, " %s ", items[index].name);
+            mvwprintw(win, i + 5, 4, " %s ", items[index].name);
 
             // Turn off color attributes
             wattroff(win, A_BOLD);
@@ -164,11 +172,16 @@ int extract_archive(const char *archive_path) {
     strncpy(archive_dir, archive_path, PATH_MAX);
     dirname(archive_dir); // Get the directory part of the archive path
 
+    // Create the extraction directory (filename_extracted)
+    char *archive_basename = basename(archive_path);
+    char extraction_dir[PATH_MAX];
+    snprintf(extraction_dir, sizeof(extraction_dir), "%s/%s_extracted", archive_dir, archive_basename);
+
     // Determine archive type and construct extraction command
     if (strstr(archive_path, ".zip")) {
-        snprintf(command, sizeof(command), "mkdir -p \"%s\" && unzip -o \"%s\" -d \"%s\" > /dev/null 2>&1", archive_dir, archive_path, archive_dir);
+        snprintf(command, sizeof(command), "mkdir -p \"%s\" && unzip -o \"%s\" -d \"%s\" > /dev/null 2>&1", extraction_dir, archive_path, extraction_dir);
     } else if (strstr(archive_path, ".tar")) {
-        snprintf(command, sizeof(command), "mkdir -p \"%s\" && tar -xf \"%s\" -C \"%s\" > /dev/null 2>&1", archive_dir, archive_path, archive_dir);
+        snprintf(command, sizeof(command), "mkdir -p \"%s\" && tar -xf \"%s\" -C \"%s\" > /dev/null 2>&1", extraction_dir, archive_path, extraction_dir);
     } else {
         endwin(); // End NCurses mode before returning
         return -1; // Unsupported archive format
@@ -238,7 +251,8 @@ int remove_file(const char *path, const char *filename) {
 
     return 0; // File removed successfully
 }
-/* NOT RECURSIVE YET */
+
+/* NOT RECURSIVE */
 int remove_directory(const char *path, const char *dirname) {
     char full_path[PATH_MAX];
     snprintf(full_path, PATH_MAX, "%s/%s", path, dirname);
@@ -248,6 +262,85 @@ int remove_directory(const char *path, const char *dirname) {
         return -1; // Error removing directory
 
     return 0; // Directory removed successfully
+}
+
+/* probably the most dangerous function (it works pretty well tho) */
+int remove_directory_recursive(const char *base_path, const char *dirname) {
+    char full_path[PATH_MAX];
+    snprintf(full_path, PATH_MAX, "%s/%s", base_path, dirname);
+
+    DIR *dir = opendir(full_path);
+    if (dir == NULL) {
+        show_term_message("Error opening directory");
+        return -1;
+    }
+
+    struct dirent *entry;
+    int num_files_deleted = 0;
+    int num_dirs_deleted = 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        char file_path[PATH_MAX];
+        snprintf(file_path, PATH_MAX, "%s/%s", full_path, entry->d_name);
+
+        struct stat statbuf;
+        if (stat(file_path, &statbuf) == 0) {
+            if (S_ISDIR(statbuf.st_mode)) {
+                // Recursively remove subdirectory
+                if (remove_directory_recursive(full_path, entry->d_name) != 0) {
+                    closedir(dir);
+                    return -1;
+                }
+                num_dirs_deleted++;
+                char message[PATH_MAX];
+                snprintf(message, PATH_MAX, "Deleted directory: %s", file_path);
+                show_term_message(message);
+            } else {
+                // Remove file
+                if (unlink(file_path) != 0) {
+                    char message[PATH_MAX];
+                    snprintf(message, PATH_MAX, "Error removing file: %s", file_path);
+                    show_term_message(message);
+                    closedir(dir);
+                    return -1;
+                }
+                num_files_deleted++;
+                char message[PATH_MAX];
+                snprintf(message, PATH_MAX, "Deleted file: %s", file_path);
+                show_term_message(message);
+            }
+        } else {
+            char message[PATH_MAX];
+            snprintf(message, PATH_MAX, "Error getting status of file: %s", file_path);
+            show_term_message(message);
+            closedir(dir);
+            return -1;
+        }
+    }
+
+    closedir(dir);
+
+    // Remove the now-empty directory
+    if (rmdir(full_path) != 0) {
+        char message[PATH_MAX];
+        snprintf(message, PATH_MAX, "Error removing directory: %s", full_path);
+        show_term_message(message);
+        return -1;
+    }
+    num_dirs_deleted++;
+    char message[PATH_MAX];
+    snprintf(message, PATH_MAX, "Deleted directory: %s", full_path);
+    show_term_message(message);
+
+    char message2[PATH_MAX];
+    snprintf(message2, PATH_MAX, "Deleted %d files and %d directories", num_files_deleted, num_dirs_deleted);
+    show_term_message(message2);
+
+    return 0;
 }
 
 void get_user_input(WINDOW *win, char *input, int max_length) {
@@ -260,6 +353,22 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
     noecho();
     cbreak();
     curs_set(0);
+}
+
+void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type) {
+    echo();
+    nodelay(win, FALSE);
+    attron(A_BOLD);  // Turn on bold attribute
+    if (type == "search") {
+      mvprintw(LINES - 1, 0, " /");
+    }
+    attroff(A_BOLD);  // Turn off bold attribute
+    clrtoeol();  // Clear the rest of the line to handle previous content
+    wgetnstr(win, buffer, max_length);
+    noecho();
+    nodelay(win, TRUE);
+    mvprintw(LINES - 1, 0, " ");  // Clear the prompt after getting input
+    clrtoeol();  // Clear the rest of the line to handle previous content
 }
 
 int confirm_action(WINDOW *win, const char *message) {
@@ -278,7 +387,7 @@ int confirm_action(WINDOW *win, const char *message) {
     return ch == 'y' || ch == 'Y';
 }
 
-void show_popup_message(const char *message) { 
+void show_term_message(const char *message) { 
     int maxy, maxx;
     getmaxyx(stdscr, maxy, maxx);
 
@@ -495,9 +604,9 @@ int main() {
                 
                 case 'a': // Add file or directory
                     {
-                        WINDOW *input_win = newwin(3, COLS - 40, LINES / 2 - 1, 2);
+                        WINDOW *input_win = newwin(3, COLS - 150, LINES - 5, 2);
                         box(input_win, 0, 0);
-                        mvwprintw(input_win, 0, 1, "Enter name (append '/' to create directory):");
+                        mvwprintw(input_win, 0, 1, " %s/ ", current_path);
                         wrefresh(input_win);
 
                         char name_input[NAME_MAX];
@@ -514,11 +623,11 @@ int main() {
                                 if (result == 0) {
                                     char msg[256];
                                     snprintf(msg, sizeof(msg), "Directory '%s' created at %s.", name_input, timestamp);
-                                    show_popup_message(msg);
+                                    show_term_message(msg);
                                 } else if (result == 1) {
-                                    show_popup_message("Directory already exists.");
+                                    show_term_message("Directory already exists.");
                                 } else {
-                                    show_popup_message("Error creating directory.");
+                                    show_term_message("Error creating directory.");
                                 }
                             } else {
                                 // Create file
@@ -526,11 +635,11 @@ int main() {
                                 if (result == 0) {
                                     char msg[256];
                                     snprintf(msg, sizeof(msg), "File '%s' created at %s.", name_input, timestamp);
-                                    show_popup_message(msg);
+                                    show_term_message(msg);
                                 } else if (result == 1) {
-                                    show_popup_message("File already exists.");
+                                    show_term_message("File already exists.");
                                 } else {
-                                    show_popup_message("Error creating file.");
+                                    show_term_message("Error creating file.");
                                 }
                             }
                             list_dir(current_path, items, &item_count, show_hidden);
@@ -554,21 +663,21 @@ int main() {
                                 if (items[highlight].is_dir) {
                                     int result = remove_directory(current_path, items[highlight].name);
                                     if (result != 0) {            
-                                        show_popup_message("Error removing directory.");
+                                        show_term_message("Error removing directory.");
                                     } else {
                                         char delmsg[256];
                                         snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
-                                        show_popup_message(delmsg);
+                                        show_term_message(delmsg);
                                      } 
                                 } else {
                                     char *delfile = items[highlight].name;
                                     int result = remove_file(current_path, items[highlight].name);
                                     if (result != 0) {        
-                                      show_popup_message("Error removing file.");
+                                      show_term_message("Error removing file.");
                                     } else {
                                         char msg[256];
                                     snprintf(msg, sizeof(msg), "File '%s' deleted", delfile);
-                                    show_popup_message(msg);
+                                    show_term_message(msg);
                                    }
                                 }
                                 list_dir(current_path, items, &item_count, show_hidden);
@@ -578,17 +687,45 @@ int main() {
                         }
                     }
                     break;
+               
+               case 'D':
+                  {
+                    if (item_count > 0) {
+                            char confirm_msg[256];
+                            if (items[highlight].is_dir) {
+                                snprintf(confirm_msg, sizeof(confirm_msg), "[DANGER] Remove Directory recursively '%s'? (y/n)", items[highlight].name);
+                            } else {
+                                snprintf(confirm_msg, sizeof(confirm_msg), "This command is for deleting dirs recursively only!");
+                            }
+
+                            if (confirm_action(win, confirm_msg)) {
+                                char *deldir = items[highlight].name;
+                                if (items[highlight].is_dir) {
+                                    int result = remove_directory_recursive(current_path, items[highlight].name);
+                                    if (result != 0) {            
+                                        show_term_message("Error removing directory.");
+                                    } else {
+                                        char delmsg[256];
+                                        snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
+                                        show_term_message(delmsg);
+                                     } 
+                                } 
+                                list_dir(current_path, items, &item_count, show_hidden);
+                                highlight = 0; 
+                                scroll_position = 0;
+                            }
+                        }
+                  }
+                  break;
 
                 case '/': // Find file or directory
-                    {
-                        WINDOW *input_win = newwin(3, COLS - 40, LINES / 2 - 1, 2);
-                        box(input_win, 0, 0);
-                        mvwprintw(input_win, 0, 1, "Enter search query:");
-                        wrefresh(input_win);
-
-                        char query[NAME_MAX];
-                        get_user_input(input_win, query, NAME_MAX);
-                        delwin(input_win);
+                    {   
+                        wattron(win, A_BOLD);
+                        mvwprintw(win, LINES - 3, COLS - 50, "Search ON");
+                        wattroff(win, A_BOLD);
+                        wrefresh(win);
+                        char query[NAME_MAX]; 
+                        get_user_input_from_bottom(stdscr, query, NAME_MAX, "search");
 
                         if (strlen(query) > 0) {
                             int start_index = highlight + 1;
@@ -602,11 +739,28 @@ int main() {
                                 }
                                 strncpy(last_query, query, NAME_MAX);
                             } else {
-                                show_popup_message("Item not found.");
+                                show_term_message("Item not found.");
                             }
                         }
                     }
                     break;
+                
+                case 'n':
+                  if (strlen(last_query) > 0) {
+                        int start_index = highlight + 1;
+                        int found_index = find_item(last_query, items, item_count, &start_index);
+                        if (found_index != -1) {
+                            highlight = found_index;
+                            if (highlight >= scroll_position + height - 8) {
+                                scroll_position = highlight - height + 8;
+                            } else if (highlight < scroll_position) {
+                                scroll_position = highlight;
+                            }
+                        } else {
+                            show_term_message("No more occurrences found.");
+                        }
+                    }
+                    break; 
 
                case 10: // Enter key
                     if (!items[highlight].is_dir) {
@@ -626,19 +780,19 @@ int main() {
                         if (confirm_action(win, "Extract this archive? (y/n)")) {
                             // Extract archive
                             if (extract_archive(full_path) == 0) {
-                                show_popup_message("Extraction successful.");
+                                show_term_message("Extraction successful.");
                                 // Update file list after extraction
                                 list_dir(current_path, items, &item_count, show_hidden);
                                 scroll_position = 0;
                             } else {
-                                show_popup_message("Extraction failed.");
+                                show_term_message("Extraction failed.");
                             }
                         }
                     } else {
-                        show_popup_message("Not a supported archive format.");
+                        show_term_message("Not a supported archive format.");
                     }
                 } else {
-                  show_popup_message("Cannot extract a directory.");
+                  show_term_message("Cannot extract a directory.");
                 }
                 break;
 
@@ -651,6 +805,7 @@ int main() {
             werase(win);
             box(win, 0, 0);
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
+            
             wrefresh(win);
         }
     }

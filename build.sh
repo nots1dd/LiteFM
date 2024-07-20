@@ -26,7 +26,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Copy the man file and gzip it
-sudo cp litefm.1 /usr/share/man/man1/
+sudo cp components/litefm.1 /usr/share/man/man1/
 sudo gzip /usr/share/man/man1/litefm.1
 
 # Create alias in the appropriate shell configuration file
