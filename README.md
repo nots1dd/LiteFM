@@ -39,6 +39,15 @@ Building with Make:
 
 Presently, I have not made the `Makefile` yet, TBD!!
 
+> [!TIP]
+> Building LiteFM with build.sh 
+> 
+> chmod +x build.sh 
+> 
+> ./build.sh 
+> 
+> Thats all! Enjoy LiteFM 
+
 ## FUTURE
 
 This file manager is far from done there are a lot of cool and essential features that are planned:
