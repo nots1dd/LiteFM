@@ -19,7 +19,8 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
 
-> [!DEPS]
+> DEPS
+> 
 > CMake / Make
 > 
 > Ncurses 
@@ -54,7 +55,7 @@ This file manager is far from done there are a lot of cool and essential feature
 
 - [ ] Adding a basic file preview for readable files (and stat info for directories)
 
-- [ ] Add a Makefile
+- [ ] Simple tasks like selecting multiple files, moving fils/dirs to a location (cut, copy , paste)
 
 - [ ] GO-TO a particular file or directory through string input (might be tough)
 

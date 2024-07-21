@@ -6,8 +6,12 @@
 
 /* By nots1dd */
 
-#include <ncurses.h>
-#include <errno.h>
+#include <stdio.h>     // For FILE, fopen, fgets, fclose, perror
+#include <stdlib.h>    // For exit, EXIT_FAILURE
+#include <ncurses.h>   // For NCurses functions and types
+
+#define MAX_LINES 60   // Define the maximum number of lines to display
+#define MAX_LINE_LENGTH 256 // Define the maximum line length
 
 void display_file(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -17,13 +21,12 @@ void display_file(const char *filename) {
         exit(EXIT_FAILURE);
     }
 
-    int start_row = 20;
-    int start_col = 0;
-    int win_height = MAX_LINES;
-    int win_width = COLS - 5;
+    int info_win_height = 10;
+    int info_win_width = COLS - 4;
+    int info_win_y = (LINES - info_win_height) / 2;
+    int info_win_x = (COLS - info_win_width) / 2;
 
-    // Create a new window
-    WINDOW *win = newwin(win_height, win_width, start_row, start_col);
+    WINDOW *win = newwin(info_win_height, info_win_width, info_win_y, info_win_x);
     box(win, 0, 0);  // Draw a border around the window
     mvwprintw(win, 0, 2, " File Preview ");  // Add a title to the window
 
@@ -31,7 +34,7 @@ void display_file(const char *filename) {
     int row = 1;  // Start at 1 to account for the border
 
     // Read file and display lines up to MAX_LINES
-    while (fgets(line, MAX_LINE_LENGTH, file) && row < win_height - 1) {
+    while (fgets(line, MAX_LINE_LENGTH, file) && row < info_win_height - 1) {
         mvwprintw(win, row, 1, "%s", line);
         row++;
     }
@@ -41,7 +44,6 @@ void display_file(const char *filename) {
 
     delwin(win);  // Delete the window when done
 }
-
 
 int is_readable_extension(const char *filename) {
     // List of supported extensions
