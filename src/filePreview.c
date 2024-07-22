@@ -13,41 +13,42 @@
 #define MAX_LINES 60   // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length
 
-void display_file(const char *filename) {
+void display_file(WINDOW* info_win, const char *filename) {
     FILE *file = fopen(filename, "r");
     if (!file) {
-        endwin();
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
+        werase(info_win);  // Clear the window first
+        mvwprintw(info_win, 1, 2, "Error opening file");
+        box(info_win, 0, 0);
+        wrefresh(info_win);  // Refresh the window to show the error message
+        return;
     }
 
-    int info_win_height = 10;
-    int info_win_width = COLS - 4;
-    int info_win_y = (LINES - info_win_height) / 2;
-    int info_win_x = (COLS - info_win_width) / 2;
-
-    WINDOW *win = newwin(info_win_height, info_win_width, info_win_y, info_win_x);
-    box(win, 0, 0);  // Draw a border around the window
-    mvwprintw(win, 0, 2, " File Preview ");  // Add a title to the window
+    werase(info_win);  // Clear the window before displaying content
+    mvwprintw(info_win, 0, 2, " File Preview: ");  // Add a title to the window
 
     char line[MAX_LINE_LENGTH];
-    int row = 1;  // Start at 1 to account for the border
+    int row = 1;  // Start at 1 to account for the title
 
     // Read file and display lines up to MAX_LINES
-    while (fgets(line, MAX_LINE_LENGTH, file) && row < info_win_height - 1) {
-        mvwprintw(win, row, 1, "%s", line);
+    while (fgets(line, sizeof(line), file) && row < MAX_LINES - 1) {
+        // Remove newline character from the line if present
+        line[strcspn(line, "\n")] = '\0';
+        mvwprintw(info_win, row, 1, "%s", line);
         row++;
     }
+    if (row <= 1) {
+    mvwprintw(info_win, row, 1, "Null File.");
+  }
     fclose(file);
 
-    wrefresh(win);  // Refresh the window to show the content
-
-    delwin(win);  // Delete the window when done
+    box(info_win, 0, 0);
+    wrefresh(info_win);  // Refresh the window to show the content
 }
+
 
 int is_readable_extension(const char *filename) {
     // List of supported extensions
-    const char *supported_extensions[] = {".txt", ".json", ".conf", ".log", ".md", ".c", ".h", ".cpp", ".cxx", ".cc", "hpp", ".js", ".ts", "jsx", ".java", ".dart", ".asm", ".py", ".rust", ".go", ".perl", NULL}; // will add more ig
+    const char *supported_extensions[] = {".txt", ".sh", ".json", ".conf", ".log", ".md", ".c", ".h", ".cpp", ".cxx", ".cc", "hpp", ".js", ".ts", "jsx", ".java", ".dart", ".asm", ".py", ".rust", ".go", ".perl", ".backup", ".rasi", ".nix", ".yaml", ".html", ".css", ".scss", NULL}; // will add more ig
     const char *ext = strrchr(filename, '.');
     if (ext) {
         for (int i = 0; supported_extensions[i] != NULL; i++) {

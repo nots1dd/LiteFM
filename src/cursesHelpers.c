@@ -41,7 +41,7 @@ int confirm_action(WINDOW *win, const char *message) {
     int ch = wgetch(confirm_win);
     delwin(confirm_win);
 
-    return ch == 'y' || ch == 'Y';
+    return ch == 'y' || ch == 'Y' || ch == 10;
 }
 
 void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type) {

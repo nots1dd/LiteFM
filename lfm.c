@@ -73,9 +73,16 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     mvwprintw(win, 1, 2, " LITE FM ");
     wattroff(win, A_BOLD | A_UNDERLINE);
 
+    char sanitizedCurPath[PATH_MAX];
+    if (strncmp(current_path, "//", 2) == 0) {
+      snprintf(sanitizedCurPath, sizeof(sanitizedCurPath), "%s", current_path + 1);
+    } else {
+    strcpy(sanitizedCurPath, current_path);
+  }
+
     // Print current path and hidden directories status
     wattron(win, A_BOLD);
-    mvwprintw(win, 3, 2, "Browsing: %s ", current_path);
+    mvwprintw(win, 3, 2, "Browsing: %s ", sanitizedCurPath);
     mvwprintw(win, LINES - 3, (COLS / 2) - 35, "Hidden Dirs: %s", hidden_dir);
     mvwprintw(win, LINES - 3, (COLS / 2) - 15, "%.2f GiB", systemFreeSpace);
     wattroff(win, A_BOLD);
@@ -85,6 +92,9 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
         wattron(win, COLOR_PAIR(3));
         mvwprintw(win, 7, 2, "No files or directories.");
         wattroff(win, COLOR_PAIR(3));
+        wattron(win, A_BOLD);
+        mvwprintw(win, 10, 2, "<== PRESS H or <-");
+        wattroff(win, A_BOLD);
     } else {
         for (int i = 0; i < height - 7 && i + scroll_position < count; i++) {
             int index = i + scroll_position;
@@ -129,9 +139,10 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     }
 }
 
-void get_home_directory(char *home_path) {
-    struct passwd *pw = getpwuid(getuid());
-    strcpy(home_path, pw->pw_dir);
+void get_current_working_directory(char *cwd, size_t size) {
+    if (getcwd(cwd, size) == NULL) {
+        strcpy(cwd, "/");
+    }
 }
 
 int create_file(const char *path, const char *filename, char *timestamp) {
@@ -396,6 +407,8 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     // Get file information
     if (stat(full_path, &file_stat) == -1) {
         show_message(info_win, "Error retrieving file information.");
+        box(info_win, 0, 0);
+        wrefresh(info_win);
         return;
     }
 
@@ -481,8 +494,8 @@ int main() {
     int history_count = 0;
     int show_hidden = 0;  // Flag to toggle showing hidden files
     int scroll_position = 0;  // Position of the first visible item
-
-    get_home_directory(current_path);
+ 
+    get_current_working_directory(current_path, sizeof(current_path));
     list_dir(current_path, items, &item_count, show_hidden);
 
     // Create a new window with a border
@@ -511,13 +524,19 @@ int main() {
     while (true) {
         int choice = getch();
         if (firstKeyPress) {
-            werase(info_win);
             werase(win);
             box(info_win, 0, 0);
             box(win, 0, 0);
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
-            wrefresh(info_win);
+            werase(info_win);
+            char full_path_info[PATH_MAX];
+            snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
+            if (is_readable_extension(items[highlight].name)) {
+                display_file(info_win, full_path_info);
+            } else { 
+              get_file_info(info_win, current_path, items[highlight].name);
+            }
        }
         firstKeyPress = false;
         if (choice != ERR) {
@@ -691,7 +710,7 @@ int main() {
                 case '/': // Find file or directory
                     {   
                         wattron(win, A_BOLD);
-                        mvwprintw(win, LINES - 3, (COLS / 2) - 50, "Search ON");
+                        mvwprintw(win, LINES - 3, (COLS / 2) - 48, "Search ON");
                         wattroff(win, A_BOLD);
                         wrefresh(win);
                         char query[NAME_MAX]; 
@@ -764,16 +783,20 @@ int main() {
                     endwin();
                     return 0;
             } 
-            // Update display after each key press
-            if (is_readable_extension(current_path)) {
-                display_file(current_path);
-            } 
+            // Update display after each key press 
             werase(win);
             box(win, 0, 0);
             
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
-            get_file_info(info_win, current_path, items[highlight].name);
+            werase(info_win);
+            char full_path_info[PATH_MAX];
+            snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
+            if (is_readable_extension(items[highlight].name)) {
+                display_file(info_win, full_path_info);
+            } else { 
+              get_file_info(info_win, current_path, items[highlight].name);
+            }
         }
     }
 
