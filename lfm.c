@@ -51,6 +51,18 @@ void list_dir(const char *path, FileItem items[], int *count, int show_hidden) {
     closedir(dir);
 }
 
+char* get_current_user() {
+    uid_t uid = getuid();
+    struct passwd *pw = getpwuid(uid);
+
+    if (pw == NULL) {
+        perror("getpwuid");
+        exit(EXIT_FAILURE);
+    }
+
+    return pw->pw_name;
+}
+
 void print_items(WINDOW *win, FileItem items[], int count, int highlight, const char *current_path, int show_hidden, int scroll_position, int height) {
     char *hidden_dir;
     if (show_hidden) {
@@ -61,17 +73,14 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     // getting system free space from / dir 
     double systemFreeSpace = system_free_space("/");
 
-    // Define color pairs
-    init_pair(1, COLOR_GREEN, COLOR_BLACK);  // File color (Green)
-    init_pair(2, COLOR_BLUE, COLOR_BLACK);   // Directory color (Blue)
-    init_pair(3, COLOR_RED, COLOR_BLACK);    // Unextracted archives (Red)
-    init_pair(4, COLOR_MAGENTA, COLOR_BLACK); // Audio files (Pink)
-    init_pair(5, COLOR_YELLOW, COLOR_BLACK); // Image files (Orange)
+    color_pair_init(); 
 
     // Print title
-    wattron(win, A_BOLD | A_UNDERLINE);
-    mvwprintw(win, 1, 2, " LITE FM ");
-    wattroff(win, A_BOLD | A_UNDERLINE);
+    wattron(win, COLOR_PAIR(9));
+    char* cur_user = get_current_user();
+    wattron(win, A_BOLD);
+    mvwprintw(win, 0, 2, " LITE FM: ");
+    wattroff(win, A_BOLD);
 
     char sanitizedCurPath[PATH_MAX];
     if (strncmp(current_path, "//", 2) == 0) {
@@ -82,9 +91,16 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
 
     // Print current path and hidden directories status
     wattron(win, A_BOLD);
-    mvwprintw(win, 3, 2, "Browsing: %s ", sanitizedCurPath);
-    mvwprintw(win, LINES - 3, (COLS / 2) - 35, "Hidden Dirs: %s", hidden_dir);
-    mvwprintw(win, LINES - 3, (COLS / 2) - 15, "%.2f GiB", systemFreeSpace);
+    wattron(win, COLOR_PAIR(8));
+    mvwprintw(win, 2, 2, " @%s ", cur_user);
+    wattroff(win, COLOR_PAIR(8));
+    wattron(win, COLOR_PAIR(4));
+    mvwprintw(win, 2, 10, " %s ", sanitizedCurPath);
+    wattroff(win, COLOR_PAIR(4));
+    wattron(win, COLOR_PAIR(9));
+    mvwprintw(win, LINES - 3, (COLS / 2) - 35, " Hidden Dirs: %s ", hidden_dir);
+    mvwprintw(win, LINES - 3, (COLS / 2) - 15, " %.2f GiB ", systemFreeSpace);
+    wattroff(win, COLOR_PAIR(9));
     wattroff(win, A_BOLD);
 
     // Print items
@@ -123,7 +139,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
             }
             wattron(win, A_BOLD);
 
-            mvwprintw(win, i + 5, 4, " %s ", items[index].name);
+            mvwprintw(win, i + 4, 5, " %s ", items[index].name);
 
             // Turn off color attributes
             wattroff(win, A_BOLD);
@@ -132,6 +148,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
             wattroff(win, COLOR_PAIR(3));
             wattroff(win, COLOR_PAIR(4));
             wattroff(win, COLOR_PAIR(5));
+            wattroff(win, COLOR_PAIR(9));
 
             if (index == highlight)
                 wattroff(win, A_REVERSE);
@@ -180,14 +197,7 @@ long get_file_size(const char *file_path) {
 int extract_archive(const char *archive_path) {
     char command[PATH_MAX + 100]; // +100 for safety margin
     int result;
-    long file_size_before, file_size_after;
-
-    // Initialize NCurses
-    initscr(); // Start NCurses mode
-    WINDOW *progress_win = newwin(3, 70, LINES / 2, (COLS - 70) / 2); // Create a new window
-    box(progress_win, 0, 0); // Add a border to the window
-    mvwprintw(progress_win, 1, 1, "Extraction Progress: [>%-69s]", ""); // Initial progress bar setup
-    wrefresh(progress_win); // Refresh the window to show changes
+    long file_size_before, file_size_after; 
 
     // Get the directory of the archive (example.zip)
     char archive_dir[PATH_MAX];
@@ -212,32 +222,16 @@ int extract_archive(const char *archive_path) {
     // Get file size before extraction
     file_size_before = get_file_size(archive_path);
 
+    show_term_message("Extracting...",0);
+
     // Execute command
     FILE *extract_process = popen(command, "r");
     if (extract_process == NULL) {
         endwin(); // End NCurses mode before returning
         return -1; // Failed to execute command
-    }
-
-    // Monitor extraction progress
-    while (fgets(command, sizeof(command), extract_process) != NULL) {
-        // You can parse command output here if needed
-        // For simplicity, we'll just update the progress bar based on file size changes
-        file_size_after = get_file_size(archive_path);
-        if (file_size_before != -1 && file_size_after != -1) {
-            float progress = ((float)file_size_after) / file_size_before;
-            int pos = (int)(69 * progress); // Adjust 69 for the width of the progress bar
-
-            // Update progress bar in NCurses window
-            mvwprintw(progress_win, 1, 24, "[%.*s>%*s]", pos, "=======================================================================", 69 - pos, "");
-            wrefresh(progress_win); // Refresh the window to show changes
-        }
-    }
+    } 
 
     pclose(extract_process); // Close the process
-
-    // End NCurses mode
-    endwin();
 
     return 0; // Extraction successful
 }
@@ -293,7 +287,7 @@ int remove_directory_recursive(const char *base_path, const char *dirname) {
 
     DIR *dir = opendir(full_path);
     if (dir == NULL) {
-        show_term_message("Error opening directory.");
+        show_term_message("Error opening directory.",1);
         return -1;
     }
 
@@ -320,25 +314,25 @@ int remove_directory_recursive(const char *base_path, const char *dirname) {
                 num_dirs_deleted++;
                 char message[PATH_MAX];
                 snprintf(message, PATH_MAX, "%s directory removed successfully.", file_path);
-                show_term_message(message);
+                show_term_message(message,0);
             } else {
                 // Remove file
                 if (unlink(file_path) != 0) {
                     char message[PATH_MAX];
                     snprintf(message, PATH_MAX, "Error removing file: %s", file_path);
-                    show_term_message(message);
+                    show_term_message(message,1);
                     closedir(dir);
                     return -1;
                 }
                 num_files_deleted++;
                 char message[PATH_MAX];
                 snprintf(message, PATH_MAX, "%s file removed successfully.", file_path);
-                show_term_message(message);
+                show_term_message(message,0);
             }
         } else {
             char message[PATH_MAX];
             snprintf(message, PATH_MAX, "Error getting status of file: %s", file_path);
-            show_term_message(message);
+            show_term_message(message,1);
             closedir(dir);
             return -1;
         }
@@ -350,17 +344,17 @@ int remove_directory_recursive(const char *base_path, const char *dirname) {
     if (rmdir(full_path) != 0) {
         char message[PATH_MAX];
         snprintf(message, PATH_MAX, "Error removing directory: %s", full_path);
-        show_term_message(message);
+        show_term_message(message,1);
         return -1;
     }
     num_dirs_deleted++;
     char message[PATH_MAX];
     snprintf(message, PATH_MAX, "%s dir removed successfully.", full_path);
-    show_term_message(message);
+    show_term_message(message,0);
 
     char message2[PATH_MAX];
     snprintf(message2, PATH_MAX, "Deleted %d files and %d directories", num_files_deleted, num_dirs_deleted);
-    show_term_message(message2);
+    show_term_message(message2,0);
 
     return 0;
 }
@@ -399,6 +393,72 @@ int find_item(const char *query, FileItem items[], int item_count, int *start_in
     return -1; // Not found
 }
 
+
+void get_file_info_popup(WINDOW *main_win, const char *path, const char *filename) {
+    struct stat file_stat;
+    char full_path[PATH_MAX];
+    snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
+
+    // Get file information
+    if (stat(full_path, &file_stat) == -1) {
+        show_message(main_win, "Error retrieving file information.");
+        return;
+    }
+
+    // Create a new window for displaying file information
+    int info_win_height = 10;
+    int info_win_width = (COLS / 3) - 4;
+    int info_win_y = (LINES - info_win_height) / 2;
+    int info_win_x = (COLS - info_win_width) / 2;
+
+    WINDOW *info_win = newwin(info_win_height, info_win_width, info_win_y, info_win_x);
+    box(info_win, 0, 0);
+
+    // Display file information
+    mvwprintw(info_win, 1, 2, "File Information:");
+    mvwprintw(info_win, 3, 2, "Name: %s", filename);
+    mvwprintw(info_win, 4, 2, "Size: %ld bytes", file_stat.st_size);
+
+    const char *file_ext = strrchr(filename, '.');
+    if (file_ext != NULL) {
+        mvwprintw(info_win, 6, 2, "Extension: %s", file_ext + 1);
+    } else {
+        mvwprintw(info_win, 6, 2, "Extension: none");
+    }
+
+    char mod_time[20];
+    strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime(&file_stat.st_mtime));
+    mvwprintw(info_win, 7, 2, "Last Modified: %s", mod_time);
+    wattron(info_win, COLOR_PAIR(4));
+    mvwprintw(info_win, 1, 20, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
+    mvwprintw(info_win, 1, 21, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
+    mvwprintw(info_win, 1, 22, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
+    mvwprintw(info_win, 1, 23, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
+    mvwprintw(info_win, 1, 24, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
+    mvwprintw(info_win, 1, 25, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
+    mvwprintw(info_win, 1, 26, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
+    mvwprintw(info_win, 1, 27, (file_stat.st_mode & S_IROTH) ? "r" : "-");
+    mvwprintw(info_win, 1, 28, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
+    mvwprintw(info_win, 1, 29, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
+    wattroff(info_win, COLOR_PAIR(4));
+
+    // Additional file attributes can be displayed here
+
+    mvwprintw(info_win, info_win_height - 2, 2, "Press any key to close this window.");
+    wrefresh(info_win);
+
+    // Wait for user input to close the window
+    wgetch(info_win);
+
+    // Clean up: delete the window
+    delwin(info_win);
+
+    // Refresh the main window to ensure no artifacts remain
+    werase(main_win);
+    box(main_win, 0, 0);
+    wrefresh(main_win);
+}
+
 void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     struct stat file_stat;
     char full_path[PATH_MAX];
@@ -413,7 +473,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     }
 
     // Display file information
-    wattron(info_win, A_BOLD);
+    wattron(info_win, A_BOLD | COLOR_PAIR(7));
     mvwprintw(info_win, 1, 2, "File/Dir Information:");
     clearLine(info_win, 3, 2);
     mvwprintw(info_win, 3, 2, "Name: %s", filename);
@@ -433,7 +493,8 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     clearLine(info_win, 7, 2);
     mvwprintw(info_win, 7, 2, "Last Modified: %s", mod_time);
    
-    mvwprintw(info_win, 11, 1, "Permissions: ");
+    mvwprintw(info_win, 11, 2, "Permissions: ");
+    wattron(info_win, COLOR_PAIR(4));
     mvwprintw(info_win, 11, 15, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
     mvwprintw(info_win, 11, 16, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
     mvwprintw(info_win, 11, 17, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
@@ -444,12 +505,38 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     mvwprintw(info_win, 11, 22, (file_stat.st_mode & S_IROTH) ? "r" : "-");
     mvwprintw(info_win, 11, 23, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
     mvwprintw(info_win, 11, 24, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
-    
+    wattroff(info_win, COLOR_PAIR(4));
+
     clearLine(info_win, 8, 2);
+    wattron(info_win, COLOR_PAIR(5));
     if (S_ISREG(file_stat.st_mode)) {
         mvwprintw(info_win, 8, 2, "Type: Regular File");
     } else if (S_ISDIR(file_stat.st_mode)) {
+        wattron(info_win, COLOR_PAIR(9));
         mvwprintw(info_win, 8, 2, "Type: Directory");
+        wattroff(info_win, COLOR_PAIR(9));
+        // Count and display subdirectories
+        DIR *dir;
+        struct dirent *entry;
+        int line = 14;
+        dir = opendir(full_path);
+        if (dir != NULL) {
+            wattron(info_win, COLOR_PAIR(9));
+            mvwprintw(info_win, line++, 2, "Subdirectories: ");
+            wattroff(info_win, COLOR_PAIR(9));
+            wattron(info_win, COLOR_PAIR(2));
+            while ((entry = readdir(dir)) != NULL) {
+                if (entry->d_type == DT_DIR) {
+                    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                        mvwprintw(info_win, line++, 2, "  %s", entry->d_name);
+                    }
+                }
+            }
+            closedir(dir);
+            wattroff(info_win, COLOR_PAIR(2));
+        } else {
+            show_message(info_win, "Error opening directory.");
+        }
     } else if (S_ISLNK(file_stat.st_mode)) {
         mvwprintw(info_win, 8, 2, "Type: Symbolic Link");
     } else if (S_ISFIFO(file_stat.st_mode)) {
@@ -463,13 +550,16 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     } else {
         mvwprintw(info_win, 8, 2, "Type: Unknown");
     }
+    wattroff(info_win, COLOR_PAIR(5));
 
-    clearLine(info_win, 9, 2);
+    clearLine(info_win, 10, 2);
     struct passwd *pwd = getpwuid(file_stat.st_uid);
-    mvwprintw(info_win, 9, 2, "Owner: %s (%d)", pwd->pw_name, file_stat.st_uid);
+    wattron(info_win, COLOR_PAIR(6));
+    mvwprintw(info_win, 10, 2, "Owner: %s (%d)", pwd->pw_name, file_stat.st_uid);
+    wattroff(info_win, COLOR_PAIR(6));
 
     // Additional file attributes can be displayed here
-    wattroff(info_win, A_BOLD);
+    wattroff(info_win, A_BOLD | COLOR_PAIR(7));
     wrefresh(info_win); 
 
     // Refresh the main window to ensure no artifacts remain
@@ -477,6 +567,26 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     wrefresh(info_win);
 }
 
+WINDOW *create_centered_window(int height, int width) {
+    int startx, starty;
+    int x, y;
+
+    // Get the screen dimensions
+    getmaxyx(stdscr, y, x);
+
+    // Calculate the starting position for the window
+    startx = (x - width) / 2;
+    starty = (y - height) / 2;
+
+    // Create the window
+    WINDOW *popup_win = newwin(height, width, starty, startx);
+
+    // Initialize the window
+    box(popup_win, 0, 0);
+    wrefresh(popup_win);
+
+    return popup_win;
+}
 
 int main() {
     initscr();
@@ -523,6 +633,7 @@ int main() {
 
     while (true) {
         int choice = getch();
+        /*show_term_message("");*/
         if (firstKeyPress) {
             werase(win);
             box(info_win, 0, 0);
@@ -612,11 +723,11 @@ int main() {
                                 if (result == 0) {
                                     char msg[256];
                                     snprintf(msg, sizeof(msg), "Directory '%s' created at %s.", name_input, timestamp);
-                                    show_term_message(msg);
+                                    show_term_message(msg,0);
                                 } else if (result == 1) {
-                                    show_term_message("Directory already exists.");
+                                    show_term_message("Directory already exists.",1);
                                 } else {
-                                    show_term_message("Error creating directory.");
+                                    show_term_message("Error creating directory.",1);
                                 }
                             } else {
                                 // Create file
@@ -624,11 +735,11 @@ int main() {
                                 if (result == 0) {
                                     char msg[256];
                                     snprintf(msg, sizeof(msg), "File '%s' created at %s.", name_input, timestamp);
-                                    show_term_message(msg);
+                                    show_term_message(msg,0);
                                 } else if (result == 1) {
-                                    show_term_message("File already exists.");
+                                    show_term_message("File already exists.",1);
                                 } else {
-                                    show_term_message("Error creating file.");
+                                    show_term_message("Error creating file.",1);
                                 }
                             }
                             list_dir(current_path, items, &item_count, show_hidden);
@@ -652,21 +763,21 @@ int main() {
                                 if (items[highlight].is_dir) {
                                     int result = remove_directory(current_path, items[highlight].name);
                                     if (result != 0) {            
-                                        show_term_message("Error removing directory. Dir might be recursive.");
+                                        show_term_message("Error removing directory. Dir might be recursive.",1);
                                     } else {
                                         char delmsg[256];
                                         snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
-                                        show_term_message(delmsg);
+                                        show_term_message(delmsg,0);
                                      } 
                                 } else {
                                     char *delfile = items[highlight].name;
                                     int result = remove_file(current_path, items[highlight].name);
                                     if (result != 0) {        
-                                      show_term_message("Error removing file.");
+                                      show_term_message("Error removing file.",1);
                                     } else {
                                         char msg[256];
                                     snprintf(msg, sizeof(msg), "File '%s' deleted", delfile);
-                                    show_term_message(msg);
+                                    show_term_message(msg,0);
                                    }
                                 }
                                 list_dir(current_path, items, &item_count, show_hidden);
@@ -692,11 +803,11 @@ int main() {
                                 if (items[highlight].is_dir) {
                                     int result = remove_directory_recursive(current_path, items[highlight].name);
                                     if (result != 0) {            
-                                        show_term_message("Error removing directory.");
+                                        show_term_message("Error removing directory.",1);
                                     } else {
                                         char delmsg[256];
-                                        snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
-                                        show_term_message(delmsg);
+                                        snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted recursively", deldir);
+                                        show_term_message(delmsg,0);
                                      } 
                                 } 
                                 list_dir(current_path, items, &item_count, show_hidden);
@@ -706,12 +817,11 @@ int main() {
                         }
                   }
                   break;
-
                 case '/': // Find file or directory
                     {   
-                        wattron(win, A_BOLD);
+                        wattron(win, A_BOLD | COLOR_PAIR(7));
                         mvwprintw(win, LINES - 3, (COLS / 2) - 48, "Search ON");
-                        wattroff(win, A_BOLD);
+                        wattroff(win, A_BOLD | COLOR_PAIR(7));
                         wrefresh(win);
                         char query[NAME_MAX]; 
                         get_user_input_from_bottom(stdscr, query, NAME_MAX, "search");
@@ -728,7 +838,7 @@ int main() {
                                 }
                                 strncpy(last_query, query, NAME_MAX);
                             } else {
-                                show_term_message("Item not found.");
+                                show_term_message("Item not found.", 1);
                             }
                         }
                     }
@@ -746,7 +856,7 @@ int main() {
                                 scroll_position = highlight;
                             }
                         } else {
-                            show_term_message("No more occurrences found.");
+                            show_term_message("No more occurrences found.",1);
                         }
                     }
                     break; 
@@ -763,30 +873,35 @@ int main() {
                         if (confirm_action(win, "Extract this archive? (y/n)")) {
                             // Extract archive
                             if (extract_archive(full_path) == 0) {
-                                show_term_message("Extraction successful.");
+                                show_term_message("Extraction successful.",0);
                                 // Update file list after extraction
                                 list_dir(current_path, items, &item_count, show_hidden);
                                 scroll_position = 0;
                             } else {
-                                show_term_message("Extraction failed.");
+                                show_term_message("Extraction failed.",1);
                             }
                         }
                     } else {
-                        show_term_message("Not a supported archive format.");
+                        show_term_message("Not a supported archive format.",1);
                     }
                 } else {
-                  show_term_message("Cannot extract a directory.");
+                  show_term_message("Cannot extract a directory.",1);
                 }
                 break;
-
+               case 10:
+                 if (is_readable_extension(items[highlight].name)) {
+                    get_file_info_popup(win, current_path, items[highlight].name);
+                } else {
+                    show_term_message("Something went wrong....",1);      
+                }
+                break;
                 case 'q':
                     endwin();
                     return 0;
             } 
             // Update display after each key press 
             werase(win);
-            box(win, 0, 0);
-            
+            box(win, 0, 0); 
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
             werase(info_win);

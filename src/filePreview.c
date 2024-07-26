@@ -30,6 +30,7 @@ void display_file(WINDOW* info_win, const char *filename) {
     int row = 1;  // Start at 1 to account for the title
 
     // Read file and display lines up to MAX_LINES
+    wattron(info_win, COLOR_PAIR(7));
     while (fgets(line, sizeof(line), file) && row < MAX_LINES - 1) {
         // Remove newline character from the line if present
         line[strcspn(line, "\n")] = '\0';
@@ -40,6 +41,7 @@ void display_file(WINDOW* info_win, const char *filename) {
     mvwprintw(info_win, row, 1, "Null File.");
   }
     fclose(file);
+    wattroff(info_win, COLOR_PAIR(7));
 
     box(info_win, 0, 0);
     wrefresh(info_win);  // Refresh the window to show the content

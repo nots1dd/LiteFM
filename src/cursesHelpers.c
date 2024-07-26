@@ -11,7 +11,7 @@ void clearLine(WINDOW *win, int x, int y) {
   mvwprintw(win, x, y, "\n");
 }
 
-void show_term_message(const char *message) { 
+void show_term_message(const char *message, int err) { 
     int maxy, maxx;
     getmaxyx(stdscr, maxy, maxx);
 
@@ -22,10 +22,30 @@ void show_term_message(const char *message) {
     move(message_y, 0);
     clrtoeol();
     refresh();
-
-    mvprintw(message_y, 0, "%s", message);
+    
+    if (err!=0) {
+      attron(COLOR_PAIR(3));
+      mvprintw(message_y, 0, "%s", message);
+      attroff(COLOR_PAIR(3));
+    } else {
+      mvprintw(message_y, 0, "%s", message);
+    }
     refresh();
     
+}
+
+void color_pair_init() {
+  // Define color pairs
+    init_pair(1, COLOR_GREEN, COLOR_BLACK);  // File color (Green)
+    init_pair(2, COLOR_BLUE, COLOR_BLACK);   // Directory color (Blue)
+    init_pair(3, 167, 235);    // Unextracted archives (Red)
+    init_pair(4, 175, 235); // Audio files (Pink)
+    init_pair(5, 214, 235); // Image files (yellow)
+    init_pair(6, 108, 235); // bright blue gruvbox type
+    init_pair(7, 108, 235); // aqua gruvbox
+    init_pair(8, 61, 234); // violet base03
+    init_pair(9, 235, 223); // gruvbox dark bg, white fg
+    init_pair(10, 125, 234); // magenta
 }
 
 int confirm_action(WINDOW *win, const char *message) {
@@ -53,11 +73,13 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
     }
     attroff(A_BOLD);  // Turn off bold attribute
     clrtoeol();  // Clear the rest of the line to handle previous content
+    attron(COLOR_PAIR(3));
     wgetnstr(win, buffer, max_length);
     noecho();
     nodelay(win, TRUE);
     mvprintw(LINES - 1, 0, " ");  // Clear the prompt after getting input
     clrtoeol();  // Clear the rest of the line to handle previous content
+    attroff(COLOR_PAIR(3));
 }
 
 void get_user_input(WINDOW *win, char *input, int max_length) {
