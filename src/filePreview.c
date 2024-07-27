@@ -13,7 +13,16 @@
 #define MAX_LINES 60   // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length
 
-void display_file(WINDOW* info_win, const char *filename) {
+const char *empty_message[] = {
+    " _____ __  __ ____ _______   __  _____ ___ _     _____   _ ",
+    "| ____|  \\/  |  _ \\_   _\\ \\ / / |  ___|_ _| |   | ____| | |",
+    "|  _| | |\\/| | |_) || |  \\ V /  | |_   | || |   |  _|   | |",
+    "| |___| |  | |  __/ | |   | |   |  _|  | || |___| |___  |_/",
+    "|_____|_|  |_|_|    |_|   |_|   |_|   |___|_____|_____| (_)",
+    " "
+};
+
+void display_file(WINDOW *info_win, const char *filename) {
     FILE *file = fopen(filename, "r");
     if (!file) {
         werase(info_win);  // Clear the window first
@@ -27,9 +36,11 @@ void display_file(WINDOW* info_win, const char *filename) {
     mvwprintw(info_win, 0, 2, " File Preview: ");  // Add a title to the window
 
     char line[MAX_LINE_LENGTH];
-    int row = 3;  // Start at 1 to account for the title
+    int row = 3;  // Start at row 3 to account for the title and spacing
+    int lines_read = 0;
+
     wattron(info_win, A_BOLD | COLOR_PAIR(9));
-    mvwprintw(info_win, 1, 1," %s ", filename);
+    mvwprintw(info_win, 1, 1, " %s ", filename);
     wattroff(info_win, A_BOLD | COLOR_PAIR(9));
 
     // Read file and display lines up to MAX_LINES
@@ -39,17 +50,24 @@ void display_file(WINDOW* info_win, const char *filename) {
         line[strcspn(line, "\n")] = '\0';
         mvwprintw(info_win, row, 1, "%s", line);
         row++;
+        lines_read++;
     }
-    if (row <= 1) {
-    mvwprintw(info_win, row, 1, "Null File.");
-  }
+    
+    if (lines_read == 0) {
+        // If no lines were read, display "Null File."
+        int empty_message_size = sizeof(empty_message) / sizeof(empty_message[0]);
+        for (int j=0;j<empty_message_size;j++) {
+          mvwprintw(info_win, j+3, 2, "%s", empty_message[j]);
+        }
+        mvwprintw(info_win, empty_message_size+4, 2, "Printed by LiteFM");
+    }
+
     fclose(file);
     wattroff(info_win, COLOR_PAIR(7));
 
     box(info_win, 0, 0);
     wrefresh(info_win);  // Refresh the window to show the content
 }
-
 
 int is_readable_extension(const char *filename) {
     // List of supported extensions

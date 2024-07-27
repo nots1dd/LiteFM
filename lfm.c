@@ -28,6 +28,16 @@
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
 
+
+const char *err_message[] = {
+    " _   _  ___    _____ ___ _     _____ ____    __  ____ ___ ____  ____      ",
+    "| \\ | |/ _ \\  |  ___|_ _| |   | ____/ ___|  / / |  _ \\_ _|  _ \\/ ___|     ",
+    "|  \\| | | | | | |_   | || |   |  _| \\___ \\ / /  | | | | || |_) \\___ \\     ",
+    "| |\\  | |_| | |  _|  | || |___| |___ ___) / /   | |_| | ||  _ < ___) |  _ ",
+    "|_| \\_|\\___/  |_|   |___|_____|_____|____/_/    |____/___|_| \\_\\____/  (_)",
+    " "
+};
+
 typedef struct {
     char name[NAME_MAX];
     int is_dir;
@@ -102,11 +112,14 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     // Print items
     if (count == 0) {
         wattron(win, COLOR_PAIR(3));
-        mvwprintw(win, 7, 2, "No files or directories.");
+        int err_msg_size = sizeof(err_message) / sizeof(err_message[0]);
+        for (int i=0;i<err_msg_size;i++) {
+          mvwprintw(win, i+5, 2, "%s", err_message[i]);
+        }
         wattroff(win, COLOR_PAIR(3));
-        wattron(win, A_BOLD);
-        mvwprintw(win, 10, 2, "<== PRESS H or <-");
-        wattroff(win, A_BOLD);
+        wattron(win, A_BOLD | COLOR_PAIR(5));
+        mvwprintw(win, 15, 2, "<== PRESS H or <-");
+        wattroff(win, A_BOLD | COLOR_PAIR(5));
     } else {
         for (int i = 0; i < height - 7 && i + scroll_position < count; i++) {
             int index = i + scroll_position;
@@ -122,7 +135,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
                 if (extension) {
                     if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".tar.xz") == 0 || strcmp(extension, ".tar.gz") == 0 || strcmp(extension, ".jar") == 0) {
                         wattron(win, COLOR_PAIR(3));
-                    } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
+                    } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".mp4") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
                         wattron(win, COLOR_PAIR(4));
                     } else if (strcmp(extension, ".png") == 0 || strcmp(extension, ".jpg") == 0 || strcmp(extension, ".webp") == 0 || strcmp(extension, ".gif") == 0) {
                         wattron(win, COLOR_PAIR(5));
@@ -641,7 +654,8 @@ int main() {
                             if (items[highlight].is_dir) {
                                 snprintf(confirm_msg, sizeof(confirm_msg), "[DANGER] Remove Directory recursively '%s'? (y/n)", items[highlight].name);
                             } else {
-                                snprintf(confirm_msg, sizeof(confirm_msg), "This command is for deleting dirs recursively only!");
+                               show_term_message("This command is for deleting recursive directories ONLY!", 1);
+                               break;
                             }
 
                             if (confirm_action(win, confirm_msg)) {
@@ -842,11 +856,13 @@ int main() {
             werase(info_win);
             char full_path_info[PATH_MAX];
             snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
-            if (is_readable_extension(items[highlight].name)) {
-                display_file(info_win, full_path_info);
-            } else { 
-              get_file_info(info_win, current_path, items[highlight].name);
-            }
+            if (item_count > 0) {
+              if (is_readable_extension(items[highlight].name)) {
+                  display_file(info_win, full_path_info);
+              } else { 
+                get_file_info(info_win, current_path, items[highlight].name);
+              }
+           }
         }
     }
 
