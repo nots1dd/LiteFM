@@ -647,7 +647,8 @@ int main() {
                             if (confirm_action(win, confirm_msg)) {
                                 char *deldir = items[highlight].name;
                                 if (items[highlight].is_dir) {
-                                    int result = remove_directory_recursive(current_path, items[highlight].name);
+                                    int parent_fd = open(current_path, O_RDONLY | O_DIRECTORY);
+                                    int result = remove_directory_recursive(current_path, items[highlight].name, parent_fd);
                                     if (result != 0) {            
                                         show_term_message("Error removing directory.",1);
                                     } else {
