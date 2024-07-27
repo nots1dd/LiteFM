@@ -96,13 +96,19 @@ int remove_directory(const char *path, const char *dirname) {
 }
 
 /* probably the most dangerous function (it works pretty well tho) */
-int remove_directory_recursive(const char *base_path, const char *dirname) {
+int remove_directory_recursive(const char *base_path, const char *dirname, int parent_fd) {
     char full_path[PATH_MAX];
     snprintf(full_path, PATH_MAX, "%s/%s", base_path, dirname);
+    int dir_fd = openat(parent_fd, full_path, O_RDONLY | O_DIRECTORY);
+    if (dir_fd == -1) {
+        show_term_message("Error opening directory.", 1);
+        return -1;
+    }
 
-    DIR *dir = opendir(full_path);
+    DIR *dir = fdopendir(dir_fd);
     if (dir == NULL) {
-        show_term_message("Error opening directory.",1);
+        show_term_message("Error opening directory stream.", 1);
+        close(dir_fd);
         return -1;
     }
 
@@ -115,61 +121,62 @@ int remove_directory_recursive(const char *base_path, const char *dirname) {
             continue;
         }
 
-        char file_path[PATH_MAX];
-        snprintf(file_path, PATH_MAX, "%s/%s", full_path, entry->d_name);
-
         struct stat statbuf;
-        if (stat(file_path, &statbuf) == 0) {
+        if (fstatat(dir_fd, entry->d_name, &statbuf, 0) == 0) {
             if (S_ISDIR(statbuf.st_mode)) {
                 // Recursively remove subdirectory
-                if (remove_directory_recursive(full_path, entry->d_name) != 0) {
+                if (remove_directory_recursive(full_path, entry->d_name, dir_fd) != 0) {
                     closedir(dir);
+                    close(dir_fd);
                     return -1;
                 }
                 num_dirs_deleted++;
                 char message[PATH_MAX];
-                snprintf(message, PATH_MAX, "%s directory removed successfully.", file_path);
-                show_term_message(message,0);
+                snprintf(message, PATH_MAX, "%s directory removed successfully.", entry->d_name);
+                show_term_message(message, 0);
             } else {
                 // Remove file
-                if (unlink(file_path) != 0) {
+                if (unlinkat(dir_fd, entry->d_name, 0) != 0) {
                     char message[PATH_MAX];
-                    snprintf(message, PATH_MAX, "Error removing file: %s", file_path);
-                    show_term_message(message,1);
+                    snprintf(message, PATH_MAX, "Error removing file: %s", entry->d_name);
+                    show_term_message(message, 1);
                     closedir(dir);
+                    close(dir_fd);
                     return -1;
                 }
                 num_files_deleted++;
                 char message[PATH_MAX];
-                snprintf(message, PATH_MAX, "%s file removed successfully.", file_path);
-                show_term_message(message,0);
+                snprintf(message, PATH_MAX, "%s file removed successfully.", entry->d_name);
+                show_term_message(message, 0);
             }
         } else {
             char message[PATH_MAX];
-            snprintf(message, PATH_MAX, "Error getting status of file: %s", file_path);
-            show_term_message(message,1);
+            snprintf(message, PATH_MAX, "Error getting status of file: %s", entry->d_name);
+            show_term_message(message, 1);
             closedir(dir);
+            close(dir_fd);
             return -1;
         }
     }
 
     closedir(dir);
+    close(dir_fd);
 
     // Remove the now-empty directory
-    if (rmdir(full_path) != 0) {
+    if (unlinkat(parent_fd, dirname, AT_REMOVEDIR) != 0) {
         char message[PATH_MAX];
-        snprintf(message, PATH_MAX, "Error removing directory: %s", full_path);
-        show_term_message(message,1);
+        snprintf(message, PATH_MAX, "Error removing directory: %s", dirname);
+        show_term_message(message, 1);
         return -1;
     }
     num_dirs_deleted++;
     char message[PATH_MAX];
-    snprintf(message, PATH_MAX, "%s dir removed successfully.", full_path);
-    show_term_message(message,0);
+    snprintf(message, PATH_MAX, "%s dir removed successfully.", dirname);
+    show_term_message(message, 0);
 
     char message2[PATH_MAX];
     snprintf(message2, PATH_MAX, "Deleted %d files and %d directories", num_files_deleted, num_dirs_deleted);
-    show_term_message(message2,0);
+    show_term_message(message2, 0);
 
     return 0;
 }
