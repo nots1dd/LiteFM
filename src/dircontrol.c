@@ -1,3 +1,11 @@
+// // // // // // 
+//             //
+//   LITE FM   //
+//             //
+// // // // // // 
+
+/* BY nots1dd */
+
 #include <stdio.h>    // For snprintf
 #include <stdlib.h>   // For exit
 #include <string.h>   // For strcmp, strerror
@@ -6,6 +14,43 @@
 #include <unistd.h>   // For unlink, rmdir
 #include <dirent.h>   // For opendir, readdir, closedir
 #include <time.h>     // For time, localtime, strftime
+#include <pwd.h>
+
+char* get_current_user() {
+    uid_t uid = getuid();
+    struct passwd *pw = getpwuid(uid);
+
+    if (pw == NULL) {
+        perror("getpwuid");
+        exit(EXIT_FAILURE);
+    }
+
+    return pw->pw_name;
+}
+
+char *get_hostname() {
+    char buffer[100];
+    if (gethostname(buffer, sizeof(buffer)) != 0) {
+        perror("gethostname");
+        return NULL;
+    }
+
+    // Allocate memory for the hostname string
+    char *hostname = (char *)malloc(strlen(buffer) + 1);
+    if (hostname == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+
+    // Copy the hostname to the allocated memory
+    strcpy(hostname, buffer);
+    return hostname;
+}
+void get_current_working_directory(char *cwd, size_t size) {
+    if (getcwd(cwd, size) == NULL) {
+        strcpy(cwd, "/");
+    }
+}
 
 int create_directory(const char *path, const char *dirname, char *timestamp) {
     char full_path[PATH_MAX];
@@ -128,3 +173,19 @@ int remove_directory_recursive(const char *base_path, const char *dirname) {
 
     return 0;
 }
+
+int rename_file_or_dir(const char *old_path, const char *new_name) {
+    char new_path[PATH_MAX];
+    
+    // Construct the new path
+    snprintf(new_path, sizeof(new_path), "%s/%s", dirname(strdup(old_path)), new_name);
+
+    // Rename the file or directory
+    if (rename(old_path, new_path) != 0) {
+        perror("rename");
+        return -1; // Return error code if rename fails
+    }
+
+    return 0; // Return success code
+}
+

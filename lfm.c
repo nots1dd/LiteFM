@@ -1,20 +1,29 @@
+// // // // // // 
+//             //
+//   LITE FM   //
+//             //
+// // // // // // 
+
+/* BY nots1dd */
+
+/* Main C file FOR LITE FILE MANAGER */
+
+/* LICENSED UNDER GNU GPL v3 */
+
 #include <dirent.h>
 #include <ctype.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
-#include <pwd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <libgen.h>
-#include <archive.h>
-#include <archive_entry.h>
 #include "src/getFreeSpace.c"
 #include "src/cursesutils.c"
 #include "src/filePreview.c"
 #include "src/dircontrol.c"
+#include "src/archivecontrol.c"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -49,18 +58,6 @@ void list_dir(const char *path, FileItem items[], int *count, int show_hidden) {
     closedir(dir);
 }
 
-char* get_current_user() {
-    uid_t uid = getuid();
-    struct passwd *pw = getpwuid(uid);
-
-    if (pw == NULL) {
-        perror("getpwuid");
-        exit(EXIT_FAILURE);
-    }
-
-    return pw->pw_name;
-}
-
 void print_items(WINDOW *win, FileItem items[], int count, int highlight, const char *current_path, int show_hidden, int scroll_position, int height) {
     char *hidden_dir;
     if (show_hidden) {
@@ -76,6 +73,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     // Print title
     wattron(win, COLOR_PAIR(9));
     char* cur_user = get_current_user();
+    char* cur_hostname = get_hostname();
     wattron(win, A_BOLD);
     mvwprintw(win, 0, 2, " LITE FM: ");
     wattroff(win, A_BOLD);
@@ -90,10 +88,10 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     // Print current path and hidden directories status
     wattron(win, A_BOLD);
     wattron(win, COLOR_PAIR(8));
-    mvwprintw(win, 2, 2, " @%s ", cur_user);
+    mvwprintw(win, 2, 2, " %s@%s ", cur_hostname, cur_user);
     wattroff(win, COLOR_PAIR(8));
     wattron(win, COLOR_PAIR(4));
-    mvwprintw(win, 2, 10, " %s ", sanitizedCurPath);
+    mvwprintw(win, 2, 20, " %s ", sanitizedCurPath);
     wattroff(win, COLOR_PAIR(4));
     wattron(win, COLOR_PAIR(9));
     mvwprintw(win, LINES - 3, (COLS / 2) - 35, " Hidden Dirs: %s ", hidden_dir);
@@ -154,12 +152,6 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     }
 }
 
-void get_current_working_directory(char *cwd, size_t size) {
-    if (getcwd(cwd, size) == NULL) {
-        strcpy(cwd, "/");
-    }
-}
-
 int create_file(const char *path, const char *filename, char *timestamp) {
     char full_path[PATH_MAX];
     snprintf(full_path, PATH_MAX, "%s/%s", path, filename); 
@@ -181,49 +173,6 @@ int create_file(const char *path, const char *filename, char *timestamp) {
     strftime(timestamp, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 
     return 0; // File created successfully
-}
-
-// Function to extract an archive specified by archive_path
-int extract_archive(const char *archive_path) {
-    char command[PATH_MAX + 100]; // +100 for safety margin
-    int result;
-    long file_size_before, file_size_after; 
-
-    // Get the directory of the archive (example.zip)
-    char archive_dir[PATH_MAX];
-    strncpy(archive_dir, archive_path, PATH_MAX);
-    dirname(archive_dir); // Get the directory part of the archive path
-
-    // Create the extraction directory (filename_extracted)
-    char *archive_basename = basename(archive_path);
-    char extraction_dir[PATH_MAX];
-    snprintf(extraction_dir, sizeof(extraction_dir), "%s/%s_extracted", archive_dir, archive_basename);
-
-    // Determine archive type and construct extraction command
-    if (strstr(archive_path, ".zip")) {
-        snprintf(command, sizeof(command), "mkdir -p \"%s\" && unzip -o \"%s\" -d \"%s\" > /dev/null 2>&1", extraction_dir, archive_path, extraction_dir);
-    } else if (strstr(archive_path, ".tar")) {
-        snprintf(command, sizeof(command), "mkdir -p \"%s\" && tar -xf \"%s\" -C \"%s\" > /dev/null 2>&1", extraction_dir, archive_path, extraction_dir);
-    } else {
-        endwin(); // End NCurses mode before returning
-        return -1; // Unsupported archive format
-    }
-
-    // Get file size before extraction
-    file_size_before = get_file_size(archive_path);
-
-    show_term_message("Extracting...",0);
-
-    // Execute command
-    FILE *extract_process = popen(command, "r");
-    if (extract_process == NULL) {
-        endwin(); // End NCurses mode before returning
-        return -1; // Failed to execute command
-    } 
-
-    pclose(extract_process); // Close the process
-
-    return 0; // Extraction successful
 }
 
 int find_item(const char *query, FileItem items[], int item_count, int *start_index) {
@@ -470,6 +419,27 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     wrefresh(info_win);
 }
 
+void handle_rename(WINDOW *win, const char *path) {
+    char new_name[PATH_MAX];
+    
+    // Prompt for new name
+    get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename");
+
+    // Check if new_name is not empty
+    if (strlen(new_name) == 0) {
+        show_term_message("No name provided. Aborting rename.", 1);
+        return;
+    }
+
+    // Perform rename
+    if (rename_file_or_dir(path, new_name) == 0) {
+        show_term_message("Rename successful.", 0);
+        // Update file list if needed
+    } else {
+        show_term_message("Rename failed.", 1);
+    }
+}
+
 int main() {
     init_curses(); 
 
@@ -517,7 +487,6 @@ int main() {
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
             werase(info_win);
-            mvwprintw(info_win, 0, 2, " File Info: ");
             char full_path_info[PATH_MAX];
             snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
             if (is_readable_extension(items[highlight].name)) { 
@@ -720,7 +689,6 @@ int main() {
                         }
                     }
                     break;
-                
                 case 'n':
                   if (strlen(last_query) > 0) {
                         int start_index = highlight + 1;
@@ -782,6 +750,78 @@ int main() {
                   show_term_message("Cannot extract a directory.",1);
                 }
                 break;
+               
+            
+            case 'Z':
+                if (items[highlight].is_dir) {
+                    // Check if the selected item is a directory
+                    const char *dirname = items[highlight].name;
+                    char full_path[PATH_MAX];
+                    snprintf(full_path, PATH_MAX, "%s/%s", current_path, dirname);
+
+                    // Ask user for the compression format
+                    int choice = show_compression_options(win); // Implement this function to show options and get the user's choice
+
+                    // Define the output archive path
+                    char archive_path[PATH_MAX];
+                    snprintf(archive_path, PATH_MAX, "%s/%s.%s", current_path, dirname, (choice == 1) ? "tar" : "zip");
+
+                    // Confirm compression
+                    if (choice == 1 || choice == 2) {
+                        // Compress the directory based on the user's choice
+                        int result;
+                        if (choice == 1) {
+                            // Compress as TAR
+                            result = compress_directory(full_path, archive_path, 1);
+                        } else {
+                            // Compress as ZIP
+                            result = compress_directory(full_path, archive_path, 2);
+                        }
+
+                        if (result == 0) {
+                            show_term_message("Compression successful.", 0);
+                            // Update file list after compression
+                            list_dir(current_path, items, &item_count, show_hidden);
+                            scroll_position = 0;
+                        } else {
+                            show_term_message("Compression failed.", 1);
+                        }
+                    }
+                } else {
+                    show_term_message("Selected item is not a directory.", 1);
+                }
+                break;
+               
+              case 'R': // Rename file or directory
+              {
+                  if (item_count > 0) {
+                      const char *current_name = items[highlight].name;
+                      char full_path[PATH_MAX];
+                      snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
+
+                      char new_name[NAME_MAX];
+                      get_user_input_from_bottom(stdscr, new_name, NAME_MAX, "rename");
+
+                      if (strlen(new_name) > 0) {
+                          char new_full_path[PATH_MAX];
+                          snprintf(new_full_path, PATH_MAX, "%s/%s", current_path, new_name);
+
+                          if (rename(full_path, new_full_path) == 0) {
+                              show_term_message("Rename successful.", 0);
+                              // Update file list after renaming
+                              list_dir(current_path, items, &item_count, show_hidden);
+                              scroll_position = 0;
+                          } else {
+                              show_term_message("Rename failed.", 1);
+                          }
+                      } else {
+                          show_term_message("No name provided. Aborting rename.", 1);
+                      }
+                  } else {
+                      show_term_message("No item selected for renaming.", 1);
+                  }
+                  break;
+              }
                case 10:
                  if (is_readable_extension(items[highlight].name)) {
                     get_file_info_popup(win, current_path, items[highlight].name);
@@ -799,7 +839,6 @@ int main() {
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
             werase(info_win);
-            mvwprintw(info_win, 0, 2, " File Info: ");
             char full_path_info[PATH_MAX];
             snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
             if (is_readable_extension(items[highlight].name)) {

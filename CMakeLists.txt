@@ -1,3 +1,15 @@
+#// // // // // // 
+#//             //
+#//   LITE FM   //
+#//             //
+#// // // // // // 
+
+# BY nots1dd 
+
+# CMAKE CONFIGURATION FOR LITE FILE MANAGER
+
+# LICENSED UNDER GNU GPL v3
+
 cmake_minimum_required(VERSION 3.10)
 
 # Set the project name

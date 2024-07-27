@@ -1,3 +1,11 @@
+// // // // // // 
+//             //
+//   LITE FM   //
+//             //
+// // // // // // 
+
+/* BY nots1dd */
+
 #include <ncurses.h>
 #include <locale.h>
 
@@ -10,6 +18,45 @@ void show_message(WINDOW *win, const char *message) {
 
 void clearLine(WINDOW *win, int x, int y) {
   mvwprintw(win, x, y, "\n");
+}
+
+int show_compression_options(WINDOW *parent_win) {
+    WINDOW *options_win;
+    int choice;
+    // Create a new window for displaying options
+    int win_height = 10;
+    int win_width = 40;
+    int win_y = (LINES - win_height) / 2;
+    int win_x = (COLS - win_width) / 2;
+    
+    options_win = newwin(win_height, win_width, win_y, win_x);
+    box(options_win, 0, 0);
+    keypad(options_win, TRUE); // Enable special keys (e.g., arrow keys)
+
+    // Display options with color
+    wattron(options_win, COLOR_PAIR(1));
+    mvwprintw(options_win, 1, 2, "Select compression format:");
+    wattroff(options_win, COLOR_PAIR(1));
+
+    wattron(options_win, COLOR_PAIR(2));
+    mvwprintw(options_win, 2, 2, "1. TAR (.tar)");
+    mvwprintw(options_win, 3, 2, "2. ZIP (.zip)");
+    wattroff(options_win, COLOR_PAIR(2));
+
+    wattron(options_win, COLOR_PAIR(3));
+    mvwprintw(options_win, 5, 2, "Press '1' for TAR, '2' for ZIP");
+    mvwprintw(options_win, win_height - 2, 2, "Press any other key to exit!");
+    wattroff(options_win, COLOR_PAIR(3));
+
+    // Refresh and wait for user input
+    wrefresh(options_win);
+    choice = wgetch(options_win);
+
+    // Clean up
+    delwin(options_win);
+    refresh(); // Refresh the main window to ensure no artifacts remain
+
+    return (choice == '1') ? 1 : (choice == '2') ? 2 : -1;
 }
 
 void show_term_message(const char *message, int err) { 
@@ -88,6 +135,10 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
       attron(COLOR_PAIR(3));
       mvprintw(LINES - 1, 0, " /");
       attroff(COLOR_PAIR(3));
+    } else if (type == "rename") {
+      attron(COLOR_PAIR(2));
+      mvprintw(LINES - 1, 0, " Rename: ");
+      attroff(COLOR_PAIR(2));
     }
     attroff(A_BOLD);  // Turn off bold attribute
     clrtoeol();  // Clear the rest of the line to handle previous content
@@ -132,3 +183,5 @@ WINDOW *create_centered_window(int height, int width) {
 
     return popup_win;
 }
+
+

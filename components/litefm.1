@@ -41,11 +41,18 @@ Delete the selected file or directory (NON-RECURSIVE DELETION).
 .B D
 Delete a directory RECURSIVELY (every sub-dir and file inside selected dir is deleted).
 .TP
+.B R
+Rename a file or directory.
+.TP
 .B /
 Search for a file or directory.
 .TP
-.B e
+.B E
 Extract the selected archive (zip or tar).
+.TP
+.B Z
+To compress a directory to zip or tar(*).
+* - If you extract a zip file and attempt to compress it to a tar, or vice-versa, it will NOT WORK (it will show up as empty)!
 .TP
 .B Enter
 Display information about the selected file (if file preview is displayed).
@@ -70,7 +77,7 @@ To start
 simply run:
 .PP
 .EX
-LiteFM
+lfm
 .EE
 .PP
 Navigate to the desired directory using the arrow keys or 
@@ -85,7 +92,7 @@ Extract archives using
 .B e,
 and search for files or directories using 
 .B /.
-.SH AUTHOR
+.SH AUTHOR - nots1dd
 .B LiteFM
 was developed as an example application using the NCurses library.
 .SH SEE ALSO
@@ -94,6 +101,6 @@ was developed as an example application using the NCurses library.
 .BR unzip (1), 
 .BR tar (1)
 .SH BUGS
-No known bugs. Report any issues to the project maintainer.
+No known bugs. Report any issues to the project maintainer (https://github.com/nots1dd/litefm).
 .SH COPYRIGHT
-This is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+This is free software licensed under GNU GPL v3; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.

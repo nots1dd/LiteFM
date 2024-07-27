@@ -8,6 +8,7 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 2. String search along with next occurance functionalities
 3. Easy and Fast addition, deletion of files and directories
 4. Clean and responsive TUI thanks to ncurses with cool colors
+5. Incredibly fast extraction and compression functions thanks to `libarchive`
 
 ## Usage
 
@@ -25,12 +26,16 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 > 
 > CMake / Make
 > 
-> Ncurses 
+> Ncurses library (libncurses-dev for debian)
+> 
+> libarchive (for extraction of archives)
 > 
 > A C compiler (like GCC)
 > 
 
 Building with CMake:
+
+**Ensure you have CMake installed first**
 
 -> `cmake -S -B build/` to create a `build/` directory with all libraries linked as per `CMakeLists.txt`
 
@@ -40,7 +45,11 @@ Building with CMake:
 
 Building with Make:
 
-Presently, I have not made the `Makefile` yet, TBD!!
+-> Run `make` in the current directory
+
+-> This should give a `litefm` executable, just run it to enjoy LiteFM!
+
+-> To cleanup, run `make clean`
 
 > [!TIP]
 > Building LiteFM with build.sh 
