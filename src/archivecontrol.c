@@ -67,10 +67,17 @@ int add_directory_to_archive(struct archive *a, const char *dir_path, const char
     DIR *dir;
     struct stat st;
 
-    // Open the directory
-    dir = opendir(dir_path);
+    // Open the directory using file descriptor
+    int dir_fd = open(dir_path, O_RDONLY | O_DIRECTORY);
+    if (dir_fd == -1) {
+        perror("open");
+        return -1;
+    }
+
+    dir = fdopendir(dir_fd);
     if (dir == NULL) {
-        perror("opendir");
+        perror("fdopendir");
+        close(dir_fd);
         return -1;
     }
 
@@ -81,9 +88,10 @@ int add_directory_to_archive(struct archive *a, const char *dir_path, const char
         }
 
         snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, dp->d_name);
-        if (stat(full_path, &st) == -1) {
-            perror("stat");
+        if (fstatat(dir_fd, dp->d_name, &st, 0) == -1) {
+            perror("fstatat");
             closedir(dir);
+            close(dir_fd);
             return -1;
         }
 
@@ -97,15 +105,27 @@ int add_directory_to_archive(struct archive *a, const char *dir_path, const char
             fprintf(stderr, "archive_write_header: %s\n", archive_error_string(a));
             archive_entry_free(entry);
             closedir(dir);
+            close(dir_fd);
             return -1;
         }
 
         if (!S_ISDIR(st.st_mode)) {
-            FILE *file = fopen(full_path, "rb");
-            if (file == NULL) {
-                perror("fopen");
+            int file_fd = openat(dir_fd, dp->d_name, O_RDONLY);
+            if (file_fd == -1) {
+                perror("openat");
                 archive_entry_free(entry);
                 closedir(dir);
+                close(dir_fd);
+                return -1;
+            }
+
+            FILE *file = fdopen(file_fd, "rb");
+            if (file == NULL) {
+                perror("fdopen");
+                close(file_fd);
+                archive_entry_free(entry);
+                closedir(dir);
+                close(dir_fd);
                 return -1;
             }
 
@@ -115,20 +135,25 @@ int add_directory_to_archive(struct archive *a, const char *dir_path, const char
                 if (archive_write_data(a, buffer, len) != len) {
                     fprintf(stderr, "archive_write_data: %s\n", archive_error_string(a));
                     fclose(file);
+                    close(file_fd);
                     archive_entry_free(entry);
                     closedir(dir);
+                    close(dir_fd);
                     return -1;
                 }
             }
             fclose(file);
+            close(file_fd);
         }
 
         archive_entry_free(entry);
     }
 
     closedir(dir);
+    close(dir_fd);
     return 0;
 }
+
 
 int compress_directory(const char *dir_path, const char *archive_path, int format) {
     struct archive *archive_writer;
