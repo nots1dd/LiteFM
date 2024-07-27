@@ -36,7 +36,10 @@ Toggle the display of hidden files and directories.
 Add a new file or directory. To create a directory, append a '/' to the name.
 .TP
 .B d
-Delete the selected file or directory.
+Delete the selected file or directory (NON-RECURSIVE DELETION).
+.TP
+.B D
+Delete a directory RECURSIVELY (every sub-dir and file inside selected dir is deleted).
 .TP
 .B /
 Search for a file or directory.
@@ -45,7 +48,13 @@ Search for a file or directory.
 Extract the selected archive (zip or tar).
 .TP
 .B Enter
-Display information about the selected file.
+Display information about the selected file (if file preview is displayed).
+.TP
+.B n
+Go to the next occurance of the string search '/'.
+.TP
+.B N
+Go to the previous occurance of the string search '/'.
 .TP
 .B q
 Quit the application.

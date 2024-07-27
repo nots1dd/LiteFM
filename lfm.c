@@ -1,7 +1,5 @@
-#include <ncurses.h>
 #include <dirent.h>
 #include <ctype.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -11,12 +9,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <libgen.h>
-#include <time.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include "src/getFreeSpace.c"
-#include "src/cursesHelpers.c"
+#include "src/cursesutils.c"
 #include "src/filePreview.c"
+#include "src/dircontrol.c"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -185,14 +183,6 @@ int create_file(const char *path, const char *filename, char *timestamp) {
     return 0; // File created successfully
 }
 
-long get_file_size(const char *file_path) {
-    struct stat st;
-    if (stat(file_path, &st) == 0) {
-        return st.st_size;
-    }
-    return -1;
-}
-
 // Function to extract an archive specified by archive_path
 int extract_archive(const char *archive_path) {
     char command[PATH_MAX + 100]; // +100 for safety margin
@@ -236,129 +226,6 @@ int extract_archive(const char *archive_path) {
     return 0; // Extraction successful
 }
 
-
-int create_directory(const char *path, const char *dirname, char *timestamp) {
-    char full_path[PATH_MAX];
-    snprintf(full_path, PATH_MAX, "%s/%s", path, dirname);
-
-    // Create the directory
-    if (mkdir(full_path, 0777) == -1) {
-        if (errno == EEXIST)
-            return 1; // Directory already exists
-        else
-            return -1; // Error creating directory
-    }
-
-    // Get the current time and format it
-    time_t t = time(NULL);
-    struct tm *tm_info = localtime(&t);
-    strftime(timestamp, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-
-    return 0; // Directory created successfully
-}
-
-int remove_file(const char *path, const char *filename) {
-    char full_path[PATH_MAX];
-    snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
-
-    // Remove the file
-    if (unlink(full_path) == -1)
-        return -1; // Error removing file
-
-    return 0; // File removed successfully
-}
-
-/* NOT RECURSIVE */
-int remove_directory(const char *path, const char *dirname) {
-    char full_path[PATH_MAX];
-    snprintf(full_path, PATH_MAX, "%s/%s", path, dirname);
-
-    // Remove the directory and its contents
-    if (rmdir(full_path) == -1)
-        return -1; // Error removing directory
-
-    return 0; // Directory removed successfully
-}
-
-/* probably the most dangerous function (it works pretty well tho) */
-int remove_directory_recursive(const char *base_path, const char *dirname) {
-    char full_path[PATH_MAX];
-    snprintf(full_path, PATH_MAX, "%s/%s", base_path, dirname);
-
-    DIR *dir = opendir(full_path);
-    if (dir == NULL) {
-        show_term_message("Error opening directory.",1);
-        return -1;
-    }
-
-    struct dirent *entry;
-    int num_files_deleted = 0;
-    int num_dirs_deleted = 0;
-
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-
-        char file_path[PATH_MAX];
-        snprintf(file_path, PATH_MAX, "%s/%s", full_path, entry->d_name);
-
-        struct stat statbuf;
-        if (stat(file_path, &statbuf) == 0) {
-            if (S_ISDIR(statbuf.st_mode)) {
-                // Recursively remove subdirectory
-                if (remove_directory_recursive(full_path, entry->d_name) != 0) {
-                    closedir(dir);
-                    return -1;
-                }
-                num_dirs_deleted++;
-                char message[PATH_MAX];
-                snprintf(message, PATH_MAX, "%s directory removed successfully.", file_path);
-                show_term_message(message,0);
-            } else {
-                // Remove file
-                if (unlink(file_path) != 0) {
-                    char message[PATH_MAX];
-                    snprintf(message, PATH_MAX, "Error removing file: %s", file_path);
-                    show_term_message(message,1);
-                    closedir(dir);
-                    return -1;
-                }
-                num_files_deleted++;
-                char message[PATH_MAX];
-                snprintf(message, PATH_MAX, "%s file removed successfully.", file_path);
-                show_term_message(message,0);
-            }
-        } else {
-            char message[PATH_MAX];
-            snprintf(message, PATH_MAX, "Error getting status of file: %s", file_path);
-            show_term_message(message,1);
-            closedir(dir);
-            return -1;
-        }
-    }
-
-    closedir(dir);
-
-    // Remove the now-empty directory
-    if (rmdir(full_path) != 0) {
-        char message[PATH_MAX];
-        snprintf(message, PATH_MAX, "Error removing directory: %s", full_path);
-        show_term_message(message,1);
-        return -1;
-    }
-    num_dirs_deleted++;
-    char message[PATH_MAX];
-    snprintf(message, PATH_MAX, "%s dir removed successfully.", full_path);
-    show_term_message(message,0);
-
-    char message2[PATH_MAX];
-    snprintf(message2, PATH_MAX, "Deleted %d files and %d directories", num_files_deleted, num_dirs_deleted);
-    show_term_message(message2,0);
-
-    return 0;
-}
-
 int find_item(const char *query, FileItem items[], int item_count, int *start_index) {
     char lower_query[NAME_MAX];
     for (int i = 0; query[i] && i < NAME_MAX; i++) {
@@ -393,6 +260,39 @@ int find_item(const char *query, FileItem items[], int item_count, int *start_in
     return -1; // Not found
 }
 
+int find_previous_item(const char *query, FileItem items[], int item_count, int *start_index) {
+    char lower_query[NAME_MAX];
+    for (int i = 0; query[i] && i < NAME_MAX; i++) {
+        lower_query[i] = tolower(query[i]);
+    }
+    lower_query[strlen(query)] = '\0';
+
+    for (int i = *start_index; i >= 0; i--) {
+        char lower_name[NAME_MAX];
+        for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
+            lower_name[j] = tolower(items[i].name[j]);
+        }
+        lower_name[strlen(items[i].name)] = '\0';
+
+        if (strstr(lower_name, lower_query) != NULL) {
+            *start_index = i;
+            return i;
+        }
+    }
+    for (int i = item_count - 1; i > *start_index; i--) {
+        char lower_name[NAME_MAX];
+        for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
+            lower_name[j] = tolower(items[i].name[j]);
+        }
+        lower_name[strlen(items[i].name)] = '\0';
+
+        if (strstr(lower_name, lower_query) != NULL) {
+            *start_index = i;
+            return i;
+        }
+    }
+    return -1; // Not found
+}
 
 void get_file_info_popup(WINDOW *main_win, const char *path, const char *filename) {
     struct stat file_stat;
@@ -417,7 +317,7 @@ void get_file_info_popup(WINDOW *main_win, const char *path, const char *filenam
     // Display file information
     mvwprintw(info_win, 1, 2, "File Information:");
     mvwprintw(info_win, 3, 2, "Name: %s", filename);
-    mvwprintw(info_win, 4, 2, "Size: %ld bytes", file_stat.st_size);
+    mvwprintw(info_win, 4, 2, "Size: %s", format_file_size(file_stat.st_size));
 
     const char *file_ext = strrchr(filename, '.');
     if (file_ext != NULL) {
@@ -443,7 +343,10 @@ void get_file_info_popup(WINDOW *main_win, const char *path, const char *filenam
     wattroff(info_win, COLOR_PAIR(4));
 
     // Additional file attributes can be displayed here
-
+    struct passwd *pwd = getpwuid(file_stat.st_uid);
+    wattron(info_win, COLOR_PAIR(6));
+    mvwprintw(info_win, 2, 2, "Owner: %s (%d)", pwd->pw_name, file_stat.st_uid);
+    wattroff(info_win, COLOR_PAIR(6));
     mvwprintw(info_win, info_win_height - 2, 2, "Press any key to close this window.");
     wrefresh(info_win);
 
@@ -473,12 +376,12 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     }
 
     // Display file information
-    wattron(info_win, A_BOLD | COLOR_PAIR(7));
+    wattron(info_win, A_BOLD);
     mvwprintw(info_win, 1, 2, "File/Dir Information:");
     clearLine(info_win, 3, 2);
     mvwprintw(info_win, 3, 2, "Name: %s", filename);
     clearLine(info_win, 4, 2);
-    mvwprintw(info_win, 4, 2, "Size: %ld bytes", file_stat.st_size);
+    mvwprintw(info_win, 4, 2, "Size: %s", format_file_size(file_stat.st_size));
 
     const char *file_ext = strrchr(filename, '.');
     clearLine(info_win, 6, 2);
@@ -512,9 +415,9 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     if (S_ISREG(file_stat.st_mode)) {
         mvwprintw(info_win, 8, 2, "Type: Regular File");
     } else if (S_ISDIR(file_stat.st_mode)) {
-        wattron(info_win, COLOR_PAIR(9));
+        wattron(info_win, COLOR_PAIR(11));
         mvwprintw(info_win, 8, 2, "Type: Directory");
-        wattroff(info_win, COLOR_PAIR(9));
+        wattroff(info_win, COLOR_PAIR(11));
         // Count and display subdirectories
         DIR *dir;
         struct dirent *entry;
@@ -559,7 +462,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     wattroff(info_win, COLOR_PAIR(6));
 
     // Additional file attributes can be displayed here
-    wattroff(info_win, A_BOLD | COLOR_PAIR(7));
+    wattroff(info_win, A_BOLD);
     wrefresh(info_win); 
 
     // Refresh the main window to ensure no artifacts remain
@@ -567,34 +470,8 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     wrefresh(info_win);
 }
 
-WINDOW *create_centered_window(int height, int width) {
-    int startx, starty;
-    int x, y;
-
-    // Get the screen dimensions
-    getmaxyx(stdscr, y, x);
-
-    // Calculate the starting position for the window
-    startx = (x - width) / 2;
-    starty = (y - height) / 2;
-
-    // Create the window
-    WINDOW *popup_win = newwin(height, width, starty, startx);
-
-    // Initialize the window
-    box(popup_win, 0, 0);
-    wrefresh(popup_win);
-
-    return popup_win;
-}
-
 int main() {
-    initscr();
-    start_color();  // Enable color
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-    curs_set(0);
+    init_curses(); 
 
     int highlight = 0;
     FileItem items[MAX_ITEMS];
@@ -633,7 +510,6 @@ int main() {
 
     while (true) {
         int choice = getch();
-        /*show_term_message("");*/
         if (firstKeyPress) {
             werase(win);
             box(info_win, 0, 0);
@@ -641,9 +517,10 @@ int main() {
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
             werase(info_win);
+            mvwprintw(info_win, 0, 2, " File Info: ");
             char full_path_info[PATH_MAX];
             snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
-            if (is_readable_extension(items[highlight].name)) {
+            if (is_readable_extension(items[highlight].name)) { 
                 display_file(info_win, full_path_info);
             } else { 
               get_file_info(info_win, current_path, items[highlight].name);
@@ -859,7 +736,24 @@ int main() {
                             show_term_message("No more occurrences found.",1);
                         }
                     }
-                    break; 
+                    break;
+               case 'N':
+                  if (strlen(last_query) > 0) {
+                      int start_index = highlight - 1;
+                      int found_index = find_previous_item(last_query, items, item_count, &start_index);
+                      if (found_index != -1) {
+                          highlight = found_index;
+                          if (highlight >= scroll_position + height - 8) {
+                              scroll_position = highlight - height + 8;
+                          } else if (highlight < scroll_position) {
+                              scroll_position = highlight;
+                          }
+                      } else {
+                          show_term_message("No previous occurrences found.", 1);
+                      }
+                  }
+                  break;
+
                             
                case 'E':
                 if (!items[highlight].is_dir) {
@@ -905,6 +799,7 @@ int main() {
             print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
             wrefresh(win);
             werase(info_win);
+            mvwprintw(info_win, 0, 2, " File Info: ");
             char full_path_info[PATH_MAX];
             snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
             if (is_readable_extension(items[highlight].name)) {

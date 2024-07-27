@@ -11,9 +11,10 @@ find_package(Curses REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 
-# Include directories for ncurses and libarchive
+# Include directories for ncurses, libarchive, and project headers
 include_directories(${CURSES_INCLUDE_DIR})
 include_directories(${LIBARCHIVE_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR})
 
 # Add the executable
 add_executable(litefm lfm.c)
