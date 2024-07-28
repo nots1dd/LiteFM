@@ -22,13 +22,15 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
 
-> DEPS
+> ![NOTE]
+> 
+> Dependencies to install for LiteFM:
 > 
 > CMake / Make
 > 
 > Ncurses library (libncurses-dev for debian)
 > 
-> libarchive (for extraction of archives)
+> libarchive (for extraction and compression)
 > 
 > A C compiler (like GCC)
 > 
@@ -51,7 +53,7 @@ Building with Make:
 
 -> To cleanup, run `make clean`
 
-> [!TIP]
+> [!NOTE]
 > Building LiteFM with build.sh 
 > 
 > chmod +x build.sh 
@@ -59,6 +61,17 @@ Building with Make:
 > ./build.sh 
 > 
 > Thats all! Enjoy LiteFM 
+
+## SECURITY
+
+As this is a file manager that is able to perform some VERY cool and dangerous tasks like deleting any directory recursively, I definitely have tried to set up security measures to avoid any form of code vulnerability or CWE.
+
+Other steps I plan on taking to ensure that you are always in control of the file manager are:
+
+1. Setting up a log file to keep track of every change being made to any inode in your filesystem. [priority/high]
+2. Possibly set up a trash system so that accidental deletion of any file/dir can be restored [priority/low]
+
+Check out `SECURITY.md` for the security policy that this repository follows.
 
 ## FUTURE
 
@@ -74,6 +87,6 @@ This file manager is far from done there are a lot of cool and essential feature
 
 - [ ] Bugfixes and massive code refactor
 
-- [ ] Improve the build script
+- [x] Improve the build script
 
 - [ ] Integration of adding a text editor

@@ -269,7 +269,7 @@ void get_file_info_popup(WINDOW *main_win, const char *path, const char *filenam
 
     // Create a new window for displaying file information
     int info_win_height = 10;
-    int info_win_width = (COLS / 3) - 4;
+    int info_win_width = (COLS / 3) + 4;
     int info_win_y = (LINES - info_win_height) / 2;
     int info_win_x = (COLS - info_win_width) / 2;
 
