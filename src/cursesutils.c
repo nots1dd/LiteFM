@@ -73,11 +73,11 @@ void show_term_message(const char *message, int err) {
     
     if (err!=0) {
       attron(COLOR_PAIR(12));
-      mvprintw(message_y, 0, "%s", message);
+      mvprintw(message_y, 0, " \u2718 %s", message); // \u2718 is unicode for ✘
       attroff(COLOR_PAIR(12));
     } else {
       attron(COLOR_PAIR(1));
-      mvprintw(message_y, 0, "%s", message);
+      mvprintw(message_y, 0, " \u2714 %s", message); // \u2714 is unicode for ✔
       attroff(COLOR_PAIR(1));
     }
     refresh();
@@ -125,6 +125,17 @@ int confirm_action(WINDOW *win, const char *message) {
     delwin(confirm_win);
 
     return ch == 'y' || ch == 'Y' || ch == 10;
+}
+
+void draw_3d_info_win(WINDOW *win, int y, int x, int height, int width, int color_pair, int shadow_color_pair) {
+    // Create shadow window
+    WINDOW *shadow_win = newwin(height, width, y + 1, x + 2);
+    wattron(shadow_win, COLOR_PAIR(shadow_color_pair)); 
+    wattroff(shadow_win, COLOR_PAIR(shadow_color_pair));
+    box(shadow_win, 0, 0);
+    wrefresh(shadow_win);
+
+    
 }
 
 void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type) {

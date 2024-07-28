@@ -7,13 +7,13 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 1. Ranger like traversal of directories (vim keybinds supported)
 2. String search along with next occurance functionalities
 3. Easy and Fast addition, deletion of files and directories
-4. Clean and responsive TUI thanks to ncurses with cool colors
+4. Clean and responsive TUI thanks to ncurses with cool colors and unicodes
 5. Incredibly fast extraction and compression functions thanks to `libarchive`
 
 ## Usage
 
 -> Currently LiteFM has only been tested on the following Linux Distros:
-   1. Arch Linux 6.9.9 kernels (zen and base) x86_64 arch (1920x1080)
+   1. Arch Linux 6.9.9 and 6.10.0 kernels (zen and base) x86_64 arch (1920x1080)
    2. Ubuntu 22 x86_64
 
 -> There are no plans on expanding this beyond Linux distributions
@@ -22,7 +22,7 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
 
-> ![NOTE]
+> [!NOTE]
 > 
 > Dependencies to install for LiteFM:
 > 
@@ -45,6 +45,13 @@ Building with CMake:
 
 -> Set it as an alias in your respective shell rc and enjoy!
 
+> [!IMPORTANT]
+> Ensure that you set up litefm.log in your ~/.cache/litefm/log/ directory (create if not there)
+> 
+> LiteFM has a very modular logging system and keeps a track of every file/dir control that goes on in a litefm instance 
+> 
+> Just run the command mkdir -p $HOME/.cache/litefm/log/ and you can run litefm without a hassle!
+
 Building with Make:
 
 -> Run `make` in the current directory
@@ -54,13 +61,15 @@ Building with Make:
 -> To cleanup, run `make clean`
 
 > [!NOTE]
-> Building LiteFM with build.sh 
+> Building LiteFM with build.sh (**HIGHLY RECOMMENDED**) 
 > 
-> chmod +x build.sh 
+> The script contains every method of installation, logging and setup of litefm
 > 
-> ./build.sh 
+> Just run `chmod +x build.sh` 
 > 
-> Thats all! Enjoy LiteFM 
+> Execute it by `./build.sh` 
+> 
+> Just wait for it to setup and answer a few questions, thats it!
 
 ## SECURITY
 
@@ -68,7 +77,7 @@ As this is a file manager that is able to perform some VERY cool and dangerous t
 
 Other steps I plan on taking to ensure that you are always in control of the file manager are:
 
-1. Setting up a log file to keep track of every change being made to any inode in your filesystem. [priority/high]
+1. A `litefm.log` and it's functionality has been implemented (`src/logging.c`) that will log EVERY file/dir control in every litefm instance
 2. Possibly set up a trash system so that accidental deletion of any file/dir can be restored [priority/low]
 
 Check out `SECURITY.md` for the security policy that this repository follows.

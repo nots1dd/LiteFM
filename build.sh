@@ -4,6 +4,7 @@
 GREEN="\e[32m"
 RED="\e[31m"
 PINK="\e[35m"
+BLUE="\e[34m"
 RESET="\e[0m"
 
 # Function to detect the package manager and distribution
@@ -125,6 +126,14 @@ if [ "$confirm_man" == "y" ]; then
     sudo gzip /usr/share/man/man1/litefm.1
 fi 
 
+echo -e "${BLUE}=========== LOGGING SETUP =============== ${RESET}"
+mkdir -p "$HOME/.cache/litefm/log/"
+if [ $? -ne 0 ]; then
+  echo -e "${BLUE}================ LOGGING DONE ============= ${RESET}"
+else
+  echo -e "${RED} Something went wrong while trying to setup logging. Exiting with code 1${RESET}"
+  exit 1 
+fi
 # Create alias in the appropriate shell configuration file
 echo -e "${PINK}============= SETTING ALIAS =========${RESET}"
 SHELL_NAME=$(basename "$SHELL")

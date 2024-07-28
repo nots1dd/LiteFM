@@ -38,9 +38,14 @@ void display_file(WINDOW *info_win, const char *filename) {
     char line[MAX_LINE_LENGTH];
     int row = 3;  // Start at row 3 to account for the title and spacing
     int lines_read = 0;
-
+    char sanitizedCurPath[PATH_MAX];
+    if (strncmp(filename, "//", 2) == 0) {
+      snprintf(sanitizedCurPath, sizeof(sanitizedCurPath), "%s", filename + 1);
+    } else {
+    strcpy(sanitizedCurPath, filename);
+  }
     wattron(info_win, A_BOLD | COLOR_PAIR(9));
-    mvwprintw(info_win, 1, 1, " %s ", filename);
+    mvwprintw(info_win, 1, 1, " %s ", sanitizedCurPath);
     wattroff(info_win, A_BOLD | COLOR_PAIR(9));
 
     // Read file and display lines up to MAX_LINES

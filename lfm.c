@@ -19,11 +19,13 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <libgen.h>
+#include <grp.h>
 #include "src/getFreeSpace.c"
 #include "src/cursesutils.c"
 #include "src/filePreview.c"
 #include "src/dircontrol.c"
 #include "src/archivecontrol.c"
+#include "src/logging.c"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -68,12 +70,18 @@ void list_dir(const char *path, FileItem items[], int *count, int show_hidden) {
     closedir(dir);
 }
 
+const char *get_file_extension(const char *filename) {
+    const char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename) return "";
+    return dot + 1;
+}
+
 void print_items(WINDOW *win, FileItem items[], int count, int highlight, const char *current_path, int show_hidden, int scroll_position, int height) {
     char *hidden_dir;
     if (show_hidden) {
-        hidden_dir = "ON";
+        hidden_dir = "ON\u25C6";
     } else {
-        hidden_dir = "OFF";
+        hidden_dir = "OFF\u25C7";
     }
     // getting system free space from / dir 
     double systemFreeSpace = system_free_space("/");
@@ -84,9 +92,9 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     wattron(win, COLOR_PAIR(9));
     char* cur_user = get_current_user();
     char* cur_hostname = get_hostname();
-    wattron(win, A_BOLD);
-    mvwprintw(win, 0, 2, " LITE FM: ");
-    wattroff(win, A_BOLD);
+    wattron(win, A_BOLD | COLOR_PAIR(4));
+    mvwprintw(win, 0, 2, "\u2502 📁 LITE FM: \u2502");
+    wattroff(win, A_BOLD | COLOR_PAIR(4));
 
     char sanitizedCurPath[PATH_MAX];
     if (strncmp(current_path, "//", 2) == 0) {
@@ -100,12 +108,12 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
     wattron(win, COLOR_PAIR(8));
     mvwprintw(win, 2, 2, " %s@%s ", cur_hostname, cur_user);
     wattroff(win, COLOR_PAIR(8));
-    wattron(win, COLOR_PAIR(4));
-    mvwprintw(win, 2, 20, " %s ", sanitizedCurPath);
-    wattroff(win, COLOR_PAIR(4));
     wattron(win, COLOR_PAIR(9));
-    mvwprintw(win, LINES - 3, (COLS / 2) - 35, " Hidden Dirs: %s ", hidden_dir);
-    mvwprintw(win, LINES - 3, (COLS / 2) - 15, " %.2f GiB ", systemFreeSpace);
+    mvwprintw(win, 2, 20, " %s ", sanitizedCurPath);
+    wattroff(win, COLOR_PAIR(9));
+    wattron(win, COLOR_PAIR(9));
+    mvwprintw(win, LINES - 3, (COLS / 2) - 40, " Hidden Dirs: %s ", hidden_dir);
+    mvwprintw(win, LINES - 3, (COLS / 2) - 18, " 💾 %.2f GiB ", systemFreeSpace);
     wattroff(win, COLOR_PAIR(9));
     wattroff(win, A_BOLD);
 
@@ -129,26 +137,32 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight, const 
             // Apply color based on file type
             if (items[index].is_dir) {
                 wattron(win, COLOR_PAIR(2));
+                mvwprintw(win, i+4, 5, "📁");
             } else {
                 // Determine file type by extension
                 char *extension = strrchr(items[index].name, '.');
                 if (extension) {
-                    if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".tar.xz") == 0 || strcmp(extension, ".tar.gz") == 0 || strcmp(extension, ".jar") == 0) {
+                    if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".tar") == 0 || strcmp(extension, ".xz") == 0 || strcmp(extension, ".gz") == 0 || strcmp(extension, ".jar") == 0) {
                         wattron(win, COLOR_PAIR(3));
+                        mvwprintw(win, i+4, 5, "📦");
                     } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".mp4") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
                         wattron(win, COLOR_PAIR(4));
+                        mvwprintw(win, i+4, 5, "🎵 ");
                     } else if (strcmp(extension, ".png") == 0 || strcmp(extension, ".jpg") == 0 || strcmp(extension, ".webp") == 0 || strcmp(extension, ".gif") == 0) {
                         wattron(win, COLOR_PAIR(5));
+                        mvwprintw(win, i+4, 5, "🖼️");
                     } else {
                         wattron(win, COLOR_PAIR(1));
+                        mvwprintw(win, i+4, 5, "📄");
                     }
                 } else {
                     wattron(win, COLOR_PAIR(1));
+                    mvwprintw(win, i+4, 5, "📄");
                 }
             }
             wattron(win, A_BOLD);
 
-            mvwprintw(win, i + 4, 5, " %s ", items[index].name);
+            mvwprintw(win, i + 4, 7, " %s ", items[index].name);
 
             // Turn off color attributes
             wattroff(win, A_BOLD);
@@ -263,53 +277,96 @@ void get_file_info_popup(WINDOW *main_win, const char *path, const char *filenam
 
     // Get file information
     if (stat(full_path, &file_stat) == -1) {
+        log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
         show_message(main_win, "Error retrieving file information.");
         return;
     }
 
     // Create a new window for displaying file information
-    int info_win_height = 10;
+    int info_win_height = 13;
     int info_win_width = (COLS / 3) + 4;
     int info_win_y = (LINES - info_win_height) / 2;
     int info_win_x = (COLS - info_win_width) / 2;
 
     WINDOW *info_win = newwin(info_win_height, info_win_width, info_win_y, info_win_x);
+    draw_3d_info_win(info_win, info_win_y, info_win_x, info_win_height, info_win_width, 1, 2);
     box(info_win, 0, 0);
 
-    // Display file information
+    // Display file information with colors
+    wattron(info_win, COLOR_PAIR(1));
     mvwprintw(info_win, 1, 2, "File Information:");
-    mvwprintw(info_win, 3, 2, "Name: %s", filename);
-    mvwprintw(info_win, 4, 2, "Size: %s", format_file_size(file_stat.st_size));
+    wattroff(info_win, COLOR_PAIR(1));
+
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 3, 2, "Name: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", filename);
+    wattroff(info_win, COLOR_PAIR(4));
+
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 4, 2, "Size: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", format_file_size(file_stat.st_size));
+    wattroff(info_win, COLOR_PAIR(4));
 
     const char *file_ext = strrchr(filename, '.');
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 5, 2, "Extension: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
     if (file_ext != NULL) {
-        mvwprintw(info_win, 6, 2, "Extension: %s", file_ext + 1);
+        wprintw(info_win, "%s", file_ext + 1);
     } else {
-        mvwprintw(info_win, 6, 2, "Extension: none");
+        wprintw(info_win, "none");
     }
+    wattroff(info_win, COLOR_PAIR(4));
 
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 6, 2, "Last Modified: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
     char mod_time[20];
     strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime(&file_stat.st_mtime));
-    mvwprintw(info_win, 7, 2, "Last Modified: %s", mod_time);
+    wprintw(info_win, "%s", mod_time);
+    wattroff(info_win, COLOR_PAIR(4));
+
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 7, 2, "Permissions: ");
+    wattroff(info_win, COLOR_PAIR(3));
     wattron(info_win, COLOR_PAIR(4));
-    mvwprintw(info_win, 1, 20, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
-    mvwprintw(info_win, 1, 21, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
-    mvwprintw(info_win, 1, 22, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
-    mvwprintw(info_win, 1, 23, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
-    mvwprintw(info_win, 1, 24, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
-    mvwprintw(info_win, 1, 25, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
-    mvwprintw(info_win, 1, 26, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
-    mvwprintw(info_win, 1, 27, (file_stat.st_mode & S_IROTH) ? "r" : "-");
-    mvwprintw(info_win, 1, 28, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
-    mvwprintw(info_win, 1, 29, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
+    wprintw(info_win, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IROTH) ? "r" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
+    wattroff(info_win, COLOR_PAIR(4));
+
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 8, 2, "Inode: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%lu", file_stat.st_ino);
     wattroff(info_win, COLOR_PAIR(4));
 
     // Additional file attributes can be displayed here
     struct passwd *pwd = getpwuid(file_stat.st_uid);
-    wattron(info_win, COLOR_PAIR(6));
-    mvwprintw(info_win, 2, 2, "Owner: %s (%d)", pwd->pw_name, file_stat.st_uid);
-    wattroff(info_win, COLOR_PAIR(6));
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 9, 2, "Owner: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s (%d)", pwd->pw_name, file_stat.st_uid);
+    wattroff(info_win, COLOR_PAIR(4));
+
+    wattron(info_win, COLOR_PAIR(2));
     mvwprintw(info_win, info_win_height - 2, 2, "Press any key to close this window.");
+    wattroff(info_win, COLOR_PAIR(2));
     wrefresh(info_win);
 
     // Wait for user input to close the window
@@ -331,6 +388,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
 
     // Get file information
     if (stat(full_path, &file_stat) == -1) {
+        log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
         show_message(info_win, "Error retrieving file information.");
         box(info_win, 0, 0);
         wrefresh(info_win);
@@ -340,45 +398,64 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     // Display file information
     wattron(info_win, A_BOLD);
     mvwprintw(info_win, 1, 2, "File/Dir Information:");
+    wattroff(info_win, A_BOLD);
+
     clearLine(info_win, 3, 2);
-    mvwprintw(info_win, 3, 2, "Name: %s", filename);
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 3, 2, "Name: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", filename);
+    wattroff(info_win, COLOR_PAIR(4));
+
     clearLine(info_win, 4, 2);
-    mvwprintw(info_win, 4, 2, "Size: %s", format_file_size(file_stat.st_size));
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 4, 2, "Size: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", format_file_size(file_stat.st_size));
+    wattroff(info_win, COLOR_PAIR(4));
 
     const char *file_ext = strrchr(filename, '.');
-    clearLine(info_win, 6, 2);
+    clearLine(info_win, 5, 2);
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 5, 2, "Extension: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
     if (file_ext != NULL) {
-        mvwprintw(info_win, 6, 2, "Extension: %s", file_ext + 1);
+        wprintw(info_win, "%s", file_ext + 1);
     } else {
-        mvwprintw(info_win, 6, 2, "Extension: none");
+        wprintw(info_win, "none");
     }
+    wattroff(info_win, COLOR_PAIR(4));
 
     char mod_time[20];
     strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime(&file_stat.st_mtime));
-    clearLine(info_win, 7, 2);
-    mvwprintw(info_win, 7, 2, "Last Modified: %s", mod_time);
-   
-    mvwprintw(info_win, 11, 2, "Permissions: ");
+    clearLine(info_win, 6, 2);
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 6, 2, "Last Modified: ");
+    wattroff(info_win, COLOR_PAIR(3));
     wattron(info_win, COLOR_PAIR(4));
-    mvwprintw(info_win, 11, 15, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
-    mvwprintw(info_win, 11, 16, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
-    mvwprintw(info_win, 11, 17, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
-    mvwprintw(info_win, 11, 18, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
-    mvwprintw(info_win, 11, 19, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
-    mvwprintw(info_win, 11, 20, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
-    mvwprintw(info_win, 11, 21, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
-    mvwprintw(info_win, 11, 22, (file_stat.st_mode & S_IROTH) ? "r" : "-");
-    mvwprintw(info_win, 11, 23, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
-    mvwprintw(info_win, 11, 24, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
+    wprintw(info_win, "%s", mod_time);
+    wattroff(info_win, COLOR_PAIR(4));
+
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 7, 2, "Inode: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%lu", file_stat.st_ino);
     wattroff(info_win, COLOR_PAIR(4));
 
     clearLine(info_win, 8, 2);
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 8, 2, "Type: ");
+    wattroff(info_win, COLOR_PAIR(3));
     wattron(info_win, COLOR_PAIR(5));
     if (S_ISREG(file_stat.st_mode)) {
-        mvwprintw(info_win, 8, 2, "Type: Regular File");
+        wprintw(info_win, "Regular File");
     } else if (S_ISDIR(file_stat.st_mode)) {
         wattron(info_win, COLOR_PAIR(11));
-        mvwprintw(info_win, 8, 2, "Type: Directory");
+        wprintw(info_win, "Directory");
         wattroff(info_win, COLOR_PAIR(11));
         // Count and display subdirectories
         DIR *dir;
@@ -386,10 +463,10 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         int line = 14;
         dir = opendir(full_path);
         if (dir != NULL) {
-            wattron(info_win, COLOR_PAIR(9));
-            mvwprintw(info_win, line++, 2, "Subdirectories: ");
-            wattroff(info_win, COLOR_PAIR(9));
-            wattron(info_win, COLOR_PAIR(2));
+            wattron(info_win, A_BOLD | COLOR_PAIR(9));
+            mvwprintw(info_win, line++, 2, " Subdirectories: ");
+            wattroff(info_win, A_BOLD | COLOR_PAIR(9));
+            wattron(info_win, A_BOLD | COLOR_PAIR(2));
             while ((entry = readdir(dir)) != NULL) {
                 if (entry->d_type == DT_DIR) {
                     if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
@@ -398,35 +475,60 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
                 }
             }
             closedir(dir);
-            wattroff(info_win, COLOR_PAIR(2));
+            wattroff(info_win, A_BOLD | COLOR_PAIR(2));
         } else {
             show_message(info_win, "Error opening directory.");
         }
     } else if (S_ISLNK(file_stat.st_mode)) {
-        mvwprintw(info_win, 8, 2, "Type: Symbolic Link");
+        wprintw(info_win, "Symbolic Link");
     } else if (S_ISFIFO(file_stat.st_mode)) {
-        mvwprintw(info_win, 8, 2, "Type: FIFO");
+        wprintw(info_win, "FIFO");
     } else if (S_ISCHR(file_stat.st_mode)) {
-        mvwprintw(info_win, 8, 2, "Type: Character Device");
+        wprintw(info_win, "Character Device");
     } else if (S_ISBLK(file_stat.st_mode)) {
-        mvwprintw(info_win, 8, 2, "Type: Block Device");
+        wprintw(info_win, "Block Device");
     } else if (S_ISSOCK(file_stat.st_mode)) {
-        mvwprintw(info_win, 8, 2, "Type: Socket");
+        wprintw(info_win, "Socket");
     } else {
-        mvwprintw(info_win, 8, 2, "Type: Unknown");
+        wprintw(info_win, "Unknown");
     }
     wattroff(info_win, COLOR_PAIR(5));
+
+    clearLine(info_win, 9, 2);
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 9, 2, "Permissions: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IROTH) ? "r" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
+    wprintw(info_win, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
+    wattroff(info_win, COLOR_PAIR(4));
 
     clearLine(info_win, 10, 2);
     struct passwd *pwd = getpwuid(file_stat.st_uid);
     wattron(info_win, COLOR_PAIR(6));
     mvwprintw(info_win, 10, 2, "Owner: %s (%d)", pwd->pw_name, file_stat.st_uid);
     wattroff(info_win, COLOR_PAIR(6));
+    
+    struct group *grp = getgrgid(file_stat.st_gid);
+    if (grp != NULL) {
+        wattron(info_win, COLOR_PAIR(6));
+        mvwprintw(info_win, 11, 2, "Group: %s (%d)", grp->gr_name, file_stat.st_gid);
+        wattroff(info_win, COLOR_PAIR(6));
+    } else {
+        wattron(info_win, COLOR_PAIR(6));
+        mvwprintw(info_win, 11, 2, "Group: %d", file_stat.st_gid);
+        wattroff(info_win, COLOR_PAIR(6));
+    }
 
-    // Additional file attributes can be displayed here
-    wattroff(info_win, A_BOLD);
-    wrefresh(info_win); 
-
+    wrefresh(info_win);
     // Refresh the main window to ensure no artifacts remain
     box(info_win, 0, 0);
     wrefresh(info_win);
@@ -434,6 +536,10 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
 
 void handle_rename(WINDOW *win, const char *path) {
     char new_name[PATH_MAX];
+    char old_name[PATH_MAX];
+    
+    // Copy the original filename
+    strncpy(old_name, basename((char *)path), PATH_MAX);
     
     // Prompt for new name
     get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename");
@@ -444,11 +550,23 @@ void handle_rename(WINDOW *win, const char *path) {
         return;
     }
 
+    // Extract file extensions
+    const char *old_ext = get_file_extension(old_name);
+    const char *new_ext = get_file_extension(new_name);
+
+    // Check if extensions are different
+    if (strcmp(old_ext, new_ext) != 0) {
+        show_term_message("Extension change not allowed. Aborting rename.", 1);
+        return;
+    }
+
     // Perform rename
     if (rename_file_or_dir(path, new_name) == 0) {
+        log_message(LOG_LEVEL_INFO, "Rename successful for %s", path); 
         show_term_message("Rename successful.", 0);
         // Update file list if needed
     } else {
+        log_message(LOG_LEVEL_ERROR, "Rename error for %s", path);
         show_term_message("Rename failed.", 1);
     }
 }
@@ -490,6 +608,7 @@ int main() {
     int find_index = 0;
     char last_query[NAME_MAX] = "";
     bool firstKeyPress = true;
+    log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE STARTED =================");
 
     while (true) {
         int choice = getch();
@@ -565,7 +684,7 @@ int main() {
                     {
                         WINDOW *input_win = newwin(3, (COLS / 2) - (COLS / 3), LINES - 5, 2);
                         box(input_win, 0, 0);
-                        mvwprintw(input_win, 0, 1, " %s/ ", current_path);
+                        mvwprintw(input_win, 0, 1, " \u25B2 %s/ ", current_path);
                         wrefresh(input_win);
 
                         char name_input[NAME_MAX];
@@ -580,12 +699,15 @@ int main() {
                                 name_input[strlen(name_input) - 1] = '\0'; // Remove trailing slash
                                 int result = create_directory(current_path, name_input, timestamp);
                                 if (result == 0) {
+                                    log_message(LOG_LEVEL_INFO, "Directory created successfully for %s", name_input);
                                     char msg[256];
                                     snprintf(msg, sizeof(msg), "Directory '%s' created at %s.", name_input, timestamp);
                                     show_term_message(msg,0);
                                 } else if (result == 1) {
+                                    log_message(LOG_LEVEL_WARN, "Directory %s already exists", name_input);
                                     show_term_message("Directory already exists.",1);
                                 } else {
+                                    log_message(LOG_LEVEL_ERROR, "Error creating directory for %s", name_input);
                                     show_term_message("Error creating directory.",1);
                                 }
                             } else {
@@ -593,11 +715,14 @@ int main() {
                                 int result = create_file(current_path, name_input, timestamp);
                                 if (result == 0) {
                                     char msg[256];
+                                    log_message(LOG_LEVEL_INFO, "File created successfully for %s", name_input);
                                     snprintf(msg, sizeof(msg), "File '%s' created at %s.", name_input, timestamp);
                                     show_term_message(msg,0);
                                 } else if (result == 1) {
+                                    log_message(LOG_LEVEL_WARN, "File %s already exists", name_input);
                                     show_term_message("File already exists.",1);
                                 } else {
+                                    log_message(LOG_LEVEL_ERROR, "Error creating file for %s", name_input);
                                     show_term_message("Error creating file.",1);
                                 }
                             }
@@ -621,22 +746,26 @@ int main() {
                                 char *deldir = items[highlight].name;
                                 if (items[highlight].is_dir) {
                                     int result = remove_directory(current_path, items[highlight].name);
-                                    if (result != 0) {            
+                                    if (result != 0) {
+                                        log_message(LOG_LEVEL_ERROR, "Error deleting directory for %s", items[highlight].name);
                                         show_term_message("Error removing directory. Dir might be recursive.",1);
                                     } else {
                                         char delmsg[256];
+                                        log_message(LOG_LEVEL_INFO, "Directory %s deleted", deldir);
                                         snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
                                         show_term_message(delmsg,0);
                                      } 
                                 } else {
                                     char *delfile = items[highlight].name;
                                     int result = remove_file(current_path, items[highlight].name);
-                                    if (result != 0) {        
+                                    if (result != 0) {
+                                      log_message(LOG_LEVEL_ERROR, "Error removing file for %s", items[highlight].name);
                                       show_term_message("Error removing file.",1);
                                     } else {
                                         char msg[256];
-                                    snprintf(msg, sizeof(msg), "File '%s' deleted", delfile);
-                                    show_term_message(msg,0);
+                                        log_message(LOG_LEVEL_INFO, "File %s deleted", delfile);
+                                        snprintf(msg, sizeof(msg), "File '%s' deleted", delfile);
+                                        show_term_message(msg,0);
                                    }
                                 }
                                 list_dir(current_path, items, &item_count, show_hidden);
@@ -654,6 +783,7 @@ int main() {
                             if (items[highlight].is_dir) {
                                 snprintf(confirm_msg, sizeof(confirm_msg), "[DANGER] Remove Directory recursively '%s'? (y/n)", items[highlight].name);
                             } else {
+                               log_message(LOG_LEVEL_WARN, "Attempted to remove file %s recursively.", items[highlight].name);
                                show_term_message("This command is for deleting recursive directories ONLY!", 1);
                                break;
                             }
@@ -663,10 +793,12 @@ int main() {
                                 if (items[highlight].is_dir) {
                                     int parent_fd = open(current_path, O_RDONLY | O_DIRECTORY);
                                     int result = remove_directory_recursive(current_path, items[highlight].name, parent_fd);
-                                    if (result != 0) {            
+                                    if (result != 0) {
+                                        log_message(LOG_LEVEL_ERROR, "Error removing directory %s", items[highlight].name);
                                         show_term_message("Error removing directory.",1);
                                     } else {
                                         char delmsg[256];
+                                        log_message(LOG_LEVEL_INFO, "Directory %s deleted recursively", deldir);
                                         snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted recursively", deldir);
                                         show_term_message(delmsg,0);
                                      } 
@@ -681,7 +813,7 @@ int main() {
                 case '/': // Find file or directory
                     {   
                         wattron(win, A_BOLD | COLOR_PAIR(7));
-                        mvwprintw(win, LINES - 3, (COLS / 2) - 48, "Search ON");
+                        mvwprintw(win, LINES - 3, (COLS / 2) - 55, "🔍 Search ON ");
                         wattroff(win, A_BOLD | COLOR_PAIR(7));
                         wrefresh(win);
                         char query[NAME_MAX]; 
@@ -716,6 +848,7 @@ int main() {
                                 scroll_position = highlight;
                             }
                         } else {
+                            log_message(LOG_LEVEL_WARN, "No more NEXT occurances for %s found", last_query);
                             show_term_message("No more occurrences found.",1);
                         }
                     }
@@ -732,6 +865,7 @@ int main() {
                               scroll_position = highlight;
                           }
                       } else {
+                          log_message(LOG_LEVEL_WARN, "No more PREV occurances for %s found", last_query);
                           show_term_message("No previous occurrences found.", 1);
                       }
                   }
@@ -750,18 +884,22 @@ int main() {
                         if (confirm_action(win, "Extract this archive? (y/n)")) {
                             // Extract archive
                             if (extract_archive(full_path) == 0) {
+                                log_message(LOG_LEVEL_INFO, "Extraction of %s successful", full_path);
                                 show_term_message("Extraction successful.",0);
                                 // Update file list after extraction
                                 list_dir(current_path, items, &item_count, show_hidden);
                                 scroll_position = 0;
                             } else {
+                                log_message(LOG_LEVEL_ERROR, "Extraction of %s failed", last_query);
                                 show_term_message("Extraction failed.",1);
                             }
                         }
                     } else {
+                        log_message(LOG_LEVEL_WARN, "File %s is not a supported archive format", filename);
                         show_term_message("Not a supported archive format.",1);
                     }
                 } else {
+                  log_message(LOG_LEVEL_ERROR, "Cannot extract %s as it is is directory", items[highlight].name);
                   show_term_message("Cannot extract a directory.",1);
                 }
                 break;
@@ -794,15 +932,18 @@ int main() {
                         }
 
                         if (result == 0) {
+                            log_message(LOG_LEVEL_INFO, "Compression of %s (compression type: %d) successful", dirname, choice);
                             show_term_message("Compression successful.", 0);
                             // Update file list after compression
                             list_dir(current_path, items, &item_count, show_hidden);
                             scroll_position = 0;
                         } else {
+                            log_message(LOG_LEVEL_ERROR, "Compression of %s (compression type: %d) failed", dirname, choice);
                             show_term_message("Compression failed.", 1);
                         }
                     }
                 } else {
+                    log_message(LOG_LEVEL_WARN, "Selected item %s is not a directory", dirname);
                     show_term_message("Selected item is not a directory.", 1);
                 }
                 break;
@@ -822,17 +963,21 @@ int main() {
                           snprintf(new_full_path, PATH_MAX, "%s/%s", current_path, new_name);
 
                           if (rename(full_path, new_full_path) == 0) {
+                              log_message(LOG_LEVEL_INFO, "Rename of %s to %s was successful", current_name, new_name);
                               show_term_message("Rename successful.", 0);
                               // Update file list after renaming
                               list_dir(current_path, items, &item_count, show_hidden);
                               scroll_position = 0;
                           } else {
+                              log_message(LOG_LEVEL_ERROR, "Rename of %s to %s failed", current_name, new_name);
                               show_term_message("Rename failed.", 1);
                           }
                       } else {
+                          log_message(LOG_LEVEL_WARN, "No name provided to change for %s, so renaming failed", current_name);
                           show_term_message("No name provided. Aborting rename.", 1);
                       }
                   } else {
+                      log_message(LOG_LEVEL_WARN, "No item selected for renaming");
                       show_term_message("No item selected for renaming.", 1);
                   }
                   break;
@@ -841,10 +986,12 @@ int main() {
                  if (is_readable_extension(items[highlight].name)) {
                     get_file_info_popup(win, current_path, items[highlight].name);
                 } else {
+                    log_message(LOG_LEVEL_DEBUG, "Something went wrong...");
                     show_term_message("Something went wrong....",1);      
                 }
                 break;
                 case 'q':
+                    log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE OVER =================");
                     endwin();
                     return 0;
             } 
