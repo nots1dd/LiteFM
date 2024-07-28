@@ -10,6 +10,9 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 4. Clean and responsive TUI thanks to ncurses with cool colors and unicodes
 5. Incredibly fast extraction and compression functions thanks to `libarchive`
 
+![litefm1](https://github.com/user-attachments/assets/7f63e03e-7e17-41b5-b805-f7ddcd5dd095)
+![litefm2](https://github.com/user-attachments/assets/b361d1b6-fa12-48ad-82af-b48dfc80d44b)
+
 ## Usage
 
 -> Currently LiteFM has only been tested on the following Linux Distros:
