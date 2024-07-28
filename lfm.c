@@ -943,7 +943,7 @@ int main() {
                         }
                     }
                 } else {
-                    log_message(LOG_LEVEL_WARN, "Selected item %s is not a directory", dirname);
+                    log_message(LOG_LEVEL_WARN, "Selected item %s is not a directory", items[highlight].name);
                     show_term_message("Selected item is not a directory.", 1);
                 }
                 break;
