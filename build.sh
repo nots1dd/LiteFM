@@ -50,7 +50,7 @@ install_packages() {
     elif [ "$distro" == "rpm" ]; then
         sudo yum install -y "${packages[@]}"
     elif [ "$distro" == "arch" ]; then
-        sudo pacman -Syu --needed "${packages[@]}"
+        sudo pacman -S --needed "${packages[@]}"
     else
         echo -e "${RED}Unsupported distribution.${RESET}"
         exit 1

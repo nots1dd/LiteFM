@@ -70,7 +70,7 @@ void display_file(WINDOW *info_win, const char *filename) {
     fclose(file);
     wattroff(info_win, COLOR_PAIR(7));
 
-    box(info_win, 0, 0);
+    draw_colored_border(info_win, 4);
     wrefresh(info_win);  // Refresh the window to show the content
 }
 

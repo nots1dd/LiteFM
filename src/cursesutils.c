@@ -20,6 +20,12 @@ void clearLine(WINDOW *win, int x, int y) {
   mvwprintw(win, x, y, "\n");
 }
 
+void colorLine(WINDOW* win, const char* info, int colorpair, int x, int y) {
+  wattron(win, COLOR_PAIR(colorpair));
+  mvwprintw(win, x, y, info);
+  wattroff(win, COLOR_PAIR(colorpair));
+} 
+
 int show_compression_options(WINDOW *parent_win) {
     WINDOW *options_win;
     int choice;
@@ -71,14 +77,18 @@ void show_term_message(const char *message, int err) {
     clrtoeol();
     refresh();
     
-    if (err!=0) {
+    if (err==1) {
       attron(COLOR_PAIR(12));
       mvprintw(message_y, 0, " \u2718 %s", message); // \u2718 is unicode for ✘
       attroff(COLOR_PAIR(12));
-    } else {
+    } else if (err==0) {
       attron(COLOR_PAIR(1));
       mvprintw(message_y, 0, " \u2714 %s", message); // \u2714 is unicode for ✔
       attroff(COLOR_PAIR(1));
+    } else if (err=-1) {
+      attron(COLOR_PAIR(4));
+      mvprintw(message_y, 0, "%s", message);
+      attroff(COLOR_PAIR(4));
     }
     refresh();
     
@@ -92,6 +102,21 @@ void init_curses() {
     noecho();
     keypad(stdscr, TRUE);
     curs_set(0);
+}
+
+void draw_colored_border(WINDOW *win, int color_pair) {
+    wattron(win, COLOR_PAIR(color_pair));
+    box(win, 0, 0); // Draw the border using box function
+    wattroff(win, COLOR_PAIR(color_pair));
+    wrefresh(win);
+}
+
+void init_custom_color(short color_index, int r, int g, int b) {
+    // Convert RGB from 0-255 to 0-1000 scale for ncurses
+    short red = (short)(r * 1000 / 255);
+    short green = (short)(g * 1000 / 255);
+    short blue = (short)(b * 1000 / 255);
+    init_color(color_index, red, green, blue);
 }
 
 void color_pair_init() { 
@@ -108,7 +133,8 @@ void color_pair_init() {
     // init_pair(9, 235, 223); // gruvbox dark bg, white fg
     init_pair(10, 125, 234); // magenta
     init_pair(11, 168, COLOR_BLACK);
-    init_pair(12, COLOR_RED, COLOR_BLACK);
+    init_pair(12, COLOR_RED, COLOR_BLACK); // Regular color red
+    init_custom_color(13, 0xDC, 0x9A, 0x1F); // #BDAE93 #DC9A1F
 }
 
 int confirm_action(WINDOW *win, const char *message) {
@@ -134,8 +160,6 @@ void draw_3d_info_win(WINDOW *win, int y, int x, int height, int width, int colo
     wattroff(shadow_win, COLOR_PAIR(shadow_color_pair));
     box(shadow_win, 0, 0);
     wrefresh(shadow_win);
-
-    
 }
 
 void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type) {
