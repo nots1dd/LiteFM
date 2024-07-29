@@ -368,21 +368,18 @@ void get_file_info_popup(WINDOW * main_win,
   colorLine(info_win, "Press any key to close this window.", 2, info_win_height-2, 2); 
   wrefresh(info_win);
 
-  // Wait for user input to close the window
-  wgetch(info_win);
+  wgetch(info_win);    // Wait for user input
+  wclear(info_win);    // Clear info window before deleting
+  delwin(info_win);    // Delete info window
 
-  // Clean up: delete the window
-  delwin(info_win);
-
-  // Refresh the main window to ensure no artifacts remain
-  werase(main_win);
-  box(main_win, 0, 0);
+  // Refresh the main window to ensure no artifacts remain 
   wrefresh(main_win);
 }
 
 void get_file_info(WINDOW * info_win,
   const char * path,
     const char * filename) {
+  werase(info_win);
   struct stat file_stat;
   char full_path[PATH_MAX];
   snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
@@ -517,7 +514,6 @@ void get_file_info(WINDOW * info_win,
     wattroff(info_win, COLOR_PAIR(6));
   }
 
-  wrefresh(info_win);
   // Refresh the main window to ensure no artifacts remain
   box(info_win, 0, 0);
   wrefresh(info_win);
@@ -1012,6 +1008,9 @@ int main() {
         }
 
       }
+      case '?':
+        displayHelp(win);
+        break;
       case 'q':
         log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE OVER =================");
         endwin();
@@ -1022,10 +1021,11 @@ int main() {
       draw_colored_border(win, 2);
       print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
       wrefresh(win);
-      werase(info_win);
       char full_path_info[PATH_MAX];
       snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
       if (item_count > 0) {
+        werase(info_win);
+        box(info_win, 0, 0);
         if (is_readable_extension(items[highlight].name)) {
           display_file(info_win, full_path_info);
         } else {

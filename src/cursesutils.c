@@ -198,6 +198,49 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
     curs_set(0);
 }
 
+void displayHelp(WINDOW* main_win) {
+    int help_win_height = 25;
+    int help_win_width = (COLS / 3);
+    int help_win_y = (LINES - help_win_height) / 2;
+    int help_win_x = (COLS - help_win_width) / 2;
+    WINDOW* help_win = newwin(help_win_height, help_win_width, help_win_y, help_win_x);
+    box(help_win, 0, 0);
+    draw_3d_info_win(help_win, help_win_y, help_win_x, help_win_height, help_win_width, 1, 2);
+    colorLine(help_win, " Help Win: ", 1, 0, 2);  // Using color pair 1 for the title
+
+    colorLine(help_win, " Scroll up            - [k/UP_ARROW]", 2, 2, 2);
+    colorLine(help_win, " Scroll down          - [j/DOWN_ARROW]", 2, 3, 2);
+    colorLine(help_win, " Go inside sel. dir   - [l/RIGHT_ARROW/ENTER]", 2, 4, 2);
+    colorLine(help_win, " Go to parent dir     - [h/LEFT_ARROW]", 2, 5, 2);
+    colorLine(help_win, " String search        - [/]", 2, 6, 2);
+    colorLine(help_win, " String next match    - [n]", 2, 7, 2);
+    colorLine(help_win, " String prev match    - [N]", 2, 8, 2);
+    colorLine(help_win, " Go to top of list    - [gg]", 2, 9, 2);
+    colorLine(help_win, " Go to end of list    - [G]", 2, 10, 2);
+
+    colorLine(help_win, " --------- FILE CMDS --------", 3, 12, 2);  // Using color pair 3 for section header
+
+    colorLine(help_win, " Add a new file/dir   - [a]", 2, 14, 2);
+    colorLine(help_win, " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}", 2, 15, 2);
+    colorLine(help_win, " Recursive dir delete - [D]", 2, 16, 2);
+    colorLine(help_win, " Rename a file/dir    - [R]", 2, 17, 2);
+    colorLine(help_win, " Extract archive      - [E] {Works for any archive}", 2, 18, 2);
+    colorLine(help_win, " Compress directory   - [Z] {Works for .zip and .tar ONLY!}", 2, 19, 2);
+
+    colorLine(help_win, " Show help win        - [?]", 2, 21, 2);
+
+    wrefresh(help_win);
+    wgetch(help_win);
+    delwin(help_win);
+
+    // Refresh the main window to avoid some flickering issues
+    wrefresh(main_win);
+
+    /*werase(main_win);*/
+    /*box(main_win, 0, 0);*/
+    /*wrefresh(main_win);*/
+}
+
 WINDOW *create_centered_window(int height, int width) {
     int startx, starty;
     int x, y;
