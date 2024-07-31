@@ -6,8 +6,7 @@
 
 /* BY nots1dd */
 
-#include <ncurses.h>
-#include <locale.h>
+#include "../cursesutils.h"
 
 void show_message(WINDOW *win, const char *message) {
     int maxy, maxx;
@@ -163,28 +162,49 @@ void draw_3d_info_win(WINDOW *win, int y, int x, int height, int width, int colo
 }
 
 void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type) {
+    int y, x;
+    getmaxyx(stdscr, y, x);  // Get screen dimensions
+
     echo();
     nodelay(win, FALSE);
     attron(A_BOLD);  // Turn on bold attribute
-    if (type == "search") {
-      attron(COLOR_PAIR(3));
-      mvprintw(LINES - 1, 0, " /");
-      attroff(COLOR_PAIR(3));
-    } else if (type == "rename") {
-      attron(COLOR_PAIR(2));
-      mvprintw(LINES - 1, 0, " Rename: ");
-      attroff(COLOR_PAIR(2));
+    if (strcmp(type, "search") == 0) {
+        attron(COLOR_PAIR(3));
+        mvprintw(y - 1, 0, " /");
+        attroff(COLOR_PAIR(3));
+    } else if (strcmp(type, "rename") == 0) {
+        attron(COLOR_PAIR(2));
+        mvprintw(y - 1, 0, " Rename: ");
+        attroff(COLOR_PAIR(2));
+    } else if (strcmp(type, "add") == 0) {
+        attron(COLOR_PAIR(2));
+        mvprintw(y - 1, 0, " Add: ");
+        attroff(COLOR_PAIR(2));
     }
     attroff(A_BOLD);  // Turn off bold attribute
     clrtoeol();  // Clear the rest of the line to handle previous content
+
+    // Move the cursor to the appropriate location in the window
+    if (strcmp(type, "search") == 0) {
+      wmove(win, getmaxy(win) - 1, 2);
+    } else if (strcmp(type, "rename") == 0) {
+      wmove(win, getmaxy(win) - 1, 10);
+    } else if (strcmp(type, "add") == 0) {
+      wmove(win, getmaxy(win) - 1, 6);
+    } else {
+      wmove(win, getmaxy(win) - 1, 1);
+    }
     attron(COLOR_PAIR(3));
     wgetnstr(win, buffer, max_length);
     noecho();
     nodelay(win, TRUE);
-    mvprintw(LINES - 1, 0, " ");  // Clear the prompt after getting input
+
+    mvprintw(y - 1, 0, " ");  // Clear the prompt after getting input
     clrtoeol();  // Clear the rest of the line to handle previous content
     attroff(COLOR_PAIR(3));
+    refresh();
 }
+
 
 void get_user_input(WINDOW *win, char *input, int max_length) {
     echo();
@@ -217,17 +237,19 @@ void displayHelp(WINDOW* main_win) {
     colorLine(help_win, " String prev match    - [N]", 2, 8, 2);
     colorLine(help_win, " Go to top of list    - [gg]", 2, 9, 2);
     colorLine(help_win, " Go to end of list    - [G]", 2, 10, 2);
+    colorLine(help_win, " Yank file name       - [y]", 2, 11, 2);
+    colorLine(help_win, " Yank file location   - [Y]", 2, 12, 2);
 
-    colorLine(help_win, " --------- FILE CMDS --------", 3, 12, 2);  // Using color pair 3 for section header
+    colorLine(help_win, " --------- FILE CMDS --------", 3, 14, 2);  // Using color pair 3 for section header
 
-    colorLine(help_win, " Add a new file/dir   - [a]", 2, 14, 2);
-    colorLine(help_win, " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}", 2, 15, 2);
-    colorLine(help_win, " Recursive dir delete - [D]", 2, 16, 2);
-    colorLine(help_win, " Rename a file/dir    - [R]", 2, 17, 2);
-    colorLine(help_win, " Extract archive      - [E] {Works for any archive}", 2, 18, 2);
-    colorLine(help_win, " Compress directory   - [Z] {Works for .zip and .tar ONLY!}", 2, 19, 2);
+    colorLine(help_win, " Add a new file/dir   - [a]", 2, 16, 2);
+    colorLine(help_win, " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}", 2, 17, 2);
+    colorLine(help_win, " Recursive dir delete - [D]", 2, 18, 2);
+    colorLine(help_win, " Rename a file/dir    - [R]", 2, 19, 2);
+    colorLine(help_win, " Extract archive      - [E] {Works for any archive}", 2, 20, 2);
+    colorLine(help_win, " Compress directory   - [Z] {Works for .zip and .tar ONLY!}", 2, 21, 2);
 
-    colorLine(help_win, " Show help win        - [?]", 2, 21, 2);
+    colorLine(help_win, " Show help win        - [?]", 2, 22, 2);
 
     wrefresh(help_win);
     wgetch(help_win);

@@ -57,6 +57,17 @@ install_packages() {
     fi
 }
 
+# Function to detect the display server
+detect_display_server() {
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        echo "wayland"
+    elif [ -n "$DISPLAY" ]; then
+        echo "x11"
+    else
+        echo "unknown"
+    fi
+}
+
 # Title
 echo -e "${GREEN}===================="
 echo -e "      LiteFM        "
@@ -71,13 +82,28 @@ fi
 
 echo -e "${PINK}Building for $distro...${RESET}"
 
+# Detect the display server
+display_server=$(detect_display_server)
+echo -e "${PINK}Detected display server: $display_server${RESET}"
+
 # Define the required packages based on the distribution
-if [ "$distro" == "debian" ]; then
-    required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev")
-elif [ "$distro" == "rpm" ]; then
+required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev")
+
+if [ "$display_server" == "wayland" ]; then
+    required_packages+=("wl-clipboard")
+elif [ "$display_server" == "x11" ]; then
+    required_packages+=("xclip")
+fi
+
+if [ "$distro" == "rpm" ]; then
     required_packages=("ncurses" "cmake" "make" "libarchive")
 elif [ "$distro" == "arch" ]; then
     required_packages=("ncurses" "cmake" "make" "libarchive")
+    if [ "$display_server" == "wayland" ]; then
+        required_packages+=("wl-clipboard")
+    elif [ "$display_server" == "x11" ]; then
+        required_packages+=("xclip")
+    fi
 fi
 
 # Check for required packages

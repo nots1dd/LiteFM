@@ -6,16 +6,17 @@
 
 /* BY nots1dd */
 
-#include <archive.h>
-#include <archive_entry.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <unistd.h>
+#include "../archivecontrol.h"
+#include "../dircontrol.h"
+#include "../cursesutils.h"
 
+long get_file_size(const char *file_path) {
+    struct stat st;
+    if (stat(file_path, &st) == 0) {
+        return st.st_size;
+    }
+    return -1;
+}
 
 // Function to extract an archive specified by archive_path
 int extract_archive(const char *archive_path) {

@@ -6,9 +6,8 @@
 
 /* By nots1dd */
 
-#include <stdio.h>     // For FILE, fopen, fgets, fclose, perror
-#include <stdlib.h>    // For exit, EXIT_FAILURE
-#include <ncurses.h>   // For NCurses functions and types
+#include "../filePreview.h"
+#include "../cursesutils.h"
 
 #define MAX_LINES 60   // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length

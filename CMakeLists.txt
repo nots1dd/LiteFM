@@ -29,7 +29,7 @@ include_directories(${LIBARCHIVE_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 
 # Add the executable
-add_executable(litefm lfm.c)
+add_executable(litefm lfm.c src/cursesutils.c src/filePreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c)
 
 # Link required libraries
 target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES})

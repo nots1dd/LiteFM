@@ -6,15 +6,8 @@
 
 /* BY nots1dd */
 
-#include <stdio.h>    // For snprintf
-#include <stdlib.h>   // For exit
-#include <string.h>   // For strcmp, strerror
-#include <sys/stat.h> // For stat, S_ISDIR, S_ISREG
-#include <errno.h>    // For errno
-#include <unistd.h>   // For unlink, rmdir
-#include <dirent.h>   // For opendir, readdir, closedir
-#include <time.h>     // For time, localtime, strftime
-#include <pwd.h>
+#include "../dircontrol.h"
+#include "../cursesutils.h" 
 
 char* get_current_user() {
     uid_t uid = getuid();

@@ -13,6 +13,13 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 ![litefm1](https://github.com/user-attachments/assets/7f63e03e-7e17-41b5-b805-f7ddcd5dd095)
 ![litefm2](https://github.com/user-attachments/assets/b361d1b6-fa12-48ad-82af-b48dfc80d44b)
 
+> [!NOTE]
+> 
+> For the best experience of LiteFM:
+> 
+> Ensure that your terminal has any NERD FONT enabled.
+> 
+
 ## Usage
 
 -> Currently LiteFM has only been tested on the following Linux Distros:
@@ -21,11 +28,20 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 
 -> There are no plans on expanding this beyond Linux distributions
 
+> [!WARNING]
+> 
+> Yanking function only works with `WAYLAND` and `X11` display servers ONLY!!
+> 
+> If you are on other display servers like `Mir`, `SurfaceFlinger` and yanking does NOT work:
+> 
+> You can create an issue or even submit a PR as per `CONTRIBUTION.md`
+
+
 ## Building
 
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
 
-> [!NOTE]
+> [!IMPORTANT]
 > 
 > Dependencies to install for LiteFM:
 > 

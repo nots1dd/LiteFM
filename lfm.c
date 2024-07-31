@@ -10,22 +10,21 @@
 
 /* LICENSED UNDER GNU GPL v3 */
 
-#include <dirent.h>
 #include <ctype.h>
-#include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <limits.h>
 #include <fcntl.h>
-#include <errno.h>
-#include <libgen.h>
 #include <grp.h>
+
+/* LITEFM DEDICATED HEADERS */
+
 #include "src/getFreeSpace.c"
-#include "src/cursesutils.c"
-#include "src/filePreview.c"
-#include "src/dircontrol.c"
-#include "src/archivecontrol.c"
+#include "cursesutils.h"
+#include "filePreview.h"
+#include "dircontrol.h"
+#include "archivecontrol.h"
 #include "src/logging.c"
+#include "clipboard.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -51,40 +50,41 @@ typedef struct {
 }
 DirHistory;
 
-void list_dir(WINDOW *win, const char *path, FileItem items[], int *count, int show_hidden) {
-    DIR *dir;
-    struct dirent *entry;
-    werase(win);
-    if (!(dir = opendir(path)))
-        return;
-    *count = 0;
-    // First pass: List directories
-    while ((entry = readdir(dir)) != NULL) {
-        if ((!show_hidden && entry->d_name[0] == '.') || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
+void list_dir(WINDOW * win,
+  const char * path, FileItem items[], int * count, int show_hidden) {
+  DIR * dir;
+  struct dirent * entry;
+  werase(win);
+  if (!(dir = opendir(path)))
+    return;
+  * count = 0;
+  // First pass: List directories
+  while ((entry = readdir(dir)) != NULL) {
+    if ((!show_hidden && entry -> d_name[0] == '.') || strcmp(entry -> d_name, ".") == 0 || strcmp(entry -> d_name, "..") == 0)
+      continue;
 
-        if (entry->d_type == DT_DIR) {
-            strcpy(items[*count].name, entry->d_name);
-            items[*count].is_dir = 1;
-            (*count)++;
-        }
+    if (entry -> d_type == DT_DIR) {
+      strcpy(items[ * count].name, entry -> d_name);
+      items[ * count].is_dir = 1;
+      ( * count) ++;
     }
-    // Rewind directory stream for the second pass
-    rewinddir(dir);
-    // Second pass: List non-directory files
-    while ((entry = readdir(dir)) != NULL) {
-        if ((!show_hidden && entry->d_name[0] == '.') || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
+  }
+  // Rewind directory stream for the second pass
+  rewinddir(dir);
+  // Second pass: List non-directory files
+  while ((entry = readdir(dir)) != NULL) {
+    if ((!show_hidden && entry -> d_name[0] == '.') || strcmp(entry -> d_name, ".") == 0 || strcmp(entry -> d_name, "..") == 0)
+      continue;
 
-        if (entry->d_type != DT_DIR) {
-            strcpy(items[*count].name, entry->d_name);
-            items[*count].is_dir = 0;
-            (*count)++;
-        }
+    if (entry -> d_type != DT_DIR) {
+      strcpy(items[ * count].name, entry -> d_name);
+      items[ * count].is_dir = 0;
+      ( * count) ++;
     }
+  }
 
-    closedir(dir);
-    wrefresh(win);
+  closedir(dir);
+  wrefresh(win);
 }
 
 const char * get_file_extension(const char * filename) {
@@ -221,66 +221,66 @@ int create_file(const char * path,
   return 0; // File created successfully
 }
 
-int find_item(const char *query, FileItem items[], int item_count, int *start_index, int direction) {
-    char lower_query[NAME_MAX];
-    for (int i = 0; query[i] && i < NAME_MAX; i++) {
-        lower_query[i] = tolower(query[i]);
+int find_item(const char * query, FileItem items[], int item_count, int * start_index, int direction) {
+  char lower_query[NAME_MAX];
+  for (int i = 0; query[i] && i < NAME_MAX; i++) {
+    lower_query[i] = tolower(query[i]);
+  }
+  lower_query[strlen(query)] = '\0';
+
+  if (direction == 1) { // Forward search
+    for (int i = * start_index; i < item_count; i++) {
+      char lower_name[NAME_MAX];
+      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
+        lower_name[j] = tolower(items[i].name[j]);
+      }
+      lower_name[strlen(items[i].name)] = '\0';
+
+      if (strstr(lower_name, lower_query) != NULL) {
+        * start_index = i;
+        return i;
+      }
     }
-    lower_query[strlen(query)] = '\0';
+    for (int i = 0; i < * start_index; i++) {
+      char lower_name[NAME_MAX];
+      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
+        lower_name[j] = tolower(items[i].name[j]);
+      }
+      lower_name[strlen(items[i].name)] = '\0';
 
-    if (direction == 1) { // Forward search
-        for (int i = *start_index; i < item_count; i++) {
-            char lower_name[NAME_MAX];
-            for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(items[i].name[j]);
-            }
-            lower_name[strlen(items[i].name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-        for (int i = 0; i < *start_index; i++) {
-            char lower_name[NAME_MAX];
-            for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(items[i].name[j]);
-            }
-            lower_name[strlen(items[i].name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-    } else if (direction == -1) { // Backward search
-        for (int i = *start_index; i >= 0; i--) {
-            char lower_name[NAME_MAX];
-            for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(items[i].name[j]);
-            }
-            lower_name[strlen(items[i].name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-        for (int i = item_count - 1; i > *start_index; i--) {
-            char lower_name[NAME_MAX];
-            for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(items[i].name[j]);
-            }
-            lower_name[strlen(items[i].name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
+      if (strstr(lower_name, lower_query) != NULL) {
+        * start_index = i;
+        return i;
+      }
     }
+  } else if (direction == -1) { // Backward search
+    for (int i = * start_index; i >= 0; i--) {
+      char lower_name[NAME_MAX];
+      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
+        lower_name[j] = tolower(items[i].name[j]);
+      }
+      lower_name[strlen(items[i].name)] = '\0';
 
-    return -1; // Not found
+      if (strstr(lower_name, lower_query) != NULL) {
+        * start_index = i;
+        return i;
+      }
+    }
+    for (int i = item_count - 1; i > * start_index; i--) {
+      char lower_name[NAME_MAX];
+      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
+        lower_name[j] = tolower(items[i].name[j]);
+      }
+      lower_name[strlen(items[i].name)] = '\0';
+
+      if (strstr(lower_name, lower_query) != NULL) {
+        * start_index = i;
+        return i;
+      }
+    }
+  }
+
+  return -1; // Not found
 }
 
 void get_file_info_popup(WINDOW * main_win,
@@ -314,14 +314,14 @@ void get_file_info_popup(WINDOW * main_win,
   wattron(info_win, COLOR_PAIR(4));
   wprintw(info_win, "%s", filename);
   wattroff(info_win, COLOR_PAIR(4));
-  
+
   colorLine(info_win, "Size: ", 3, 4, 2);
   wattron(info_win, COLOR_PAIR(4));
   wprintw(info_win, "%s", format_file_size(file_stat.st_size));
   wattroff(info_win, COLOR_PAIR(4));
 
   const char * file_ext = strrchr(filename, '.');
-  colorLine(info_win, "Extension: ", 3, 5, 2); 
+  colorLine(info_win, "Extension: ", 3, 5, 2);
   wattron(info_win, COLOR_PAIR(4));
   if (file_ext != NULL) {
     wprintw(info_win, "%s", file_ext + 1);
@@ -329,15 +329,15 @@ void get_file_info_popup(WINDOW * main_win,
     wprintw(info_win, "none");
   }
   wattroff(info_win, COLOR_PAIR(4));
-  
-  colorLine(info_win, "Last Modified: ", 3, 6, 2); 
+
+  colorLine(info_win, "Last Modified: ", 3, 6, 2);
   wattron(info_win, COLOR_PAIR(4));
   char mod_time[20];
   strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime( & file_stat.st_mtime));
   wprintw(info_win, "%s", mod_time);
   wattroff(info_win, COLOR_PAIR(4));
-  
-  colorLine(info_win, "Permissions: ", 3, 7, 2); 
+
+  colorLine(info_win, "Permissions: ", 3, 7, 2);
   wattron(info_win, COLOR_PAIR(4));
   wprintw(info_win, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
   wprintw(info_win, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
@@ -350,8 +350,8 @@ void get_file_info_popup(WINDOW * main_win,
   wprintw(info_win, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
   wprintw(info_win, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
   wattroff(info_win, COLOR_PAIR(4));
-  
-  colorLine(info_win, "Inode: ", 3, 8, 2); 
+
+  colorLine(info_win, "Inode: ", 3, 8, 2);
   wattron(info_win, COLOR_PAIR(4));
   wprintw(info_win, "%lu", file_stat.st_ino);
   wattroff(info_win, COLOR_PAIR(4));
@@ -364,13 +364,13 @@ void get_file_info_popup(WINDOW * main_win,
   wattron(info_win, COLOR_PAIR(4));
   wprintw(info_win, "%s (%d)", pwd -> pw_name, file_stat.st_uid);
   wattroff(info_win, COLOR_PAIR(4));
-  
-  colorLine(info_win, "Press any key to close this window.", 2, info_win_height-2, 2); 
+
+  colorLine(info_win, "Press any key to close this window.", 2, info_win_height - 2, 2);
   wrefresh(info_win);
 
-  wgetch(info_win);    // Wait for user input
-  wclear(info_win);    // Clear info window before deleting
-  delwin(info_win);    // Delete info window
+  wgetch(info_win); // Wait for user input
+  wclear(info_win); // Clear info window before deleting
+  delwin(info_win); // Delete info window
 
   // Refresh the main window to ensure no artifacts remain 
   wrefresh(main_win);
@@ -686,15 +686,8 @@ int main() {
 
       case 'a': // Add file or directory
       {
-        WINDOW * input_win = newwin(3, (COLS / 2) - (COLS / 3), LINES - 5, 2);
-        box(input_win, 0, 0);
-        mvwprintw(input_win, 0, 1, " \u25B2 %s/ ", current_path);
-        wrefresh(input_win);
-
         char name_input[NAME_MAX];
-        get_user_input(input_win, name_input, NAME_MAX);
-
-        delwin(input_win);
+        get_user_input_from_bottom(stdscr, name_input, NAME_MAX, "add");
 
         if (strlen(name_input) > 0) {
           char timestamp[26];
@@ -703,12 +696,12 @@ int main() {
             name_input[strlen(name_input) - 1] = '\0'; // Remove trailing slash
             int result = create_directory(current_path, name_input, timestamp);
             if (result == 0) {
-              log_message(LOG_LEVEL_INFO, "Directory created successfully for %s", name_input);
+              log_message(LOG_LEVEL_INFO, "Directory created successfully for `%s`", name_input);
               char msg[256];
               snprintf(msg, sizeof(msg), "Directory '%s' created at %s.", name_input, timestamp);
               show_term_message(msg, 0);
             } else if (result == 1) {
-              log_message(LOG_LEVEL_WARN, "Directory %s already exists", name_input);
+              log_message(LOG_LEVEL_WARN, "Directory `%s` already exists", name_input);
               show_term_message("Directory already exists.", 1);
             } else {
               log_message(LOG_LEVEL_ERROR, "Error creating directory for %s", name_input);
@@ -719,11 +712,11 @@ int main() {
             int result = create_file(current_path, name_input, timestamp);
             if (result == 0) {
               char msg[256];
-              log_message(LOG_LEVEL_INFO, "File created successfully for %s", name_input);
+              log_message(LOG_LEVEL_INFO, "File created successfully for `%s`", name_input);
               snprintf(msg, sizeof(msg), "File '%s' created at %s.", name_input, timestamp);
               show_term_message(msg, 0);
             } else if (result == 1) {
-              log_message(LOG_LEVEL_WARN, "File %s already exists", name_input);
+              log_message(LOG_LEVEL_WARN, "File `%s` already exists", name_input);
               show_term_message("File already exists.", 1);
             } else {
               log_message(LOG_LEVEL_ERROR, "Error creating file for %s", name_input);
@@ -732,9 +725,13 @@ int main() {
           }
           list_dir(win, current_path, items, & item_count, show_hidden);
           scroll_position = 0;
+        } else {
+          log_message(LOG_LEVEL_ERROR, "Null input given. Not creating anything...");
+          show_term_message("Null input. Not adding anything..", 1);
         }
+
+        break;
       }
-      break;
 
       case 'd': // Remove file or directory
       {
@@ -751,11 +748,11 @@ int main() {
             if (items[highlight].is_dir) {
               int result = remove_directory(current_path, items[highlight].name);
               if (result != 0) {
-                log_message(LOG_LEVEL_ERROR, "Error deleting directory for %s", items[highlight].name);
+                log_message(LOG_LEVEL_ERROR, "Error deleting directory for `%s`", items[highlight].name);
                 show_term_message("Error removing directory. Dir might be recursive.", 1);
               } else {
                 char delmsg[256];
-                log_message(LOG_LEVEL_INFO, "Directory %s deleted", deldir);
+                log_message(LOG_LEVEL_INFO, "Directory `%s` deleted", deldir);
                 snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
                 show_term_message(delmsg, 0);
               }
@@ -763,11 +760,11 @@ int main() {
               char * delfile = items[highlight].name;
               int result = remove_file(current_path, items[highlight].name);
               if (result != 0) {
-                log_message(LOG_LEVEL_ERROR, "Error removing file for %s", items[highlight].name);
+                log_message(LOG_LEVEL_ERROR, "Error removing file for `%s`", items[highlight].name);
                 show_term_message("Error removing file.", 1);
               } else {
                 char msg[256];
-                log_message(LOG_LEVEL_INFO, "File %s deleted", delfile);
+                log_message(LOG_LEVEL_INFO, "File `%s` deleted", delfile);
                 snprintf(msg, sizeof(msg), "File '%s' deleted", delfile);
                 show_term_message(msg, 0);
               }
@@ -786,7 +783,7 @@ int main() {
           if (items[highlight].is_dir) {
             snprintf(confirm_msg, sizeof(confirm_msg), "[DANGER] Remove Directory recursively '%s'? (y/n)", items[highlight].name);
           } else {
-            log_message(LOG_LEVEL_WARN, "Attempted to remove file %s recursively.", items[highlight].name);
+            log_message(LOG_LEVEL_WARN, "Attempted to remove file `%s` recursively.", items[highlight].name);
             show_term_message("This command is for deleting recursive directories ONLY!", 1);
             break;
           }
@@ -797,11 +794,11 @@ int main() {
               int parent_fd = open(current_path, O_RDONLY | O_DIRECTORY);
               int result = remove_directory_recursive(current_path, items[highlight].name, parent_fd);
               if (result != 0) {
-                log_message(LOG_LEVEL_ERROR, "Error removing directory %s", items[highlight].name);
+                log_message(LOG_LEVEL_ERROR, "Error removing directory `%s`", items[highlight].name);
                 show_term_message("Error removing directory.", 1);
               } else {
                 char delmsg[256];
-                log_message(LOG_LEVEL_INFO, "Directory %s deleted recursively", deldir);
+                log_message(LOG_LEVEL_INFO, "Directory `%s` deleted recursively", deldir);
                 snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted recursively", deldir);
                 show_term_message(delmsg, 0);
               }
@@ -843,7 +840,7 @@ int main() {
         if (strlen(last_query) > 0) {
           int start_index = highlight + 1;
           int found_index = find_item(last_query, items, item_count, & start_index, 1);
-          if (found_index != -1) {
+          if (found_index != -1 && found_index != highlight) {
             highlight = found_index;
             if (highlight >= scroll_position + height - 8) {
               scroll_position = highlight - height + 8;
@@ -851,7 +848,7 @@ int main() {
               scroll_position = highlight;
             }
           } else {
-            log_message(LOG_LEVEL_WARN, "No more NEXT occurances for %s found", last_query);
+            log_message(LOG_LEVEL_WARN, "No more NEXT occurances for `%s` found", last_query);
             show_term_message("No more occurrences found.", 1);
           }
         }
@@ -860,7 +857,7 @@ int main() {
         if (strlen(last_query) > 0) {
           int start_index = highlight - 1;
           int found_index = find_item(last_query, items, item_count, & start_index, -1);
-          if (found_index != -1) {
+          if (found_index != -1 && found_index != highlight) {
             highlight = found_index;
             if (highlight >= scroll_position + height - 8) {
               scroll_position = highlight - height + 8;
@@ -868,7 +865,7 @@ int main() {
               scroll_position = highlight;
             }
           } else {
-            log_message(LOG_LEVEL_WARN, "No more PREV occurances for %s found", last_query);
+            log_message(LOG_LEVEL_WARN, "No more PREV occurances for `%s` found", last_query);
             show_term_message("No previous occurrences found.", 1);
           }
         }
@@ -886,13 +883,13 @@ int main() {
             if (confirm_action(win, "Extract this archive? (y/n)")) {
               // Extract archive
               if (extract_archive(full_path) == 0) {
-                log_message(LOG_LEVEL_INFO, "Extraction of %s successful", full_path);
+                log_message(LOG_LEVEL_INFO, "Extraction of `%s` successful", full_path);
                 show_term_message("Extraction successful.", 0);
                 // Update file list after extraction
                 list_dir(win, current_path, items, & item_count, show_hidden);
                 scroll_position = 0;
               } else {
-                log_message(LOG_LEVEL_ERROR, "Extraction of %s failed", last_query);
+                log_message(LOG_LEVEL_ERROR, "Extraction of `%s` failed", last_query);
                 show_term_message("Extraction failed.", 1);
               }
             }
@@ -1008,6 +1005,15 @@ int main() {
         }
 
       }
+      case 'y': {
+        yank_selected_item(items[highlight].name);
+        break;
+      }
+      case 'Y':
+        char full_path[PATH_MAX];
+        snprintf(full_path, PATH_MAX, "%s/%s", current_path, items[highlight].name);
+        yank_selected_item(full_path);
+        break;
       case '?':
         displayHelp(win);
         break;
