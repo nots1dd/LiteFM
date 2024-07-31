@@ -4,7 +4,34 @@
 //             //
 // // // // // // 
 
-/* BY nots1dd */
+/*
+ * ---------------------------------------------------------------------------
+ *  File:        cursesutils.h
+ *
+ *  Description: This header file provides utility functions for managing 
+ *                NCurses windows and performing various terminal operations 
+ *                used within the LiteFM file manager application. It includes 
+ *                functionalities for handling user input, displaying messages,
+ *                initializing colors, and creating windows with custom borders.
+ *
+ *  Author:      nots1dd
+ *  Created:     31/07/24
+ * 
+ *  Copyright:   2024 nots1dd. All rights reserved.
+ * 
+ *  License:     <GNU GPL v3>
+ *
+ *  Notes:       The functions declared in this header facilitate operations 
+ *                such as showing messages, handling user inputs, and 
+ *                creating styled windows within the LiteFM application. 
+ *                Ensure that NCurses is properly initialized before using 
+ *                these utilities.
+ * 
+ *  Revision History:
+ *      31/07/24 - Initial creation.
+ *
+ * ---------------------------------------------------------------------------
+ */
 
 #ifndef CURSESUTILS_H
 #define CURSESUTILS_H

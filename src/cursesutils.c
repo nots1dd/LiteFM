@@ -134,16 +134,35 @@ void color_pair_init() {
     init_pair(11, 168, COLOR_BLACK);
     init_pair(12, COLOR_RED, COLOR_BLACK); // Regular color red
     init_custom_color(13, 0xDC, 0x9A, 0x1F); // #BDAE93 #DC9A1F
+    init_pair(14, 235, 175); // ping bg, black fg
+    init_pair(15, 175, 175);
 }
 
 int confirm_action(WINDOW *win, const char *message) {
-    int maxy, maxx;
-    getmaxyx(win, maxy, maxx);
+    int confirm_win_height = 8;
+    int confirm_win_width = (COLS / 3);
+    int confirm_win_y = (LINES - confirm_win_height) / 2;
+    int confirm_win_x = (COLS - confirm_win_width) / 2;
 
-    WINDOW *confirm_win = newwin(5, maxx - 4, maxy / 2 - 2, 2);
-    box(confirm_win, 0, 0);
-    mvwprintw(confirm_win, 1, 2, message);
-    mvwprintw(confirm_win, 3, 2, "Press 'y' to confirm, 'n' to cancel.");
+    WINDOW *confirm_win = newwin(confirm_win_height, confirm_win_width, confirm_win_y, confirm_win_x);
+    draw_colored_border(confirm_win, 5);
+
+    // Create a buffer for the truncated message
+    char truncated_message[confirm_win_width - 3 + 1];
+    if (strlen(message) > confirm_win_width - 3) {
+        strncpy(truncated_message, message, confirm_win_width - 3 - 3);
+        strcpy(truncated_message + confirm_win_width - 3 - 3, "...");
+    } else {
+        strcpy(truncated_message, message);
+    }
+    
+    colorLine(confirm_win, " Are you sure?? ", 14, 0, 2);
+
+    wattron(confirm_win, A_BOLD | COLOR_PAIR(3));
+    mvwprintw(confirm_win, 2, 2, "%s", truncated_message);
+    wattroff(confirm_win, A_BOLD | COLOR_PAIR(3));
+    mvwprintw(confirm_win, 4, 2, "Press 'y' to confirm, 'n' to cancel.");
+    mvwprintw(confirm_win, 6, 2, "Confirming the actions of this window CANNOT be reverted!");
     wrefresh(confirm_win);
 
     int ch = wgetch(confirm_win);
@@ -152,12 +171,13 @@ int confirm_action(WINDOW *win, const char *message) {
     return ch == 'y' || ch == 'Y' || ch == 10;
 }
 
+
 void draw_3d_info_win(WINDOW *win, int y, int x, int height, int width, int color_pair, int shadow_color_pair) {
     // Create shadow window
-    WINDOW *shadow_win = newwin(height, width, y + 1, x + 2);
+    WINDOW *shadow_win = newwin(height, width, y + 1, x + 1);
     wattron(shadow_win, COLOR_PAIR(shadow_color_pair)); 
     wattroff(shadow_win, COLOR_PAIR(shadow_color_pair));
-    box(shadow_win, 0, 0);
+    draw_colored_border(shadow_win, 4);
     wrefresh(shadow_win);
 }
 
@@ -174,11 +194,15 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
         attroff(COLOR_PAIR(3));
     } else if (strcmp(type, "rename") == 0) {
         attron(COLOR_PAIR(2));
-        mvprintw(y - 1, 0, " Rename: ");
+        mvprintw(y - 1, 0, " Rename to: ");
         attroff(COLOR_PAIR(2));
     } else if (strcmp(type, "add") == 0) {
         attron(COLOR_PAIR(2));
         mvprintw(y - 1, 0, " Add: ");
+        attroff(COLOR_PAIR(2));
+    } else if (strcmp(type, "move") == 0) {
+        attron(COLOR_PAIR(2));
+        mvprintw(y-1,0, " Move to: ");
         attroff(COLOR_PAIR(2));
     }
     attroff(A_BOLD);  // Turn off bold attribute
@@ -187,8 +211,8 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
     // Move the cursor to the appropriate location in the window
     if (strcmp(type, "search") == 0) {
       wmove(win, getmaxy(win) - 1, 2);
-    } else if (strcmp(type, "rename") == 0) {
-      wmove(win, getmaxy(win) - 1, 10);
+    } else if (strcmp(type, "rename") == 0 || strcmp(type, "move") == 0) {
+      wmove(win, getmaxy(win) - 1, 12);
     } else if (strcmp(type, "add") == 0) {
       wmove(win, getmaxy(win) - 1, 6);
     } else {
@@ -219,14 +243,14 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
 }
 
 void displayHelp(WINDOW* main_win) {
-    int help_win_height = 25;
+    int help_win_height = 28;
     int help_win_width = (COLS / 3);
     int help_win_y = (LINES - help_win_height) / 2;
     int help_win_x = (COLS - help_win_width) / 2;
     WINDOW* help_win = newwin(help_win_height, help_win_width, help_win_y, help_win_x);
-    box(help_win, 0, 0);
+    draw_colored_border(help_win, 4);
     draw_3d_info_win(help_win, help_win_y, help_win_x, help_win_height, help_win_width, 1, 2);
-    colorLine(help_win, " Help Win: ", 1, 0, 2);  // Using color pair 1 for the title
+    colorLine(help_win, " Help Win: ", 14, 0, 2);
 
     colorLine(help_win, " Scroll up            - [k/UP_ARROW]", 2, 2, 2);
     colorLine(help_win, " Scroll down          - [j/DOWN_ARROW]", 2, 3, 2);
@@ -248,19 +272,16 @@ void displayHelp(WINDOW* main_win) {
     colorLine(help_win, " Rename a file/dir    - [R]", 2, 19, 2);
     colorLine(help_win, " Extract archive      - [E] {Works for any archive}", 2, 20, 2);
     colorLine(help_win, " Compress directory   - [Z] {Works for .zip and .tar ONLY!}", 2, 21, 2);
+    colorLine(help_win, " Move a file/dir      - [M]", 2, 22, 2);
 
-    colorLine(help_win, " Show help win        - [?]", 2, 22, 2);
+    colorLine(help_win, " Show help win        - [?]", 2, 23, 2);
 
     wrefresh(help_win);
     wgetch(help_win);
     delwin(help_win);
 
     // Refresh the main window to avoid some flickering issues
-    wrefresh(main_win);
-
-    /*werase(main_win);*/
-    /*box(main_win, 0, 0);*/
-    /*wrefresh(main_win);*/
+    wrefresh(main_win); 
 }
 
 WINDOW *create_centered_window(int height, int width) {

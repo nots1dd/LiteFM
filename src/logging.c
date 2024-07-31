@@ -16,27 +16,7 @@
    ENSURE THAT YOU HAVE THAT DIRECTORY CREATED (JUST RUN `build.sh`) FOR LITEFM TO WORK!
 */
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <pwd.h>
-
-// Define the log directory and file paths relative to the home directory
-#define LOG_DIR_RELATIVE_PATH ".cache/litefm/log"
-#define LOG_FILE_RELATIVE_PATH ".cache/litefm/log/litefm.log"
-
-// Logging levels
-typedef enum {
-    LOG_LEVEL_INFO,
-    LOG_LEVEL_WARN,
-    LOG_LEVEL_ERROR,
-    LOG_LEVEL_DEBUG
-} LogLevel;
+#include "../logging.h"
 
 // Function to get the current time as a string
 const char *current_time_str() {

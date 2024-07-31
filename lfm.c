@@ -20,10 +20,10 @@
 
 #include "src/getFreeSpace.c"
 #include "cursesutils.h"
-#include "filePreview.h"
+#include "filepreview.h"
 #include "dircontrol.h"
 #include "archivecontrol.h"
-#include "src/logging.c"
+#include "logging.h"
 #include "clipboard.h"
 
 #define MAX_ITEMS 1024
@@ -110,9 +110,9 @@ void print_items(WINDOW * win, FileItem items[], int count, int highlight,
   wattron(win, COLOR_PAIR(9));
   char * cur_user = get_current_user();
   char * cur_hostname = get_hostname();
-  wattron(win, A_BOLD | COLOR_PAIR(9));
+  wattron(win, A_BOLD | COLOR_PAIR(14));
   mvwprintw(win, 0, 2, " 🗄️ LITE FM: ");
-  wattroff(win, A_BOLD | COLOR_PAIR(9));
+  wattroff(win, A_BOLD | COLOR_PAIR(14));
 
   char sanitizedCurPath[PATH_MAX];
   if (strncmp(current_path, "//", 2) == 0) {
@@ -414,7 +414,7 @@ void get_file_info(WINDOW * info_win,
   clearLine(info_win, 5, 2);
   colorLine(info_win, "Extension: ", 3, 5, 2);
   wattron(info_win, COLOR_PAIR(4));
-  if (file_ext != NULL) {
+  if (file_ext != NULL && !S_ISDIR(file_stat.st_mode)) {
     wprintw(info_win, "%s", file_ext + 1);
   } else {
     wprintw(info_win, "none");
@@ -519,43 +519,60 @@ void get_file_info(WINDOW * info_win,
   wrefresh(info_win);
 }
 
-void handle_rename(WINDOW * win,
-  const char * path) {
-  char new_name[PATH_MAX];
-  char old_name[PATH_MAX];
+void handle_rename(WINDOW *win, const char *path) {
+    char new_name[PATH_MAX];
+    char old_name[PATH_MAX];
+    struct stat path_stat;
 
-  // Copy the original filename
-  strncpy(old_name, basename((char * ) path), PATH_MAX);
+    // Copy the original filename
+    strncpy(old_name, basename((char *)path), PATH_MAX);
 
-  // Prompt for new name
-  get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename");
+    // Prompt for new name
+    get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename");
 
-  // Check if new_name is not empty
-  if (strlen(new_name) == 0) {
-    show_term_message("No name provided. Aborting rename.", 1);
-    return;
-  }
+    // Check if new_name is not empty
+    if (strlen(new_name) == 0) {
+        show_term_message("No name provided. Aborting rename.", 1);
+        return;
+    }
 
-  // Extract file extensions
-  const char * old_ext = get_file_extension(old_name);
-  const char * new_ext = get_file_extension(new_name);
+    // Check if the path is a file or directory
+    if (stat(path, &path_stat) != 0) {
+        show_term_message("Unable to stat path. Aborting rename.", 1);
+        return;
+    }
 
-  // Check if extensions are different
-  if (strcmp(old_ext, new_ext) != 0) {
-    show_term_message("Extension change not allowed. Aborting rename.", 1);
-    return;
-  }
+    if (S_ISDIR(path_stat.st_mode)) {
+        // It's a directory, allow any new name (excluding special characters check)
+        if (strpbrk(new_name, "/<>:\"|?*") != NULL) {
+            show_term_message("Invalid characters in new name. Aborting rename.", 1);
+            return;
+        }
+    } else if (S_ISREG(path_stat.st_mode)) {
+        // It's a file, ensure the extension remains the same
+        const char *old_ext = get_file_extension(old_name);
+        const char *new_ext = get_file_extension(new_name);
 
-  // Perform rename
-  if (rename_file_or_dir(path, new_name) == 0) {
-    log_message(LOG_LEVEL_INFO, "Rename successful for %s", path);
-    show_term_message("Rename successful.", 0);
-    // Update file list if needed
-  } else {
-    log_message(LOG_LEVEL_ERROR, "Rename error for %s", path);
-    show_term_message("Rename failed.", 1);
-  }
+        if (strcmp(old_ext, new_ext) != 0) {
+            show_term_message("Extension change not allowed. Aborting rename.", 1);
+            return;
+        }
+    } else {
+        show_term_message("Unsupported file type. Aborting rename.", 1);
+        return;
+    }
+
+    // Perform rename
+    if (rename_file_or_dir(path, new_name) == 0) {
+        log_message(LOG_LEVEL_INFO, "Rename successful for %s", path);
+        show_term_message("Rename successful.", 0);
+        // Update file list if needed
+    } else {
+        log_message(LOG_LEVEL_ERROR, "Rename error for %s", path);
+        show_term_message("Rename failed.", 1);
+    }
 }
+
 
 int main() {
   init_curses();
@@ -667,7 +684,7 @@ int main() {
         highlight = item_count - 1; // will go to the last element in the currently displaying list
         break;
       case 'g':
-        show_term_message("g", -1);
+        show_term_message(" g", -1);
         halfdelay(10);
         char nextg = getch();
         if (nextg == 'g') {
@@ -948,36 +965,27 @@ int main() {
 
       case 'R': // Rename file or directory
       {
-        if (item_count > 0) {
-          const char * current_name = items[highlight].name;
-          char full_path[PATH_MAX];
-          snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
+          if (item_count > 0) {
+              const char *current_name = items[highlight].name;
+              char full_path[PATH_MAX];
+              snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
 
-          char new_name[NAME_MAX];
-          get_user_input_from_bottom(stdscr, new_name, NAME_MAX, "rename");
+              // Call the handle_rename function
+              handle_rename(stdscr, full_path);
 
-          if (strlen(new_name) > 0) {
-            char new_full_path[PATH_MAX];
-            snprintf(new_full_path, PATH_MAX, "%s/%s", current_path, new_name);
-
-            if (rename(full_path, new_full_path) == 0) {
-              log_message(LOG_LEVEL_INFO, "Rename of %s to %s was successful", current_name, new_name);
-              show_term_message("Rename successful.", 0);
               // Update file list after renaming
-              list_dir(win, current_path, items, & item_count, show_hidden);
+              list_dir(win, current_path, items, &item_count, show_hidden);
               scroll_position = 0;
-            } else {
-              log_message(LOG_LEVEL_ERROR, "Rename of %s to %s failed", current_name, new_name);
-              show_term_message("Rename failed.", 1);
-            }
           } else {
-            log_message(LOG_LEVEL_WARN, "No name provided to change for %s, so renaming failed", current_name);
-            show_term_message("No name provided. Aborting rename.", 1);
+              log_message(LOG_LEVEL_WARN, "No item selected for renaming");
+              show_term_message("No item selected for renaming.", 1);
           }
-        } else {
-          log_message(LOG_LEVEL_WARN, "No item selected for renaming");
-          show_term_message("No item selected for renaming.", 1);
-        }
+          break;
+      }
+      case 'M':
+      {
+        move_file_or_dir(win,current_path,items[highlight].name);
+        list_dir(win, current_path, items, & item_count, show_hidden);
         break;
       }
       case 10: {

@@ -6,7 +6,7 @@
 
 /* By nots1dd */
 
-#include "../filePreview.h"
+#include "../filepreview.h"
 #include "../cursesutils.h"
 
 #define MAX_LINES 60   // Define the maximum number of lines to display
