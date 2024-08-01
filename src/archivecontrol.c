@@ -10,6 +10,8 @@
 #include "../dircontrol.h"
 #include "../cursesutils.h"
 
+int copy_data(struct archive *ar, struct archive *aw);
+
 long get_file_size(const char *file_path) {
     struct stat st;
     if (stat(file_path, &st) == 0) {
@@ -18,48 +20,101 @@ long get_file_size(const char *file_path) {
     return -1;
 }
 
+int ensure_directory_exists(const char *dir) {
+    struct stat st = {0};
+    if (stat(dir, &st) == -1) {
+        if (mkdir(dir, 0700) != 0) {
+            return -1; // Failed to create directory
+        }
+    }
+    return 0; // Directory exists or was successfully created
+}
+
+
 // Function to extract an archive specified by archive_path
 int extract_archive(const char *archive_path) {
-    char command[PATH_MAX + 100]; // +100 for safety margin
-    int result;
-    long file_size_before, file_size_after; 
-
-    // Get the directory of the archive (example.zip)
+    struct archive *a;
+    struct archive *ext;
+    struct archive_entry *entry;
+    int flags;
+    int r;
     char archive_dir[PATH_MAX];
+    char *archive_basename;
+    char extraction_dir[PATH_MAX];
+
+    // Get the directory of the archive
     strncpy(archive_dir, archive_path, PATH_MAX);
+    archive_basename = basename(archive_dir); // Get the base name part of the archive path
     dirname(archive_dir); // Get the directory part of the archive path
 
     // Create the extraction directory (filename_extracted)
-    char *archive_basename = basename(archive_path);
-    char extraction_dir[PATH_MAX];
     snprintf(extraction_dir, sizeof(extraction_dir), "%s/%s_extracted", archive_dir, archive_basename);
 
-    // Determine archive type and construct extraction command
-    if (strstr(archive_path, ".zip")) {
-        snprintf(command, sizeof(command), "mkdir -p \"%s\" && unzip -o \"%s\" -d \"%s\" > /dev/null 2>&1", extraction_dir, archive_path, extraction_dir);
-    } else if (strstr(archive_path, ".tar")) {
-        snprintf(command, sizeof(command), "mkdir -p \"%s\" && tar -xf \"%s\" -C \"%s\" > /dev/null 2>&1", extraction_dir, archive_path, extraction_dir);
-    } else {
+    // Ensure extraction directory exists
+    if (ensure_directory_exists(extraction_dir) != 0) {
         endwin(); // End NCurses mode before returning
-        return -1; // Unsupported archive format
+        return -1; // Failed to create extraction directory
     }
 
-    // Get file size before extraction
-    file_size_before = get_file_size(archive_path);
+    // Select the type of archive to open
+    flags = ARCHIVE_EXTRACT_TIME;
+    a = archive_read_new();
+    archive_read_support_format_all(a);
+    archive_read_support_compression_all(a);
+    ext = archive_write_disk_new();
+    archive_write_disk_set_options(ext, flags);
+    archive_write_disk_set_standard_lookup(ext);
 
-    show_term_message("Extracting...",0);
-
-    // Execute command
-    FILE *extract_process = popen(command, "r");
-    if (extract_process == NULL) {
+    if ((r = archive_read_open_filename(a, archive_path, 10240))) {
+        archive_read_free(a);
+        archive_write_free(ext);
         endwin(); // End NCurses mode before returning
-        return -1; // Failed to execute command
-    } 
+        return -1; // Failed to open archive
+    }
 
-    pclose(extract_process); // Close the process
+    show_term_message("Extracting...", 0);
+
+    while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        const char *current_file = archive_entry_pathname(entry);
+        char full_path[PATH_MAX];
+        snprintf(full_path, sizeof(full_path), "%s/%s", extraction_dir, current_file);
+        archive_entry_set_pathname(entry, full_path);
+
+        if ((r = archive_write_header(ext, entry)) != ARCHIVE_OK) {
+            fprintf(stderr, "%s\n", archive_error_string(ext));
+        } else {
+            copy_data(a, ext);
+            archive_write_finish_entry(ext);
+        }
+    }
+
+    archive_read_close(a);
+    archive_read_free(a);
+    archive_write_close(ext);
+    archive_write_free(ext);
 
     return 0; // Extraction successful
 }
+
+int copy_data(struct archive *ar, struct archive *aw) {
+    const void *buff;
+    size_t size;
+    la_int64_t offset;
+
+    while (1) {
+        int r = archive_read_data_block(ar, &buff, &size, &offset);
+        if (r == ARCHIVE_EOF)
+            return ARCHIVE_OK;
+        if (r != ARCHIVE_OK)
+            return r;
+        r = archive_write_data_block(aw, buff, size, offset);
+        if (r != ARCHIVE_OK) {
+            fprintf(stderr, "%s\n", archive_error_string(aw));
+            return r;
+        }
+    }
+}
+
 
 int add_directory_to_archive(struct archive *a, const char *dir_path, const char *base_path) {
     struct archive_entry *entry;

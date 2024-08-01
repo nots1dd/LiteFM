@@ -35,12 +35,12 @@
 
 #include <archive.h>
 #include <archive_entry.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <ncurses.h>
+#include <libgen.h>
+#include <limits.h>
+#include <stdio.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <unistd.h>
 
 long get_file_size(const char *file_path);
