@@ -10,10 +10,13 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 4. Clean and responsive TUI thanks to ncurses with cool colors and unicodes
 5. Incredibly fast extraction and compression functions thanks to `libarchive`
 
+------------------------------------------------------------------------------
+
 ![litefm1](https://github.com/user-attachments/assets/4bf801e2-594e-4259-b910-11a5a277de5b)
 ![litefm2](https://github.com/user-attachments/assets/80ad77be-022b-4dde-b78e-ef49b642dbfa)
 ![litefm3](https://github.com/user-attachments/assets/fb198eea-8be5-4d25-acc4-35a7c64db3de)
 
+------------------------------------------------------------------------------
 
 > [!NOTE]
 > 
@@ -21,6 +24,9 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > 
 > Ensure that your terminal has any NERD FONT enabled.
 > 
+
+
+------------------------------------------------------------------------------
 
 ## Usage
 
@@ -48,6 +54,8 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > 
 > To set an env var: `echo 'export $EDITOR=/path/to/editor' >> ~/yourshellrc`
 
+
+------------------------------------------------------------------------------
 
 ## Building
 
@@ -81,7 +89,7 @@ Building with CMake:
 > 
 > LiteFM has a very modular logging system and keeps a track of every file/dir control that goes on in a litefm instance 
 > 
-> Just run the command mkdir -p $HOME/.cache/litefm/log/ and you can run litefm without a hassle!
+> Just run the command `mkdir -p $HOME/.cache/litefm/log/` and you can run litefm without a hassle!
 
 Building with Make:
 
@@ -90,6 +98,18 @@ Building with Make:
 -> This should give a `litefm` executable, just run it to enjoy LiteFM!
 
 -> To cleanup, run `make clean`
+
+Adding Man Page (Optional):
+
+You can add the man page for LiteFM in your system by the following commands:
+
+[NOTE: You will have to keep updating this man page manually every time a new functionality is introduced.]
+
+`sudo cp components/litefm.1 /usr/share/man/man1`
+
+`cd /usr/share/man/man1/ && sudo gzip litefm.1`
+
+Thats it! The man page is ready to be used via `man litefm`
 
 > [!NOTE]
 > Building LiteFM with build.sh (**HIGHLY RECOMMENDED**) 
@@ -102,6 +122,9 @@ Building with Make:
 > 
 > Just wait for it to setup and answer a few questions, thats it!
 
+
+------------------------------------------------------------------------------
+
 ## SECURITY
 
 As this is a file manager that is able to perform some VERY cool and dangerous tasks like deleting any directory recursively, I definitely have tried to set up security measures to avoid any form of code vulnerability or CWE.
@@ -113,15 +136,17 @@ Other steps I plan on taking to ensure that you are always in control of the fil
 
 Check out `SECURITY.md` for the security policy that this repository follows.
 
+------------------------------------------------------------------------------
+
 ## FUTURE
 
 This file manager is far from done there are a lot of cool and essential features that are planned:
 
 - [x] Adding a basic file preview for readable files (and stat info for directories)
 
-- [ ] Simple tasks like selecting multiple files, moving fils/dirs to a location (cut, copy , paste)
+- [ ] Integrating current file tasks to multiple files selection (copy, paste, move)
 
-- [ ] GO-TO a particular file or directory through string input (might be tough)
+- [x] GO-TO a particular file or directory through string input (might be tough)
 
 - [x] Color coding for file groups (green - general files, pink - images, red - unextracted archives, orange - audio files) [implementation through struct mostly]
 
