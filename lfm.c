@@ -332,6 +332,15 @@ int find_item(const char * query, FileItem items[], int item_count, int * start_
   return -1; // Not found
 }
 
+bool is_valid_editor(const char *editor) {
+    for (size_t i = 0; i < strlen(editor); ++i) {
+        if (!isalnum(editor[i]) && editor[i] != '-' && editor[i] != '_') {
+            return false;
+        }
+    }
+    return true;
+}
+
 void get_file_info_popup(WINDOW * main_win,
   const char * path,
     const char * filename) {
@@ -738,7 +747,7 @@ int main() {
       } else {
             firstKeyPress = true;
             const char* editor = getenv("EDITOR");
-            if (editor == NULL) {
+            if (editor == NULL || is_valid_editor(editor)) {
                 editor = "nano"; // Default to GNU nano if EDITOR is not set
             }
 
