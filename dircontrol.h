@@ -56,5 +56,6 @@ int remove_directory(const char *path, const char *dirname);
 int remove_directory_recursive(const char *base_path, const char *dirname, int parent_fd);
 int rename_file_or_dir(const char *old_path, const char *new_name);
 void move_file_or_dir(WINDOW *win, const char *current_path, const char *selected_item);
+int is_directory(const char *path);
 
 #endif

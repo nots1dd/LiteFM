@@ -204,6 +204,10 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
         attron(COLOR_PAIR(2));
         mvprintw(y-1,0, " Move to: ");
         attroff(COLOR_PAIR(2));
+    } else if (strcmp(type, "goto") == 0) {
+      attron(COLOR_PAIR(2));
+      mvprintw(y-1,0," Go to: ");
+      attroff(COLOR_PAIR(2));
     }
     attroff(A_BOLD);  // Turn off bold attribute
     clrtoeol();  // Clear the rest of the line to handle previous content
@@ -215,7 +219,10 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
       wmove(win, getmaxy(win) - 1, 12);
     } else if (strcmp(type, "add") == 0) {
       wmove(win, getmaxy(win) - 1, 6);
-    } else {
+    } else if (strcmp(type, "goto") == 0) {
+      wmove(win, getmaxy(win) - 1, 8);
+    }
+    else {
       wmove(win, getmaxy(win) - 1, 1);
     }
     attron(COLOR_PAIR(3));

@@ -4,11 +4,24 @@
 #//             //
 #// // // // // // 
 
-# BY nots1dd 
-
-# CMAKE CONFIGURATION FOR LITE FILE MANAGER
-
-# LICENSED UNDER GNU GPL v3
+#/*
+# * ---------------------------------------------------------------------------
+# *  File:        CMakeLists.txt
+# *
+# *  Description: Default CMakeLists.txt for LiteFM
+# *
+# *  Author:      nots1dd
+# *  Created:     31/07/24
+# * 
+# *  Copyright:   2024 nots1dd. All rights reserved.
+# * 
+# *  License:     <GNU GPL v3>
+# * 
+# *  Revision History:
+# *      31/07/24 - Initial creation.
+# *
+# * ---------------------------------------------------------------------------
+# */
 
 cmake_minimum_required(VERSION 3.10)
 

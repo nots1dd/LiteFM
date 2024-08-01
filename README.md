@@ -32,11 +32,21 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 
 > [!WARNING]
 > 
+> ### Yanking
+> 
 > Yanking function only works with `WAYLAND` and `X11` display servers ONLY!!
 > 
 > If you are on other display servers like `Mir`, `SurfaceFlinger` and yanking does NOT work:
 > 
 > You can create an issue or even submit a PR as per `CONTRIBUTION.md`
+> 
+> ### Environment Vars
+> 
+> LiteFM uses `getenv` to get the env vars `$EDITOR` and `WAYLAND_SERVER` to detect the default editor and display server.
+> 
+> Hence, ensure that you have your preferred display server and editor setup in your UNIX system so that LiteFM can be even more productive to you!
+> 
+> To set an env var: `echo 'export $EDITOR=/path/to/editor' >> ~/yourshellrc`
 
 
 ## Building
@@ -119,4 +129,4 @@ This file manager is far from done there are a lot of cool and essential feature
 
 - [x] Improve the build script
 
-- [ ] Integration of adding a text editor
+- [x] Integration of adding a text editor

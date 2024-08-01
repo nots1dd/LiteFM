@@ -215,3 +215,11 @@ void move_file_or_dir(WINDOW *win, const char *current_path, const char *selecte
         show_term_message("Error moving file or directory.", 1);
     }
 }
+
+int is_directory(const char *path) {
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0) {
+        return 0; // Path doesn't exist or some other error
+    }
+    return S_ISDIR(statbuf.st_mode);
+}

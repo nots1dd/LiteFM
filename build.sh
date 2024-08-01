@@ -154,7 +154,7 @@ fi
 
 echo -e "${BLUE}=========== LOGGING SETUP =============== ${RESET}"
 mkdir -p "$HOME/.cache/litefm/log/"
-if [ $? -ne 0 ]; then
+if [ $? -eq 0 ]; then
   echo -e "${BLUE}================ LOGGING DONE ============= ${RESET}"
 else
   echo -e "${RED} Something went wrong while trying to setup logging. Exiting with code 1${RESET}"

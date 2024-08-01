@@ -4,15 +4,34 @@
 //             //
 // // // // // // 
 
-/* BY nots1dd */
-
-/* Main C file FOR LITE FILE MANAGER */
-
-/* LICENSED UNDER GNU GPL v3 */
+/*
+ * ---------------------------------------------------------------------------
+ *  File:        lfm.c
+ *  Description: This is main C file that encompasses
+ *               all the functionalities of LiteFM
+ *
+ *  Author:      nots1dd
+ *  Created:     <31/07/24>
+ * 
+ *  Copyright:   2024 nots1dd. All rights reserved.
+ * 
+ *  License:     <GNU GPL v3>
+ *
+ *  Notes:      Some cool features like history/file tracker,
+ *              is done through typedef structs
+ *
+ *  Includes:   `ncurses library`, `libarchive`, `statvfs, stat`,
+ *              `dirent`, `sys headers`, `string headers`, `grp`,
+ *              `std headers`, `unistd`, `fcntl` so on...
+ * 
+ *  Revision History:
+ *      <31/07/24> - Initial creation and function declarations added.
+ *
+ * ---------------------------------------------------------------------------
+ */
 
 #include <ctype.h>
 #include <sys/types.h>
-#include <limits.h>
 #include <fcntl.h>
 #include <grp.h>
 
@@ -662,35 +681,93 @@ int main() {
           highlight = history[history_count].highlight;
           list_dir(win, current_path, items, & item_count, show_hidden);
           scroll_position = 0;
+        } else { // will allow for traversal to parents of get_current_working_directory (getcwd)
+            char parent_dir[1024];
+            strcpy(parent_dir, current_path);
+            strcpy(current_path, dirname(parent_dir));
+            list_dir(win, current_path, items, & item_count, show_hidden);
+            highlight = 0;
+            scroll_position = 0;
         }
         break;
-      case KEY_RIGHT:
-      case 'l':
-        show_term_message("", -1);
-        if (items[highlight].is_dir) {
+      
+  case KEY_RIGHT:
+  case 'l':
+      show_term_message("", -1);
+      if (items[highlight].is_dir) {
           if (history_count < MAX_HISTORY) {
-            strcpy(history[history_count].path, current_path);
-            history[history_count].highlight = highlight;
-            history_count++;
+              strcpy(history[history_count].path, current_path);
+              history[history_count].highlight = highlight;
+              history_count++;
           }
           strcat(current_path, "/");
           strcat(current_path, items[highlight].name);
-          list_dir(win, current_path, items, & item_count, show_hidden);
+          list_dir(win, current_path, items, &item_count, show_hidden);
           highlight = 0;
           scroll_position = 0;
-        }
-        break;
+      } else {
+          firstKeyPress = true;
+          const char* editor = getenv("EDITOR");
+          log_message(LOG_LEVEL_DEBUG, "Launching `%s` in %s...", items[highlight].name, editor);
+          char editor_msg[256];
+          snprintf(editor_msg, sizeof(editor_msg), "%s %s/%s",editor, current_path, items[highlight].name);
+          
+          // End NCurses mode before launching nvim
+          endwin();
+          
+          system(editor_msg);
+          /*if (result = -1) {*/
+          /*  log_message(LOG_LEVEL_ERROR, "Error while executing `%s`", editor_msg);*/
+          /*  show_term_message("Error while calling system()",1);*/
+          /*  break;*/
+          /*}*/
+          
+          // Reinitialize NCurses mode after nvim exits
+          initscr();
+          cbreak();
+          noecho();
+          keypad(win, TRUE);
+          refresh();
+          clear();
+          char exit_msg[100];
+          snprintf(exit_msg, sizeof(exit_msg), "%s: Exited %s successfully",items[highlight].name, editor);
+          log_message(LOG_LEVEL_DEBUG, exit_msg);
+          show_term_message(exit_msg, 0);
+
+          /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
+      }
+      break;
       case 'G':
         highlight = item_count - 1; // will go to the last element in the currently displaying list
         break;
       case 'g':
         show_term_message(" g", -1);
-        halfdelay(10);
-        char nextg = getch();
-        if (nextg == 'g') {
+        halfdelay(100);
+        char nextch = getch();
+        if (nextch == 'g') {
           show_term_message("", -1);
           highlight = 0; // will go to the top most element in the current displaying list
-        } else {
+        } else if (nextch == 't') { // GO TO func
+          char destination_path[PATH_MAX];
+          get_user_input_from_bottom(stdscr, destination_path, PATH_MAX, "goto");
+          if (is_directory(destination_path)) {
+            strcpy(current_path, destination_path);
+            list_dir(win, current_path, items, & item_count, show_hidden);
+          } else {
+            log_message(LOG_LEVEL_ERROR, "The input `%s` is an invalid directory", destination_path);
+            show_term_message("Invalid destination!", 1);
+          }
+          break;
+        } else if (nextch == 'h') {
+          show_term_message("", -1);
+          char* home_dir = getenv("HOME");
+          strcpy(current_path, home_dir);
+          list_dir(win, current_path, items, & item_count, show_hidden);
+          highlight = 0;
+          scroll_position = 0;
+          break;
+        }
+        else {
           show_term_message("Invalid command", 1);
         }
         break;
@@ -700,7 +777,12 @@ int main() {
         highlight = 0;
         scroll_position = 0;
         break;
-
+      case 'H':
+        strcpy(current_path, "/");
+        list_dir(win, current_path, items, & item_count, show_hidden);
+        highlight = 0;
+        scroll_position = 0;
+        break;
       case 'a': // Add file or directory
       {
         char name_input[NAME_MAX];
