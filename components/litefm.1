@@ -7,12 +7,12 @@
 .\"
 .TH LiteFM 1 "July 2024" "1.0" "Lite File Manager in NCurses"
 .SH NAME
-LiteFM \- A terminal-based file explorer using NCurses
+LiteFM \- A LIGHT AND FAST terminal-based file explorer using NCurses
 .SH SYNOPSIS
 .B LiteFM
 .SH DESCRIPTION
 .B LiteFM
-is a simple file explorer that runs in the terminal using the NCurses library. It allows users to navigate directories, view file information, create and delete files and directories, and extract archives.
+is a simple file manager that runs in the terminal using the NCurses library. It allows users to navigate directories, view file information, create ,delete, move files and directories, and extract archives.
 .SH USAGE
 The following keys are used to navigate and perform actions within 
 .B LiteFM:
@@ -35,8 +35,26 @@ Toggle the display of hidden files and directories.
 .B a
 Add a new file or directory. To create a directory, append a '/' to the name.
 .TP
+.B H
+Go to the `/` directory.
+.TP
+.B gh
+Go to the /home/$USER (~) directory.
+.TP
+.B gt
+Go to the directory as given by the input.
+.TP
 .B d
 Delete the selected file or directory (NON-RECURSIVE DELETION).
+.TP
+.B G
+Go to the bottom of the currently viewing list.
+.TP
+.B gg
+Go to the top of the currently viewing list.
+.TP
+.B M
+Move a selected file/dir to the user's choice of destination.
 .TP
 .B D
 Delete a directory RECURSIVELY (every sub-dir and file inside selected dir is deleted).

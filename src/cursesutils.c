@@ -250,7 +250,7 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
 }
 
 void displayHelp(WINDOW* main_win) {
-    int help_win_height = 28;
+    int help_win_height = LINES - 15;
     int help_win_width = (COLS / 3);
     int help_win_y = (LINES - help_win_height) / 2;
     int help_win_x = (COLS - help_win_width) / 2;
@@ -282,6 +282,9 @@ void displayHelp(WINDOW* main_win) {
     colorLine(help_win, " Move a file/dir      - [M]", 2, 22, 2);
 
     colorLine(help_win, " Show help win        - [?]", 2, 23, 2);
+    colorLine(help_win, " Go to / directory    - [H]", 2, 24, 2);
+    colorLine(help_win, " Go to ~ (home) dir   - [gh]",2, 25,2);
+    colorLine(help_win, " Go to input dir      - [gt]",2, 26,2);
 
     wrefresh(help_win);
     wgetch(help_win);
