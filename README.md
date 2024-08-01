@@ -10,13 +10,11 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 4. Clean and responsive TUI thanks to ncurses with cool colors and unicodes
 5. Incredibly fast extraction and compression functions thanks to `libarchive`
 
-------------------------------------------------------------------------------
 
 ![litefm1](https://github.com/user-attachments/assets/4bf801e2-594e-4259-b910-11a5a277de5b)
 ![litefm2](https://github.com/user-attachments/assets/80ad77be-022b-4dde-b78e-ef49b642dbfa)
 ![litefm3](https://github.com/user-attachments/assets/fb198eea-8be5-4d25-acc4-35a7c64db3de)
 
-------------------------------------------------------------------------------
 
 > [!NOTE]
 > 
@@ -25,8 +23,6 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > Ensure that your terminal has any NERD FONT enabled.
 > 
 
-
-------------------------------------------------------------------------------
 
 ## Usage
 
@@ -55,8 +51,6 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > To set an env var: `echo 'export $EDITOR=/path/to/editor' >> ~/yourshellrc`
 
 
-------------------------------------------------------------------------------
-
 ## Building
 
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
@@ -74,7 +68,7 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 > A C compiler (like GCC)
 > 
 
-Building with CMake:
+#### Building with CMake:
 
 **Ensure you have CMake installed first**
 
@@ -91,7 +85,7 @@ Building with CMake:
 > 
 > Just run the command `mkdir -p $HOME/.cache/litefm/log/` and you can run litefm without a hassle!
 
-Building with Make:
+#### Building with Make:
 
 -> Run `make` in the current directory
 
@@ -99,7 +93,7 @@ Building with Make:
 
 -> To cleanup, run `make clean`
 
-Adding Man Page (Optional):
+#### Adding Man Page (Optional):
 
 You can add the man page for LiteFM in your system by the following commands:
 
@@ -123,8 +117,6 @@ Thats it! The man page is ready to be used via `man litefm`
 > Just wait for it to setup and answer a few questions, thats it!
 
 
-------------------------------------------------------------------------------
-
 ## SECURITY
 
 As this is a file manager that is able to perform some VERY cool and dangerous tasks like deleting any directory recursively, I definitely have tried to set up security measures to avoid any form of code vulnerability or CWE.
@@ -136,7 +128,6 @@ Other steps I plan on taking to ensure that you are always in control of the fil
 
 Check out `SECURITY.md` for the security policy that this repository follows.
 
-------------------------------------------------------------------------------
 
 ## FUTURE
 
