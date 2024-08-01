@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <sys/wait.h>   // For waitpid
 
 /* LITEFM DEDICATED HEADERS */
 
@@ -104,6 +105,35 @@ void list_dir(WINDOW * win,
 
   closedir(dir);
   wrefresh(win);
+}
+
+void launch_editor(const char *editor, const char *file_path) {
+    // Prepare arguments for execvp
+    char *args[] = {(char *)editor, (char *)file_path, NULL};
+    
+    // End NCurses mode before launching the editor
+    endwin();
+    
+    // Launch the editor
+    if (execvp(editor, args) == -1) {
+        // If execvp fails, print an error message
+        perror("Failed to launch editor");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void handle_item(const char *current_path, const char *item_name) {
+    const char *editor = getenv("EDITOR");
+    if (editor == NULL) {
+        editor = "nvim"; // Default to nvim if EDITOR is not set
+    }
+    
+    log_message(LOG_LEVEL_DEBUG, "Launching `%s` in %s...", item_name, editor);
+    
+    char file_path[PATH_MAX];
+    snprintf(file_path, sizeof(file_path), "%s/%s", current_path, item_name);
+    
+    launch_editor(editor, file_path);
 }
 
 const char * get_file_extension(const char * filename) {
@@ -706,36 +736,61 @@ int main() {
           highlight = 0;
           scroll_position = 0;
       } else {
-          firstKeyPress = true;
-          const char* editor = getenv("EDITOR");
-          log_message(LOG_LEVEL_DEBUG, "Launching `%s` in %s...", items[highlight].name, editor);
-          char editor_msg[256];
-          snprintf(editor_msg, sizeof(editor_msg), "%s %s/%s",editor, current_path, items[highlight].name);
-          
-          // End NCurses mode before launching nvim
-          endwin();
-          
-          system(editor_msg);
-          /*if (result = -1) {*/
-          /*  log_message(LOG_LEVEL_ERROR, "Error while executing `%s`", editor_msg);*/
-          /*  show_term_message("Error while calling system()",1);*/
-          /*  break;*/
-          /*}*/
-          
-          // Reinitialize NCurses mode after nvim exits
-          initscr();
-          cbreak();
-          noecho();
-          keypad(win, TRUE);
-          refresh();
-          clear();
-          char exit_msg[100];
-          snprintf(exit_msg, sizeof(exit_msg), "%s: Exited %s successfully",items[highlight].name, editor);
-          log_message(LOG_LEVEL_DEBUG, exit_msg);
-          show_term_message(exit_msg, 0);
+            firstKeyPress = true;
+            const char* editor = getenv("EDITOR");
+            if (editor == NULL) {
+                editor = "nano"; // Default to GNU nano if EDITOR is not set
+            }
 
-          /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
-      }
+            log_message(LOG_LEVEL_DEBUG, "Launching `%s` in %s...", items[highlight].name, editor);
+
+            // Construct the full file path
+            char file_path[PATH_MAX];
+            snprintf(file_path, sizeof(file_path), "%s/%s", current_path, items[highlight].name);
+
+            // End NCurses mode before launching the editor
+            endwin();
+
+            // Fork a new process to launch the editor
+            pid_t pid = fork();
+            if (pid == 0) {
+                // Child process
+                char *args[] = {(char *)editor, file_path, NULL};
+                execvp(editor, args); /* The execvp function is a POSIX function that executes a program, replacing the current process image with a new one */
+
+                // If execvp fails
+                perror("Failed to launch editor");
+                exit(EXIT_FAILURE);
+            } else if (pid < 0) {
+                // Fork failed
+                log_message(LOG_LEVEL_ERROR, "Fork failed.");
+                show_term_message("Error while forking process", 1);
+            } else {
+                // Parent process
+                int status;
+                waitpid(pid, &status, 0);
+
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                    char exit_msg[100];
+                    snprintf(exit_msg, sizeof(exit_msg), "%s: Exited %s successfully", items[highlight].name, editor);
+                    log_message(LOG_LEVEL_DEBUG, exit_msg);
+                    show_term_message(exit_msg, 0);
+                } else {
+                    log_message(LOG_LEVEL_ERROR, "Error while executing `%s`", editor);
+                    show_term_message("Error while calling editor", 1);
+                }
+            }
+
+            // Reinitialize NCurses mode after the editor exits
+            initscr();
+            cbreak();
+            noecho();
+            keypad(win, TRUE);
+            refresh();
+            clear();
+
+            /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
+        }
       break;
       case 'G':
         highlight = item_count - 1; // will go to the last element in the currently displaying list
