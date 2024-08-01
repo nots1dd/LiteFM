@@ -24,24 +24,30 @@ void yank_selected_item(char *selected_item) {
     // Show the message in the terminal
     show_term_message(copy_msg, 0);
     refresh();
-    
+
     // Determine the display server and use the appropriate clipboard tool
     const char *display_server = getenv("WAYLAND_DISPLAY");
-    char command[MAX_PATH_LENGTH + 50];
+    const char *clipboard_cmd = display_server ? "wl-copy" : "xclip -selection clipboard";
     
-    if (display_server) {
-        // Wayland environment detected, use wl-copy
-        snprintf(command, sizeof(command), "echo '%s' | wl-copy", copied_item);
-    } else {
-        // Default to xclip for X11
-        snprintf(command, sizeof(command), "echo '%s' | xclip -selection clipboard", copied_item);
+    // Use popen to securely write to the clipboard
+    FILE *clipboard = popen(clipboard_cmd, "w");
+    if (clipboard == NULL) {
+        show_term_message("Failed to open clipboard tool.", 1);
+        return;
     }
-    
-    int result = system(command);
+
+    if (fputs(copied_item, clipboard) == EOF) {
+        show_term_message("Failed to write to clipboard.", 1);
+    }
+
+    int result = pclose(clipboard);
     if (result == -1) {
-        show_term_message("Failed to copy to clipboard.", 1);
+        show_term_message("Failed to close clipboard tool.", 1);
+    } else if (WIFEXITED(result) && WEXITSTATUS(result) != 0) {
+        show_term_message("Clipboard tool exited with an error.", 1);
     }
 }
+
 
 
 
