@@ -350,7 +350,7 @@ void get_file_info_popup(WINDOW * main_win,
 
   // Get file information
   if (stat(full_path, & file_stat) == -1) {
-    log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
+    log_message(LOG_LEVEL_ERROR, "Error retrieving file information for `%s`", full_path);
     show_message(main_win, "Error retrieving file information.");
     return;
   }
@@ -774,19 +774,18 @@ int main() {
                 // Fork failed
                 log_message(LOG_LEVEL_ERROR, "Fork failed.");
                 show_term_message("Error while forking process", 1);
+                break;
             } else {
                 // Parent process
                 int status;
                 waitpid(pid, &status, 0);
 
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-                    char exit_msg[100];
-                    snprintf(exit_msg, sizeof(exit_msg), "%s: Exited %s successfully", items[highlight].name, editor);
-                    log_message(LOG_LEVEL_DEBUG, exit_msg);
-                    show_term_message(exit_msg, 0);
+                    log_message(LOG_LEVEL_DEBUG, "%s: Exited editor successfully", items[highlight].name);
                 } else {
                     log_message(LOG_LEVEL_ERROR, "Error while executing `%s`", editor);
                     show_term_message("Error while calling editor", 1);
+                    break;
                 }
             }
 
