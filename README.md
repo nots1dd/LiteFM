@@ -49,6 +49,10 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > Hence, ensure that you have your preferred display server and editor setup in your UNIX system so that LiteFM can be even more productive to you!
 > 
 > To set an env var: `echo 'export $EDITOR=/path/to/editor' >> ~/yourshellrc`
+> 
+> Setting your `$EDITOR` as any editor that creates a new window that resizes the main litefm window, will lead to litefm breaking so,
+> 
+> It is HIGHLY recommended that you pick a `terminal editor` like `nano`, `vi`, `vim`, `nvim`, so on
 
 
 ## Building
@@ -72,14 +76,14 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 
 **Ensure you have CMake installed first**
 
--> `cmake -S -B build/` to create a `build/` directory with all libraries linked as per `CMakeLists.txt`
+-> `cmake -S . -B build/` to create a `build/` directory with all libraries linked as per `CMakeLists.txt`
 
 -> `cmake --build build/` to get the `./build/litefm` executable
 
 -> Set it as an alias in your respective shell rc and enjoy!
 
 > [!IMPORTANT]
-> Ensure that you set up litefm.log in your ~/.cache/litefm/log/ directory (create if not there)
+> Ensure that you set up litefm.log in your ``~/.cache/litefm/log/`` directory (create if not there)
 > 
 > LiteFM has a very modular logging system and keeps a track of every file/dir control that goes on in a litefm instance 
 > 
@@ -146,3 +150,5 @@ This file manager is far from done there are a lot of cool and essential feature
 - [x] Improve the build script
 
 - [x] Integration of adding a text editor
+
+- [ ] Handling resizing of litefm window (maybe through `SIGWINCH`)

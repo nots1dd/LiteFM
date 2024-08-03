@@ -45,6 +45,7 @@
 #include "archivecontrol.h"
 #include "logging.h"
 #include "clipboard.h"
+#include "signalhandling.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -631,9 +632,8 @@ void handle_rename(WINDOW *win, const char *path) {
     }
 }
 
-
 int main() {
-  init_curses();
+  init_curses(); 
 
   int highlight = 0;
   FileItem items[MAX_ITEMS];
@@ -760,6 +760,8 @@ int main() {
             // End NCurses mode before launching the editor
             endwin();
 
+            ignore_sigwinch(); // ignore the signal sent when resizing a window (else litefm will break when resizing windows in WM or DE)
+
             // Fork a new process to launch the editor
             pid_t pid = fork();
             if (pid == 0) {
@@ -788,6 +790,9 @@ int main() {
                     break;
                 }
             }
+
+            // Restore default SIGWINCH handler after the editor exits
+            restore_sigwinch();
 
             // Reinitialize NCurses mode after the editor exits
             initscr();
