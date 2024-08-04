@@ -35,17 +35,21 @@ set(CMAKE_C_STANDARD 99)
 find_package(Curses REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
+# Manually specify YAML include and library paths
+set(YAML_INCLUDE_DIRS /usr/include)
+set(YAML_LIBRARIES /usr/lib/libyaml.so)
 
-# Include directories for ncurses, libarchive, and project headers
+# Include directories for ncurses, libarchive, libyaml, and project headers
 include_directories(${CURSES_INCLUDE_DIR})
 include_directories(${LIBARCHIVE_INCLUDE_DIRS})
+include_directories(${YAML_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 
 # Add the executable
-add_executable(litefm lfm.c src/cursesutils.c src/filepreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c src/logging.c src/signalhandling.c)
+add_executable(litefm lfm.c src/cursesutils.c src/filepreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c src/logging.c src/signalhandling.c src/syntax.c src/AVL_tree.c)
 
 # Link required libraries
-target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES})
+target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${YAML_LIBRARIES})
 
 # Add additional compiler flags
 target_compile_options(litefm PRIVATE -Wall -Wextra -Wpedantic)

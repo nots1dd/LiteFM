@@ -39,14 +39,25 @@
 #include <limits.h>  // For PATH_MAX
 #include <stdio.h>   // For FILE, fopen, fgets, fclose, perror
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <limits.h>
+#include <ctype.h>
+
+#include "syntax.h"
 
 // Constants
 #define MAX_LINES 60       // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length
 
 // Function Prototypes
+const char * get_file_extension(const char * filename);
 void display_file(WINDOW *info_win, const char *filename);
+const char *determine_file_type(const char *filename);
 int is_readable_extension(const char *filename);
 const char *format_file_size(off_t size);
+void view_image(WINDOW *win, const char *current_path, const char *filename);
+int is_image(const char *filename);
+void launch_env_var(WINDOW* win, const char *current_path, const char *filename, const char* type);
 
 #endif // FILEPREVIEW_H

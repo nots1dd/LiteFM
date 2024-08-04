@@ -1,0 +1,64 @@
+keywords:
+  - auto
+  - break
+  - case
+  - const
+  - continue
+  - default
+  - do
+  - double
+  - else
+  - enum
+  - extern
+  - for
+  - goto
+  - if
+  - long
+  - register
+  - return
+  - short
+  - signed
+  - sizeof
+  - static
+  - struct
+  - switch
+  - typedef
+  - union
+  - unsigned
+  - void
+  - volatile
+  - while
+
+functions:
+  - int
+  - char
+  - float
+
+operators:
+  - '+'
+  - '-'
+  - '*'
+  - '/'
+  - '='
+  - '=='
+  - '!='
+  - '<'
+  - '>'
+  - '<='
+  - '>='
+
+symbols:
+  - '('
+  - ')'
+  - '{'
+  - '}'
+  - ';'
+
+comments:
+  single_line: '//'
+  multi_line_start: '/*'
+  multi_line_end: '*/'
+
+strings:
+  - '"'
+  - "'"

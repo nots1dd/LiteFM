@@ -30,11 +30,9 @@
  * ---------------------------------------------------------------------------
  */
 
-#include <ctype.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <sys/wait.h>   // For waitpid
 
 /* LITEFM DEDICATED HEADERS */
 
@@ -46,6 +44,7 @@
 #include "logging.h"
 #include "clipboard.h"
 #include "signalhandling.h"
+#include "syntax.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -106,41 +105,6 @@ void list_dir(WINDOW * win,
 
   closedir(dir);
   wrefresh(win);
-}
-
-void launch_editor(const char *editor, const char *file_path) {
-    // Prepare arguments for execvp
-    char *args[] = {(char *)editor, (char *)file_path, NULL};
-    
-    // End NCurses mode before launching the editor
-    endwin();
-    
-    // Launch the editor
-    if (execvp(editor, args) == -1) {
-        // If execvp fails, print an error message
-        perror("Failed to launch editor");
-        exit(EXIT_FAILURE);
-    }
-}
-
-void handle_item(const char *current_path, const char *item_name) {
-    const char *editor = getenv("EDITOR");
-    if (editor == NULL) {
-        editor = "nvim"; // Default to nvim if EDITOR is not set
-    }
-    
-    log_message(LOG_LEVEL_DEBUG, "Launching `%s` in %s...", item_name, editor);
-    
-    char file_path[PATH_MAX];
-    snprintf(file_path, sizeof(file_path), "%s/%s", current_path, item_name);
-    
-    launch_editor(editor, file_path);
-}
-
-const char * get_file_extension(const char * filename) {
-  const char * dot = strrchr(filename, '.');
-  if (!dot || dot == filename) return "";
-  return dot + 1;
 }
 
 void print_items(WINDOW * win, FileItem items[], int count, int highlight,
@@ -210,7 +174,7 @@ void print_items(WINDOW * win, FileItem items[], int count, int highlight,
         // Determine file type by extension
         char * extension = strrchr(items[index].name, '.');
         if (extension) {
-          if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".tar") == 0 || strcmp(extension, ".xz") == 0 || strcmp(extension, ".gz") == 0 || strcmp(extension, ".jar") == 0) {
+          if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".7z") == 0 || strcmp(extension, ".tar") == 0 || strcmp(extension, ".xz") == 0 || strcmp(extension, ".gz") == 0 || strcmp(extension, ".jar") == 0) {
             wattron(win, COLOR_PAIR(3));
             mvwprintw(win, i + 4, 5, "📦");
           } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".mp4") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
@@ -331,15 +295,6 @@ int find_item(const char * query, FileItem items[], int item_count, int * start_
   }
 
   return -1; // Not found
-}
-
-bool is_valid_editor(const char *editor) {
-    for (size_t i = 0; i < strlen(editor); ++i) {
-        if (!isalnum(editor[i]) && editor[i] != '-' && editor[i] != '_') {
-            return false;
-        }
-    }
-    return true;
 }
 
 void get_file_info_popup(WINDOW * main_win,
@@ -674,8 +629,19 @@ int main() {
   while (true) {
     int choice = getch();
     if (firstKeyPress) {
+      check_term_size(win, info_win);
       werase(win);
-      box(info_win, 0, 0);
+      if (info_win == NULL) {
+          // Create info_win if it does not exist
+          info_win = newwin(info_height, info_width, info_starty, info_startx);
+          if (info_win == NULL) {
+              perror("Failed to create info_win");
+              exit(EXIT_FAILURE);
+          }
+          box(info_win, 0, 0);
+      } else {
+          box(info_win, 0, 0);
+        }
       draw_colored_border(win, 2);
       print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
       wrefresh(win);
@@ -683,9 +649,11 @@ int main() {
       char full_path_info[PATH_MAX];
       snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
       if (is_readable_extension(items[highlight].name)) {
-        display_file(info_win, full_path_info);
+          char full_path_info[PATH_MAX];
+          snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
+          display_file(info_win, full_path_info);
       } else {
-        get_file_info(info_win, current_path, items[highlight].name);
+          get_file_info(info_win, current_path, items[highlight].name);
       }
     }
     firstKeyPress = false;
@@ -730,80 +698,37 @@ int main() {
         }
         break;
       
-  case KEY_RIGHT:
-  case 'l':
-      show_term_message("", -1);
-      if (items[highlight].is_dir) {
-          if (history_count < MAX_HISTORY) {
-              strcpy(history[history_count].path, current_path);
-              history[history_count].highlight = highlight;
-              history_count++;
-          }
-          strcat(current_path, "/");
-          strcat(current_path, items[highlight].name);
-          list_dir(win, current_path, items, &item_count, show_hidden);
-          highlight = 0;
-          scroll_position = 0;
-      } else {
+      case KEY_RIGHT:
+      case 'l':
+        show_term_message("", -1);
+        if (items[highlight].is_dir) {
+            if (history_count < MAX_HISTORY) {
+                strcpy(history[history_count].path, current_path);
+                history[history_count].highlight = highlight;
+                history_count++;
+            }
+            strcat(current_path, "/");
+            strcat(current_path, items[highlight].name);
+            list_dir(win, current_path, items, &item_count, show_hidden);
+            highlight = 0;
+            scroll_position = 0;
+          } else {
+            if (is_readable_extension(items[highlight].name)) {
+              firstKeyPress = true;
+              launch_env_var(win, current_path, items[highlight].name, "EDITOR");
+              /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
+          } else if (is_image(items[highlight].name)) {
             firstKeyPress = true;
-            const char* editor = getenv("EDITOR");
-            if (editor == NULL || is_valid_editor(editor)) {
-                editor = "nano"; // Default to GNU nano if EDITOR is not set
-            }
-
-            log_message(LOG_LEVEL_DEBUG, "Launching `%s` in %s...", items[highlight].name, editor);
-
-            // Construct the full file path
-            char file_path[PATH_MAX];
-            snprintf(file_path, sizeof(file_path), "%s/%s", current_path, items[highlight].name);
-
-            // End NCurses mode before launching the editor
-            endwin();
-
-            ignore_sigwinch(); // ignore the signal sent when resizing a window (else litefm will break when resizing windows in WM or DE)
-
-            // Fork a new process to launch the editor
-            pid_t pid = fork();
-            if (pid == 0) {
-                // Child process
-                char *args[] = {(char *)editor, file_path, NULL};
-                execvp(editor, args); /* The execvp function is a POSIX function that executes a program, replacing the current process image with a new one */
-
-                // If execvp fails
-                perror("Failed to launch editor");
-                exit(EXIT_FAILURE);
-            } else if (pid < 0) {
-                // Fork failed
-                log_message(LOG_LEVEL_ERROR, "Fork failed.");
-                show_term_message("Error while forking process", 1);
-                break;
-            } else {
-                // Parent process
-                int status;
-                waitpid(pid, &status, 0);
-
-                if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-                    log_message(LOG_LEVEL_DEBUG, "%s: Exited editor successfully", items[highlight].name);
-                } else {
-                    log_message(LOG_LEVEL_ERROR, "Error while executing `%s`", editor);
-                    show_term_message("Error while calling editor", 1);
-                    break;
-                }
-            }
-
-            // Restore default SIGWINCH handler after the editor exits
-            restore_sigwinch();
-
-            // Reinitialize NCurses mode after the editor exits
-            initscr();
-            cbreak();
-            noecho();
-            keypad(win, TRUE);
-            refresh();
-            clear();
-
-            /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
-        }
+            view_image(win, current_path, items[highlight].name);
+          }
+      }
+      break;
+      case 'I':
+          if (!items[highlight].is_dir && is_image(items[highlight].name)) {
+            firstKeyPress = true;
+            launch_env_var(win, current_path, items[highlight].name, "VISUAL");
+            check_term_size(win, info_win);
+          }
       break;
       case 'G':
         highlight = item_count - 1; // will go to the last element in the currently displaying list
@@ -821,6 +746,8 @@ int main() {
           if (is_directory(destination_path)) {
             strcpy(current_path, destination_path);
             list_dir(win, current_path, items, & item_count, show_hidden);
+            highlight = 0;
+            scroll_position = 0;
           } else {
             log_message(LOG_LEVEL_ERROR, "The input `%s` is an invalid directory", destination_path);
             show_term_message("Invalid destination!", 1);
@@ -1042,7 +969,7 @@ int main() {
         if (!items[highlight].is_dir) {
           // Check if it's an archive file
           const char * filename = items[highlight].name;
-          if (strstr(filename, ".zip") || strstr(filename, ".tar")) {
+          if (strstr(filename, ".zip") || strstr(filename, ".tar") || strstr(filename, ".7z") || strstr(filename, ".jar")) {
             char full_path[PATH_MAX];
             snprintf(full_path, PATH_MAX, "%s/%s", current_path, filename);
 
@@ -1180,7 +1107,8 @@ int main() {
         endwin();
         return 0;
       }
-      // Update display after each key press 
+      // Update display after each key press
+      check_term_size(win, info_win);
       werase(win);
       draw_colored_border(win, 2);
       print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
@@ -1191,9 +1119,11 @@ int main() {
         werase(info_win);
         box(info_win, 0, 0);
         if (is_readable_extension(items[highlight].name)) {
-          display_file(info_win, full_path_info);
+            char full_path_info[PATH_MAX];
+            snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
+            display_file(info_win, full_path_info);
         } else {
-          get_file_info(info_win, current_path, items[highlight].name);
+            get_file_info(info_win, current_path, items[highlight].name);
         }
       }
     }

@@ -28,6 +28,8 @@ void colorLine(WINDOW* win, const char* info, int colorpair, int x, int y) {
 int show_compression_options(WINDOW *parent_win) {
     WINDOW *options_win;
     int choice;
+    int highlight = 0;
+    int c;
     // Create a new window for displaying options
     int win_height = 10;
     int win_width = 40;
@@ -38,31 +40,54 @@ int show_compression_options(WINDOW *parent_win) {
     box(options_win, 0, 0);
     keypad(options_win, TRUE); // Enable special keys (e.g., arrow keys)
 
-    // Display options with color
-    wattron(options_win, COLOR_PAIR(1));
-    mvwprintw(options_win, 1, 2, "Select compression format:");
-    wattroff(options_win, COLOR_PAIR(1));
+    const char *options[] = {
+        "TAR (.tar)",
+        "ZIP (.zip)"
+    };
+    int num_options = sizeof(options) / sizeof(options[0]);
 
-    wattron(options_win, COLOR_PAIR(2));
-    mvwprintw(options_win, 2, 2, "1. TAR (.tar)");
-    mvwprintw(options_win, 3, 2, "2. ZIP (.zip)");
-    wattroff(options_win, COLOR_PAIR(2));
+    while (1) {
+        // Display options with highlight
+        wattron(options_win, COLOR_PAIR(1));
+        mvwprintw(options_win, 1, 2, "Select compression format:");
+        wattroff(options_win, COLOR_PAIR(1));
 
-    wattron(options_win, COLOR_PAIR(3));
-    mvwprintw(options_win, 5, 2, "Press '1' for TAR, '2' for ZIP");
-    mvwprintw(options_win, win_height - 2, 2, "Press any other key to exit!");
-    wattroff(options_win, COLOR_PAIR(3));
+        for (int i = 0; i < num_options; ++i) {
+            if (i == highlight) {
+                wattron(options_win, A_REVERSE);
+            }
+            mvwprintw(options_win, i + 3, 2, " %s ", options[i]);
+            wattroff(options_win, A_REVERSE);
+        }
 
-    // Refresh and wait for user input
-    wrefresh(options_win);
-    choice = wgetch(options_win);
+        wattron(options_win, COLOR_PAIR(3));
+        mvwprintw(options_win, win_height - 2, 2, "Press ENTER to select, ESC to cancel");
+        wattroff(options_win, COLOR_PAIR(3));
 
-    // Clean up
-    delwin(options_win);
-    refresh(); // Refresh the main window to ensure no artifacts remain
+        // Refresh and wait for user input
+        wrefresh(options_win);
+        c = wgetch(options_win);
 
-    return (choice == '1') ? 1 : (choice == '2') ? 2 : -1;
+        switch (c) {
+            case KEY_UP:
+                highlight = (highlight == 0) ? num_options - 1 : highlight - 1;
+                break;
+            case KEY_DOWN:
+                highlight = (highlight == num_options - 1) ? 0 : highlight + 1;
+                break;
+            case 10: // Enter key
+                choice = highlight + 1;
+                delwin(options_win);
+                refresh(); // Refresh the main window to ensure no artifacts remain
+                return choice;
+            case 27: // ESC key
+                delwin(options_win);
+                refresh(); // Refresh the main window to ensure no artifacts remain
+                return -1;
+        }
+    }
 }
+
 
 void show_term_message(const char *message, int err) { 
     int maxy, maxx;
@@ -136,6 +161,11 @@ void color_pair_init() {
     init_custom_color(13, 0xDC, 0x9A, 0x1F); // #BDAE93 #DC9A1F
     init_pair(14, 235, 175); // ping bg, black fg
     init_pair(15, 175, 175);
+    init_pair(20, COLOR_BLUE + 1, COLOR_BLACK); // Keywords
+    init_pair(21, COLOR_GREEN + 1, COLOR_BLACK); // Comments
+    init_pair(22, COLOR_YELLOW, COLOR_BLACK); // Numbers
+    init_pair(23, COLOR_CYAN, COLOR_BLACK);   // Strings
+    init_pair(24, COLOR_WHITE, COLOR_BLACK);  // Default text
 }
 
 int confirm_action(WINDOW *win, const char *message) {
@@ -252,47 +282,91 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
 void displayHelp(WINDOW* main_win) {
     int help_win_height = LINES - 15;
     int help_win_width = (COLS / 3);
-    int help_win_y = (LINES - help_win_height) / 2;
+    int help_win_y = (LINES - help_win_height) / 4;
     int help_win_x = (COLS - help_win_width) / 2;
     WINDOW* help_win = newwin(help_win_height, help_win_width, help_win_y, help_win_x);
+    keypad(help_win, TRUE); // Enable keyboard input for the help window
+
+    // Draw the window borders and decorations
     draw_colored_border(help_win, 4);
     draw_3d_info_win(help_win, help_win_y, help_win_x, help_win_height, help_win_width, 1, 2);
-    colorLine(help_win, " Help Win: ", 14, 0, 2);
 
-    colorLine(help_win, " Scroll up            - [k/UP_ARROW]", 2, 2, 2);
-    colorLine(help_win, " Scroll down          - [j/DOWN_ARROW]", 2, 3, 2);
-    colorLine(help_win, " Go inside sel. dir   - [l/RIGHT_ARROW/ENTER]", 2, 4, 2);
-    colorLine(help_win, " Go to parent dir     - [h/LEFT_ARROW]", 2, 5, 2);
-    colorLine(help_win, " String search        - [/]", 2, 6, 2);
-    colorLine(help_win, " String next match    - [n]", 2, 7, 2);
-    colorLine(help_win, " String prev match    - [N]", 2, 8, 2);
-    colorLine(help_win, " Go to top of list    - [gg]", 2, 9, 2);
-    colorLine(help_win, " Go to end of list    - [G]", 2, 10, 2);
-    colorLine(help_win, " Yank file name       - [y]", 2, 11, 2);
-    colorLine(help_win, " Yank file location   - [Y]", 2, 12, 2);
+    // Print the header
+    wattron(help_win, A_BOLD | COLOR_PAIR(14));
+    mvwprintw(help_win, 1, (help_win_width - 11) / 2, " Help Window ");
+    wattroff(help_win, A_BOLD | COLOR_PAIR(14));
 
-    colorLine(help_win, " --------- FILE CMDS --------", 3, 14, 2);  // Using color pair 3 for section header
+    const char *commands[] = {
+        " Scroll up            - [k/UP_ARROW]",
+        " Scroll down          - [j/DOWN_ARROW]",
+        " Go inside sel. dir   - [l/RIGHT_ARROW/ENTER]",
+        " Go to parent dir     - [h/LEFT_ARROW]",
+        " String search        - [/]",
+        " String next match    - [n]",
+        " String prev match    - [N]",
+        " Go to top of list    - [gg]",
+        " Go to end of list    - [G]",
+        " Yank file name       - [y]",
+        " Yank file location   - [Y]",
+        " Add a new file/dir   - [a]",
+        " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}",
+        " Recursive dir delete - [D]",
+        " Rename a file/dir    - [R]",
+        " Extract archive      - [E] {Works for .zip, {.tar.}, .7z}",
+        " Compress directory   - [Z] {Works for .zip and .tar ONLY!}",
+        " Move a file/dir      - [M]",
+        " Show help win        - [?]",
+        " Go to / directory    - [H]",
+        " Go to ~ (home) dir   - [gh]",
+        " Go to input dir      - [gt]",
+        " Get help prompt      - [?]",
+    };
+    int num_commands = sizeof(commands) / sizeof(commands[0]);
+    int highlight = 0;
+    int c;
 
-    colorLine(help_win, " Add a new file/dir   - [a]", 2, 16, 2);
-    colorLine(help_win, " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}", 2, 17, 2);
-    colorLine(help_win, " Recursive dir delete - [D]", 2, 18, 2);
-    colorLine(help_win, " Rename a file/dir    - [R]", 2, 19, 2);
-    colorLine(help_win, " Extract archive      - [E] {Works for any archive}", 2, 20, 2);
-    colorLine(help_win, " Compress directory   - [Z] {Works for .zip and .tar ONLY!}", 2, 21, 2);
-    colorLine(help_win, " Move a file/dir      - [M]", 2, 22, 2);
+    while (1) {
+        // Display commands
+        for (int i = 0; i < num_commands; ++i) {
+            if (i == highlight) {
+                wattron(help_win, A_REVERSE);
+            }
+            if (i == 11 || i == 18) { // Highlighting section headers
+                wattron(help_win, A_BOLD | COLOR_PAIR(3));
+                mvwprintw(help_win, i + 3, 2, i == 11 ? " --------- FILE CMDS --------" : " --------- NAVIGATION --------");
+                wattroff(help_win, A_BOLD | COLOR_PAIR(3));
+            } else {
+                mvwprintw(help_win, i + 4, 2, "%s", commands[i]);
+            }
+            wattroff(help_win, A_REVERSE);
+        }
 
-    colorLine(help_win, " Show help win        - [?]", 2, 23, 2);
-    colorLine(help_win, " Go to / directory    - [H]", 2, 24, 2);
-    colorLine(help_win, " Go to ~ (home) dir   - [gh]",2, 25,2);
-    colorLine(help_win, " Go to input dir      - [gt]",2, 26,2);
+        // Display footer
+        wattron(help_win, A_BOLD | COLOR_PAIR(3));
+        mvwprintw(help_win, help_win_height - 2, (help_win_width - 29) / 2, "Press 'q' to exit this help");
+        wattroff(help_win, A_BOLD | COLOR_PAIR(3));
 
-    wrefresh(help_win);
-    wgetch(help_win);
-    delwin(help_win);
+        // Refresh and wait for user input
+        wrefresh(help_win);
+        c = wgetch(help_win);
 
-    // Refresh the main window to avoid some flickering issues
-    wrefresh(main_win); 
+        switch (c) {
+            case KEY_UP:
+                highlight = (highlight == 0) ? num_commands - 1 : highlight - 1;
+                break;
+            case KEY_DOWN:
+                highlight = (highlight == num_commands - 1) ? 0 : highlight + 1;
+                break;
+            case 'q':
+                delwin(help_win);
+                refresh(); // Refresh the main window to ensure no artifacts remain
+                return;
+            default:
+                break;
+        }
+    }
 }
+
 
 WINDOW *create_centered_window(int height, int width) {
     int startx, starty;
@@ -315,4 +389,39 @@ WINDOW *create_centered_window(int height, int width) {
     return popup_win;
 }
 
+void check_term_size(WINDOW* win, WINDOW* info_win) {
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);
 
+    int win_width = COLS / 2;
+    int win_height = rows - 1;
+    int win_startx = 0;
+    int win_starty = 0;
+
+    int info_width = COLS / 2;
+    int info_height = rows - 1;
+    int info_startx = COLS / 2;
+    int info_starty = 0;
+
+    int win_rows, win_cols;
+    getmaxyx(win, win_rows, win_cols);
+
+    // Check if the terminal size has changed
+    if (win_rows!= win_height || win_cols!= win_width) {
+        // Update the window sizes and positions
+        wresize(win, win_height, win_width);
+        mvwin(win, win_starty, win_startx);
+
+        wresize(info_win, info_height, info_width);
+        mvwin(info_win, info_starty, info_startx);
+
+        // Redraw the borders and items
+        werase(win);
+        draw_colored_border(win, 2);
+        wrefresh(win);
+
+        werase(info_win);
+        box(info_win, 0, 0);
+        wrefresh(info_win);
+    }
+}

@@ -60,5 +60,6 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
 void get_user_input(WINDOW *win, char *input, int max_length);
 void displayHelp(WINDOW* main_win);
 WINDOW *create_centered_window(int height, int width);
+void check_term_size(WINDOW* win, WINDOW* info_win);
 
 #endif // CURSESUTILS_H

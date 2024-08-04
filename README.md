@@ -152,3 +152,5 @@ This file manager is far from done there are a lot of cool and essential feature
 - [x] Integration of adding a text editor
 
 - [ ] Handling resizing of litefm window (maybe through `SIGWINCH`)
+
+- [ ] UPCOMING: Modular Syntax highlighting through `yaml.h` and `AVL Trees`
