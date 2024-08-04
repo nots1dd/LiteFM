@@ -6,11 +6,11 @@
 
 /* By nots1dd */
 
-#include "../filepreview.h"
-#include "../cursesutils.h"
-#include "../signalhandling.h"
-#include "../logging.h"
-#include "../syntax.h"
+#include "../include/filepreview.h"
+#include "../include/cursesutils.h"
+#include "../include/signalhandling.h"
+#include "../include/logging.h"
+#include "../include/syntax.h"
 
 #define MAX_LINES 60   // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length

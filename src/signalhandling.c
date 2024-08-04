@@ -1,5 +1,5 @@
 
-#include "../signalhandling.h"
+#include "../include/signalhandling.h"
 
 void ignore_sigwinch() {
     struct sigaction sa;

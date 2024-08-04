@@ -16,7 +16,7 @@
    ENSURE THAT YOU HAVE THAT DIRECTORY CREATED (JUST RUN `build.sh`) FOR LITEFM TO WORK!
 */
 
-#include "../logging.h"
+#include "../include/logging.h"
 
 // Function to get the current time as a string
 const char *current_time_str() {

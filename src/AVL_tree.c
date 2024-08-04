@@ -1,5 +1,5 @@
 
-#include "../AVL_tree.h"
+#include "../include/AVL_tree.h"
 
 int height(TreeNode *node) {
     if (node == NULL)

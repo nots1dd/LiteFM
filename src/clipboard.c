@@ -6,8 +6,8 @@
 
 /* BY nots1dd */
 
-#include "../clipboard.h"
-#include "../cursesutils.h"
+#include "../include/clipboard.h"
+#include "../include/cursesutils.h"
 
 // Function to copy the selected item name
 void yank_selected_item(char *selected_item) {

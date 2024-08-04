@@ -37,14 +37,15 @@
 /* LITEFM DEDICATED HEADERS */
 
 #include "src/getFreeSpace.c"
-#include "cursesutils.h"
-#include "filepreview.h"
-#include "dircontrol.h"
-#include "archivecontrol.h"
-#include "logging.h"
-#include "clipboard.h"
-#include "signalhandling.h"
-#include "syntax.h"
+#include "include/cursesutils.h"
+#include "include/filepreview.h"
+#include "include/dircontrol.h"
+#include "include/archivecontrol.h"
+#include "include/logging.h"
+#include "include/clipboard.h"
+#include "include/signalhandling.h"
+#include "include/syntax.h"
+#include "include/AVL_tree.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256

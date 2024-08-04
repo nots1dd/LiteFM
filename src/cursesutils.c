@@ -6,7 +6,7 @@
 
 /* BY nots1dd */
 
-#include "../cursesutils.h"
+#include "../include/cursesutils.h"
 
 void show_message(WINDOW *win, const char *message) {
     int maxy, maxx;

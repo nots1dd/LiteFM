@@ -87,7 +87,7 @@ display_server=$(detect_display_server)
 echo -e "${PINK}Detected display server: $display_server${RESET}"
 
 # Define the required packages based on the distribution
-required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev")
+required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev" "libyaml")
 
 if [ "$display_server" == "wayland" ]; then
     required_packages+=("wl-clipboard")
@@ -96,9 +96,9 @@ elif [ "$display_server" == "x11" ]; then
 fi
 
 if [ "$distro" == "rpm" ]; then
-    required_packages=("ncurses" "cmake" "make" "libarchive")
+    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml")
 elif [ "$distro" == "arch" ]; then
-    required_packages=("ncurses" "cmake" "make" "libarchive")
+    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml")
     if [ "$display_server" == "wayland" ]; then
         required_packages+=("wl-clipboard")
     elif [ "$display_server" == "x11" ]; then

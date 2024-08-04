@@ -6,9 +6,9 @@
 
 /* BY nots1dd */
 
-#include "../archivecontrol.h"
-#include "../dircontrol.h"
-#include "../cursesutils.h"
+#include "../include/archivecontrol.h"
+#include "../include/dircontrol.h"
+#include "../include/cursesutils.h"
 
 int copy_data(struct archive *ar, struct archive *aw);
 

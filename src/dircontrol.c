@@ -6,9 +6,9 @@
 
 /* BY nots1dd */
 
-#include "../dircontrol.h"
-#include "../cursesutils.h"
-#include "../logging.h"
+#include "../include/dircontrol.h"
+#include "../include/cursesutils.h"
+#include "../include/logging.h"
 
 char* get_current_user() {
     uid_t uid = getuid();
