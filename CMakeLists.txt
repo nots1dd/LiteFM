@@ -36,8 +36,10 @@ find_package(Curses REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 # Manually specify YAML include and library paths
-set(YAML_INCLUDE_DIRS /usr/include)
-set(YAML_LIBRARIES /usr/lib/libyaml.so)
+find_path(YAML_INCLUDE_DIR yaml.h)
+
+find_library(YAML_LIBRARY NAMES libyaml)
+
 
 # Include directories for ncurses, libarchive, libyaml, and project headers
 include_directories(${CURSES_INCLUDE_DIR})
