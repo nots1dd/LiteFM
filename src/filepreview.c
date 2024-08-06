@@ -221,26 +221,54 @@ void view_image(WINDOW *win, const char *current_path, const char *filename) {
     char file_path[PATH_MAX];
     snprintf(file_path, sizeof(file_path), "%s/%s", current_path, filename);
 
-    // Execute imgcurses command in the NCurses window
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "imgcurses %s", file_path);
+    // Check if the file_path is safe and exists
+    if (access(file_path, F_OK) != 0) {
+        mvwprintw(image_win, 1, 1, "File not found!");
+        wrefresh(image_win);
+        getch();
+        delwin(image_win);
+        return;
+    }
+
+    // Create a fork to execute imgcurses
     def_prog_mode();
     endwin();
-    int status = system(cmd);
-    reset_prog_mode();
+    pid_t pid = fork();
+    if (pid < 0) {
+        // Fork failed
+        perror("fork");
+        delwin(image_win);
+        return;
+    }
 
-    // Check the exit code of imgcurses
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-        // imgcurses was successful, refresh and wait for user input
-        refresh();
-        wrefresh(image_win);
-
-        getch();
+    if (pid == 0) {
+        // Child process
+        execlp("imgcurses", "imgcurses", file_path, (char *)NULL);
+        // If execlp fails
+        perror("execlp");
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+        int status;
+        waitpid(pid, &status, 0);
+        
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            // imgcurses was successful, refresh and wait for user input
+            refresh();
+            wrefresh(image_win);
+            getch();
+        } else {
+            mvwprintw(image_win, 1, 1, "Failed to display image.");
+            wrefresh(image_win);
+            getch();
+        }
     }
 
     // Clean up
     delwin(image_win);
+    reset_prog_mode();
 }
+
 
 bool is_valid_editor(const char *editor) {
     for (size_t i = 0; i < strlen(editor); ++i) {
