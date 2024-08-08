@@ -113,7 +113,7 @@ int show_compression_options(WINDOW *parent_win) {
                 } else {
                     wattron(options_win, COLOR_PAIR(33));
                 }
-                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, "%s", top_options[i]);
+                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, " %s ", top_options[i]);
                 wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
             }
 
@@ -161,7 +161,7 @@ int show_compression_options(WINDOW *parent_win) {
         } else if (step == 1) {
             // Display title
             wattron(options_win, COLOR_PAIR(31)); 
-            mvwprintw(options_win, 1, (win_width - 30), title_buf);
+            mvwprintw(options_win, 1, (win_width - strlen(title_buf)) / 2, title_buf);
             wattroff(options_win, COLOR_PAIR(31));
 
             // Display top options
@@ -171,7 +171,7 @@ int show_compression_options(WINDOW *parent_win) {
                 } else {
                     wattron(options_win, COLOR_PAIR(33));
                 }
-                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, "%s", top_options[i]);
+                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, " %s ", top_options[i]);
                 wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
             }
 
@@ -186,7 +186,7 @@ int show_compression_options(WINDOW *parent_win) {
             } else {
                 wattron(options_win, COLOR_PAIR(33));
             }
-            mvwprintw(options_win, bottom_y, left_x, "%s", bottom_options[0]);
+            mvwprintw(options_win, bottom_y, left_x, " %s ", bottom_options[0]);
             wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
 
             // Right bottom option (EXIT)

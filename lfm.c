@@ -1116,6 +1116,8 @@ int main() {
       wrefresh(win);
       char full_path_info[PATH_MAX];
       snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
+      box(info_win, 0, 0);
+      wrefresh(info_win);
       if (item_count > 0) {
         werase(info_win);
         box(info_win, 0, 0);
