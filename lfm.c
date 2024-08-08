@@ -45,7 +45,7 @@
 #include "include/clipboard.h"
 #include "include/signalhandling.h"
 #include "include/syntax.h"
-#include "include/AVL_tree.h"
+#include "include/hashtable.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -142,7 +142,7 @@ void print_items(WINDOW * win, FileItem items[], int count, int highlight,
   mvwprintw(win, 2, 2, " %s@%s ", cur_hostname, cur_user);
   wattroff(win, COLOR_PAIR(8));
   wattron(win, COLOR_PAIR(9));
-  mvwprintw(win, 2, 20, " %s ", sanitizedCurPath);
+  print_limited(win, 2, 20, sanitizedCurPath); 
   wattroff(win, COLOR_PAIR(9));
   wattron(win, COLOR_PAIR(9));
   mvwprintw(win, LINES - 3, (COLS / 2) - 40, " Hidden Dirs: %s ", hidden_dir);
@@ -543,7 +543,7 @@ void handle_rename(WINDOW *win, const char *path) {
     strncpy(old_name, basename((char *)path), PATH_MAX);
 
     // Prompt for new name
-    get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename");
+    get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename", path);
 
     // Check if new_name is not empty
     if (strlen(new_name) == 0) {
@@ -743,7 +743,7 @@ int main() {
           highlight = 0; // will go to the top most element in the current displaying list
         } else if (nextch == 't') { // GO TO func
           char destination_path[PATH_MAX];
-          get_user_input_from_bottom(stdscr, destination_path, PATH_MAX, "goto");
+          get_user_input_from_bottom(stdscr, destination_path, PATH_MAX, "goto", current_path);
           if (is_directory(destination_path)) {
             strcpy(current_path, destination_path);
             list_dir(win, current_path, items, & item_count, show_hidden);
@@ -782,7 +782,7 @@ int main() {
       case 'a': // Add file or directory
       {
         char name_input[NAME_MAX];
-        get_user_input_from_bottom(stdscr, name_input, NAME_MAX, "add");
+        get_user_input_from_bottom(stdscr, name_input, NAME_MAX, "add", current_path);
 
         if (strlen(name_input) > 0) {
           char timestamp[26];
@@ -912,7 +912,7 @@ int main() {
         wattroff(win, A_BOLD | COLOR_PAIR(7));
         wrefresh(win);
         char query[NAME_MAX];
-        get_user_input_from_bottom(stdscr, query, NAME_MAX, "search");
+        get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
 
         if (strlen(query) > 0) {
           int start_index = highlight + 1;

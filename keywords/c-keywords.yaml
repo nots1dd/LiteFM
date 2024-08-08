@@ -28,6 +28,8 @@ keywords:
   - void
   - volatile
   - while
+  - '#include'
+  - '#define'
 
 functions:
   - int
@@ -52,13 +54,24 @@ symbols:
   - ')'
   - '{'
   - '}'
+  - '['
+  - ']'
+  - ':'
+  - ','
+  - '.'
   - ';'
+  - '='
+  - '->'
 
-comments:
-  single_line: '//'
-  multi_line_start: '/*'
-  multi_line_end: '*/'
+singlecomments:
+  - '/'
+
+multicomments1:
+  - '/'
+
+multicomments2:
+  - '*'
 
 strings:
-  - '"'
+  - "\""
   - "'"

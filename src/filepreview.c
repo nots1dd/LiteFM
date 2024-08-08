@@ -94,7 +94,7 @@ void display_file(WINDOW *info_win, const char *filename) {
         strcpy(sanitizedCurPath, filename);
     }
     wattron(info_win, A_BOLD | COLOR_PAIR(9));
-    mvwprintw(info_win, 1, 1, " %s ", sanitizedCurPath);
+    print_limited(info_win, 1, 1, sanitizedCurPath);
     wattroff(info_win, A_BOLD | COLOR_PAIR(9));
 
     // Initialize color pairs for syntax highlighting

@@ -8,6 +8,8 @@
 
 #include "../include/cursesutils.h"
 
+void draw_3d_info_win(WINDOW *win, int y, int x, int height, int width, int color_pair, int shadow_color_pair);
+
 void show_message(WINDOW *win, const char *message) {
     int maxy, maxx;
     getmaxyx(win, maxy, maxx);
@@ -18,6 +20,34 @@ void show_message(WINDOW *win, const char *message) {
 void clearLine(WINDOW *win, int x, int y) {
   mvwprintw(win, x, y, "\n");
 }
+
+
+void print_limited(WINDOW *win, int y, int x, const char *str) {
+    int max_x = getmaxx(win) - 6; // Get max width of window minus borders
+    int available_width = max_x - x; // Available width from current x position
+
+    if (available_width <= 3) {
+        mvwprintw(win, y, x, "..."); // If available width is too small to display anything but ellipsis
+        return;
+    }
+
+    char buffer[available_width + 1]; // +1 for the null terminator
+    size_t len = strlen(str);
+
+    if (len > available_width - 3) { // Check if truncation is needed
+        // Copy and truncate the string, leaving space for "..."
+        strncpy(buffer, str, available_width - 3);
+        buffer[available_width - 3] = '\0'; // Null terminate
+        strcat(buffer, "..."); // Append ellipsis
+    } else {
+        // No truncation needed, just copy the string
+        strncpy(buffer, str, available_width);
+        buffer[available_width] = '\0'; // Null terminate
+    }
+
+    mvwprintw(win, y, x, " %s ", buffer);
+}
+
 
 void colorLine(WINDOW* win, const char* info, int colorpair, int x, int y) {
   wattron(win, COLOR_PAIR(colorpair));
@@ -30,63 +60,187 @@ int show_compression_options(WINDOW *parent_win) {
     int choice;
     int highlight = 0;
     int c;
-    // Create a new window for displaying options
+    int step = 0; // 0 for selecting format, 1 for selecting action
+
+    // Define window size and position
     int win_height = 10;
     int win_width = 40;
     int win_y = (LINES - win_height) / 2;
     int win_x = (COLS - win_width) / 2;
-    
+
+    // Create a new window for displaying options
     options_win = newwin(win_height, win_width, win_y, win_x);
     box(options_win, 0, 0);
     keypad(options_win, TRUE); // Enable special keys (e.g., arrow keys)
+    draw_3d_info_win(options_win, win_y, win_x, win_height, win_width, 2, 4);
 
-    const char *options[] = {
+    // Define colors
+    init_pair(31, COLOR_BLACK, COLOR_BLUE);    // Title
+    init_pair(32, COLOR_BLACK, COLOR_GREEN);  // Highlighted option
+    init_pair(33, COLOR_WHITE, COLOR_BLACK);   // Normal text
+    init_pair(34, COLOR_RED, COLOR_BLACK);      // Footer text
+
+    const char *top_options[] = {
         "TAR (.tar)",
         "ZIP (.zip)"
     };
-    int num_options = sizeof(options) / sizeof(options[0]);
+    const char *bottom_options[] = {
+        "COMPRESS",
+        "EXIT"
+    };
+
+    int num_top_options = sizeof(top_options) / sizeof(top_options[0]);
+    int num_bottom_options = sizeof(bottom_options) / sizeof(bottom_options[0]);
+    char title_buf[60];
 
     while (1) {
-        // Display options with highlight
-        wattron(options_win, COLOR_PAIR(1));
-        mvwprintw(options_win, 1, 2, "Select compression format:");
-        wattroff(options_win, COLOR_PAIR(1));
+        // Clear the window
+        werase(options_win);
 
-        for (int i = 0; i < num_options; ++i) {
-            if (i == highlight) {
-                wattron(options_win, A_REVERSE);
+        // Draw the box again
+        box(options_win, 0, 0);
+
+        if (step == 0) {
+            // Display title
+            wattron(options_win, COLOR_PAIR(31));
+            mvwprintw(options_win, 1, (win_width - strlen(" Compression format: ")) / 2, " Compression format: ");
+            wattroff(options_win, COLOR_PAIR(31));
+
+            // Display top options
+            for (int i = 0; i < num_top_options; ++i) {
+                if (i == highlight) {
+                    wattron(options_win, COLOR_PAIR(32) | A_BOLD);
+                } else {
+                    wattron(options_win, COLOR_PAIR(33));
+                }
+                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, "%s", top_options[i]);
+                wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
             }
-            mvwprintw(options_win, i + 3, 2, " %s ", options[i]);
-            wattroff(options_win, A_REVERSE);
-        }
 
-        wattron(options_win, COLOR_PAIR(3));
-        mvwprintw(options_win, win_height - 2, 2, "Press ENTER to select, ESC to cancel");
-        wattroff(options_win, COLOR_PAIR(3));
+            // Display bottom options
+            int bottom_y = win_height - 2;
+            int left_x = 2;
+            int right_x = win_width - strlen(bottom_options[1]) - 2;
 
-        // Refresh and wait for user input
-        wrefresh(options_win);
-        c = wgetch(options_win);
+            // Left bottom option (COMPRESS)
+            wattron(options_win, COLOR_PAIR(33));
+            mvwprintw(options_win, bottom_y, left_x, "%s", bottom_options[0]);
+            wattroff(options_win, COLOR_PAIR(33));
 
-        switch (c) {
-            case KEY_UP:
-                highlight = (highlight == 0) ? num_options - 1 : highlight - 1;
-                break;
-            case KEY_DOWN:
-                highlight = (highlight == num_options - 1) ? 0 : highlight + 1;
-                break;
-            case 10: // Enter key
-                choice = highlight + 1;
-                delwin(options_win);
-                refresh(); // Refresh the main window to ensure no artifacts remain
-                return choice;
-            case 27: // ESC key
-                delwin(options_win);
-                refresh(); // Refresh the main window to ensure no artifacts remain
-                return -1;
+            // Right bottom option (EXIT)
+            wattron(options_win, COLOR_PAIR(33));
+            mvwprintw(options_win, bottom_y, right_x, "%s", bottom_options[1]);
+            wattroff(options_win, COLOR_PAIR(33));
+
+            // Refresh and wait for user input
+            wrefresh(options_win);
+            c = wgetch(options_win); 
+
+            switch (c) {
+                case KEY_UP:
+                    if (highlight > 0) {
+                        highlight--;
+                    }
+                    break;
+                case KEY_DOWN:
+                    if (highlight < num_top_options - 1) {
+                        highlight++;
+                    }
+                    break;
+                case 10: // Enter key
+                    step = 1; // Move to next step
+                    snprintf(title_buf, 60, " Select %s action: ", top_options[highlight]);
+                    choice = highlight + 1;
+                    highlight = num_top_options; // Set default highlight to COMPRESS
+                    break;
+                case 27: // ESC key
+                    delwin(options_win);
+                    refresh(); // Refresh the main window to ensure no artifacts remain
+                    return -1;
+            }
+        } else if (step == 1) {
+            // Display title
+            wattron(options_win, COLOR_PAIR(31)); 
+            mvwprintw(options_win, 1, (win_width - 30), title_buf);
+            wattroff(options_win, COLOR_PAIR(31));
+
+            // Display top options
+            for (int i = 0; i < num_top_options; ++i) {
+                if (i == highlight) {
+                    wattron(options_win, COLOR_PAIR(32) | A_BOLD);
+                } else {
+                    wattron(options_win, COLOR_PAIR(33));
+                }
+                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, "%s", top_options[i]);
+                wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
+            }
+
+            // Display bottom options
+            int bottom_y = win_height - 2;
+            int left_x = 2;
+            int right_x = win_width - strlen(bottom_options[1]) - 2;
+
+            // Left bottom option (COMPRESS)
+            if (highlight == num_top_options) {
+                wattron(options_win, COLOR_PAIR(32) | A_BOLD);
+            } else {
+                wattron(options_win, COLOR_PAIR(33));
+            }
+            mvwprintw(options_win, bottom_y, left_x, "%s", bottom_options[0]);
+            wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
+
+            // Right bottom option (EXIT)
+            if (highlight == num_top_options + 1) {
+                wattron(options_win, COLOR_PAIR(32) | A_BOLD);
+            } else {
+                wattron(options_win, COLOR_PAIR(33));
+            }
+            mvwprintw(options_win, bottom_y, right_x, "%s", bottom_options[1]);
+            wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
+
+            // Refresh and wait for user input
+            wrefresh(options_win);
+            c = wgetch(options_win);
+
+            switch (c) {
+                case KEY_LEFT:
+                    if (highlight == num_top_options + 1) {
+                        highlight = num_top_options; // Move to COMPRESS
+                    }
+                    break;
+                case KEY_RIGHT:
+                    if (highlight == num_top_options) {
+                        highlight = num_top_options + 1; // Move to EXIT
+                    }
+                    break;
+                case 10: // Enter key
+                    if (highlight == num_top_options) {
+                        // Handle compression logic
+                        delwin(options_win);
+                        refresh(); // Refresh the main window to ensure no artifacts remain
+                        if (choice == 1) {
+                          return 1; // return 1 (compression type: tar)
+                        } else {
+                          return 2; // return 2 (compression type: zip)
+                        }
+                    } else if (highlight == num_top_options + 1) {
+                        delwin(options_win);
+                        refresh(); // Refresh the main window to ensure no artifacts remain
+                        return 0; // Indicate "EXIT" was chosen
+                    }
+                    break;
+                case 27: // ESC key
+                    delwin(options_win);
+                    refresh(); // Refresh the main window to ensure no artifacts remain
+                    return -1;
+            }
         }
     }
+
+    delwin(options_win);
+    wrefresh(parent_win);
 }
+
 
 
 void show_term_message(const char *message, int err) { 
@@ -211,7 +365,14 @@ void draw_3d_info_win(WINDOW *win, int y, int x, int height, int width, int colo
     wrefresh(shadow_win);
 }
 
-void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type) {
+void truncate_path(char *path) {
+    char *last_slash = strrchr(path, '/');
+    if (last_slash != NULL) {
+        *last_slash = '\0';  // Replace the last '/' with '\0' to truncate the string
+    }
+}
+
+void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const char* type, const char *current_path) {
     int y, x;
     getmaxyx(stdscr, y, x);  // Get screen dimensions
 
@@ -236,7 +397,7 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
         attroff(COLOR_PAIR(2));
     } else if (strcmp(type, "goto") == 0) {
       attron(COLOR_PAIR(2));
-      mvprintw(y-1,0," Go to: ");
+      mvprintw(y-1,0," Go to: %s/",current_path);
       attroff(COLOR_PAIR(2));
     }
     attroff(A_BOLD);  // Turn off bold attribute
@@ -250,13 +411,24 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
     } else if (strcmp(type, "add") == 0) {
       wmove(win, getmaxy(win) - 1, 6);
     } else if (strcmp(type, "goto") == 0) {
-      wmove(win, getmaxy(win) - 1, 8);
+      wmove(win, getmaxy(win) - 1, 9+strlen(current_path));
     }
     else {
       wmove(win, getmaxy(win) - 1, 1);
     }
     attron(COLOR_PAIR(3));
-    wgetnstr(win, buffer, max_length);
+    if (strcmp(type, "goto") == 0) {
+      char tmp_buf[256];
+      wgetnstr(win, tmp_buf, max_length);
+      if (strcmp(tmp_buf, "..") == 0) {
+        truncate_path(current_path);
+        snprintf(buffer, max_length, "%s", current_path);
+      } else {
+        snprintf(buffer, max_length, "%s/%s", current_path, tmp_buf);
+      }
+    } else {
+      wgetnstr(win, buffer, max_length);
+    }
     noecho();
     nodelay(win, TRUE);
 
