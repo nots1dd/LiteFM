@@ -9,6 +9,7 @@
 #include "../include/dircontrol.h"
 #include "../include/cursesutils.h"
 #include "../include/logging.h"
+#include "../include/filepreview.h"
 
 char* get_current_user() {
     uid_t uid = getuid();
@@ -222,4 +223,82 @@ int is_directory(const char *path) {
         return 0; // Path doesn't exist or some other error
     }
     return S_ISDIR(statbuf.st_mode);
+}
+
+void handle_rename(WINDOW *win, const char *path) {
+    char new_name[PATH_MAX];
+    char old_name[PATH_MAX];
+    struct stat path_stat;
+
+    // Copy the original filename
+    strncpy(old_name, basename((char *)path), PATH_MAX);
+
+    // Prompt for new name
+    get_user_input_from_bottom(win, new_name, sizeof(new_name), "rename", path);
+
+    // Check if new_name is not empty
+    if (strlen(new_name) == 0) {
+        show_term_message("No name provided. Aborting rename.", 1);
+        return;
+    }
+
+    // Check if the path is a file or directory
+    if (stat(path, &path_stat) != 0) {
+        show_term_message("Unable to stat path. Aborting rename.", 1);
+        return;
+    }
+
+    if (S_ISDIR(path_stat.st_mode)) {
+        // It's a directory, allow any new name (excluding special characters check)
+        if (strpbrk(new_name, "/<>:\"|?*") != NULL) {
+            show_term_message("Invalid characters in new name. Aborting rename.", 1);
+            return;
+        }
+    } else if (S_ISREG(path_stat.st_mode)) {
+        // It's a file, ensure the extension remains the same
+        const char *old_ext = get_file_extension(old_name);
+        const char *new_ext = get_file_extension(new_name);
+
+        if (strcmp(old_ext, new_ext) != 0) {
+            show_term_message("Extension change not allowed. Aborting rename.", 1);
+            return;
+        }
+    } else {
+        show_term_message("Unsupported file type. Aborting rename.", 1);
+        return;
+    }
+
+    // Perform rename
+    if (rename_file_or_dir(path, new_name) == 0) {
+        log_message(LOG_LEVEL_INFO, "Rename successful for %s", path);
+        show_term_message("Rename successful.", 0);
+        // Update file list if needed
+    } else {
+        log_message(LOG_LEVEL_ERROR, "Rename error for %s", path);
+        show_term_message("Rename failed.", 1);
+    }
+}
+
+int create_file(const char * path,
+  const char * filename, char * timestamp) {
+  char full_path[PATH_MAX];
+  snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
+
+  // Create the file
+  int fd = open(full_path, O_CREAT | O_EXCL | O_WRONLY, 0666);
+  if (fd == -1) {
+    if (errno == EEXIST)
+      return 1; // File already exists
+    else
+      return -1; // Error creating file
+  }
+
+  close(fd);
+
+  // Get the current time and format it
+  time_t t = time(NULL);
+  struct tm * tm_info = localtime( & t);
+  strftime(timestamp, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+
+  return 0; // File created successfully
 }
