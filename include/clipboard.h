@@ -10,7 +10,7 @@
  *
  *  Description: Header file for checking the display servers of
  *               the user, and accordingly using the right 
- *               copy/paste modules to `yank` file/dirname & file/dirpath
+ *               copy/paste modules to `yank` file contents & file/dirpath
  *
  *  Author:      nots1dd
  *  Created:     <31/07/24>

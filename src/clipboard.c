@@ -8,6 +8,7 @@
 
 #include "../include/clipboard.h"
 #include "../include/cursesutils.h"
+#include "../include/logging.h"
 
 // Function to copy the selected item name
 void yank_selected_item(char *selected_item) {
@@ -71,6 +72,12 @@ void copyFileContents(const char *sourceFile, const char *destinationFile) {
 
     fclose(src);
     fclose(dest);
+
+    // Notify user about the successful copy
+    char message[256];
+    snprintf(message, sizeof(message), "[SUCCESS] Copied 📄 '%s' to '%s'.", sourceFile, destinationFile);
+    log_message(LOG_LEVEL_INFO, "Successfully copied '%s' to '%s'.", sourceFile, destinationFile);
+    show_term_message(message, 0);
 }
 
 

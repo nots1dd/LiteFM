@@ -994,7 +994,6 @@ int main() {
       }
       case 'M':
       {
-        bool movingVISUAL = true;
         halfdelay(100);
         char basefile[MAX_PATH_LENGTH];
         strcpy(basefile, items[highlight].name);
@@ -1100,8 +1099,81 @@ int main() {
         break;
       }
       case 'Y':
-        /* THE COPY FILE CONTENT FUNC GOES HERE */
+      {
+        halfdelay(100);
+        char basefile[MAX_PATH_LENGTH];
+        strcpy(basefile, items[highlight].name);
+        char basepath[MAX_PATH_LENGTH];
+        snprintf(basepath, MAX_PATH_LENGTH, "%s/%s",current_path,basefile);
+        char termMSG[256];
+        snprintf(termMSG, 256, " [VISUAL]    Copying  %s to .... ", basepath);
+        show_term_message(termMSG, 0);
+        do { 
+          int nextch = getch();
+            if (nextch == 'h' || nextch == KEY_LEFT) {
+              if (history_count > 0) {
+                history_count--;
+                strcpy(current_path, history[history_count].path);
+                highlight = history[history_count].highlight;
+                list_dir(win, current_path, items, & item_count, show_hidden);
+                scroll_position = 0;
+              } else { // will allow for traversal to parents of get_current_working_directory (getcwd)
+                  char parent_dir[1024];
+                  strcpy(parent_dir, current_path);
+                  strcpy(current_path, dirname(parent_dir));
+                  list_dir(win, current_path, items, & item_count, show_hidden);
+                  highlight = 0;
+                  scroll_position = 0;
+              }
+            }
+            else if (nextch == 'l' || nextch == KEY_RIGHT) {
+              if (items[highlight].is_dir) {
+                  if (history_count < MAX_HISTORY) {
+                      strcpy(history[history_count].path, current_path);
+                      history[history_count].highlight = highlight;
+                      history_count++;
+                  }
+                  strcat(current_path, "/");
+                  strcat(current_path, items[highlight].name);
+                  list_dir(win, current_path, items, &item_count, show_hidden);
+                  highlight = 0;
+                  scroll_position = 0;
+                } 
+            }
+            else if (nextch == 'k' || nextch == KEY_UP) {
+              if (highlight > 0) {
+                highlight--;
+                if (highlight < scroll_position) {
+                  scroll_position--;
+                }
+              }
+            }
+            else if (nextch == 'j' || nextch == KEY_DOWN) {
+              if (highlight < item_count - 1) {
+                highlight++;
+                if (highlight >= scroll_position + height - 8) {
+                  scroll_position++;
+                }
+              }
+            }
+            else if (nextch == '.') {
+              show_hidden = !show_hidden; // Toggle show_hidden flag
+              list_dir(win, current_path, items, & item_count, show_hidden);
+              highlight = 0;
+              scroll_position = 0;
+            }
+            else if (nextch == 10 && !items[highlight].is_dir) {
+              break;
+            }
+          refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
+
+        } while (nextch != 10);
+        char destination_path[MAX_PATH_LENGTH];
+        snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s",current_path,items[highlight].name);
+        copyFileContents(basepath, destination_path);
+        list_dir(win, current_path, items, & item_count, show_hidden);
         break;
+      }
       case '?':
         displayHelp(win);
         break;
