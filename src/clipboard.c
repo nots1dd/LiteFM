@@ -48,6 +48,30 @@ void yank_selected_item(char *selected_item) {
     }
 }
 
+void copyFileContents(const char *sourceFile, const char *destinationFile) {
+    FILE *src = fopen(sourceFile, "r");
+    if (src == NULL) {
+        perror("Error opening source file");
+        return;
+    }
+
+    FILE *dest = fopen(destinationFile, "w");
+    if (dest == NULL) {
+        perror("Error opening destination file");
+        fclose(src);
+        return;
+    }
+
+    char buffer[1024];
+    size_t bytesRead;
+
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), src)) > 0) {
+        fwrite(buffer, 1, bytesRead, dest);
+    }
+
+    fclose(src);
+    fclose(dest);
+}
 
 
 

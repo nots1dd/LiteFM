@@ -510,6 +510,36 @@ void get_file_info(WINDOW * info_win,
   wrefresh(info_win);
 }
 
+void refreshMainWin(WINDOW *win, WINDOW *info_win, FileItem items[], int item_count, int highlight, const char *current_path, int show_hidden, int scroll_position, int height, int info_height, int info_width, int info_starty, int info_startx) {
+  check_term_size(win, info_win);
+  werase(win);
+  if (info_win == NULL) {
+      // Create info_win if it does not exist
+      info_win = newwin(info_height, info_width, info_starty, info_startx);
+      if (info_win == NULL) {
+          perror("Failed to create info_win");
+          exit(EXIT_FAILURE);
+      }
+      box(info_win, 0, 0);
+  } else {
+      box(info_win, 0, 0);
+    }
+  draw_colored_border(win, 2);
+  print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
+  wrefresh(win);
+  if (item_count > 0) {
+    werase(info_win);
+    box(info_win, 0, 0);
+    if (is_readable_extension(items[highlight].name) && !items[highlight].is_dir) {
+        char full_path_info[PATH_MAX];
+        snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
+        display_file(info_win, full_path_info);
+    } else {
+        get_file_info(info_win, current_path, items[highlight].name);
+    }
+  }
+}
+
 int main() {
   init_curses(); 
 
@@ -549,42 +579,18 @@ int main() {
   bool firstKeyPress = true;
   log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE STARTED =================");
 
-  while (true) {
+  while (true) { 
     int choice = getch();
     if (firstKeyPress) {
-      check_term_size(win, info_win);
-      werase(win);
-      if (info_win == NULL) {
-          // Create info_win if it does not exist
-          info_win = newwin(info_height, info_width, info_starty, info_startx);
-          if (info_win == NULL) {
-              perror("Failed to create info_win");
-              exit(EXIT_FAILURE);
-          }
-          box(info_win, 0, 0);
-      } else {
-          box(info_win, 0, 0);
-        }
-      draw_colored_border(win, 2);
-      print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
-      wrefresh(win);
-      werase(info_win);
-      char full_path_info[PATH_MAX];
-      snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
-      if (is_readable_extension(items[highlight].name)) {
-          char full_path_info[PATH_MAX];
-          snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
-          display_file(info_win, full_path_info);
-      } else {
-          get_file_info(info_win, current_path, items[highlight].name);
-      }
+        refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
+        show_term_message("", -1);
     }
     firstKeyPress = false;
     if (choice != ERR) {
       switch (choice) {
       case KEY_UP:
       case 'k':
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (highlight > 0) {
           highlight--;
           if (highlight < scroll_position) {
@@ -594,7 +600,7 @@ int main() {
         break;
       case KEY_DOWN:
       case 'j':
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (highlight < item_count - 1) {
           highlight++;
           if (highlight >= scroll_position + height - 8) {
@@ -604,7 +610,7 @@ int main() {
         break;
       case KEY_LEFT:
       case 'h':
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (history_count > 0) {
           history_count--;
           strcpy(current_path, history[history_count].path);
@@ -623,7 +629,7 @@ int main() {
       
       case KEY_RIGHT:
       case 'l':
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (items[highlight].is_dir) {
             if (history_count < MAX_HISTORY) {
                 strcpy(history[history_count].path, current_path);
@@ -636,32 +642,27 @@ int main() {
             highlight = 0;
             scroll_position = 0;
           } else {
-            if (is_readable_extension(items[highlight].name)) {
+            if (is_readable_extension(items[highlight].name) || !is_image(items[highlight].name)) {
               firstKeyPress = true;
               launch_env_var(win, current_path, items[highlight].name, "EDITOR");
               /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
           } else if (is_image(items[highlight].name)) {
             firstKeyPress = true;
-            view_image(win, current_path, items[highlight].name);
-          }
-      }
-      break;
-      case 'I':
-          if (!items[highlight].is_dir && is_image(items[highlight].name)) {
-            firstKeyPress = true;
             launch_env_var(win, current_path, items[highlight].name, "VISUAL");
-            check_term_size(win, info_win);
           }
-      break;
+          check_term_size(win, info_win);
+          werase(win);
+      }
+      break; 
       case 'G':
         highlight = item_count - 1; // will go to the last element in the currently displaying list
         break;
       case 'g':
-        show_term_message(" g", -1);
+        show_term_message(" [!] g", -1);
         halfdelay(100);
         char nextch = getch();
         if (nextch == 'g') {
-          show_term_message("", -1);
+          show_term_message("", -1);
           highlight = 0; // will go to the top most element in the current displaying list
         } else if (nextch == 't') { // GO TO func
           char destination_path[PATH_MAX];
@@ -677,7 +678,7 @@ int main() {
           }
           break;
         } else if (nextch == 'h') {
-          show_term_message("", -1);
+          show_term_message("", -1);
           char* home_dir = getenv("HOME");
           strcpy(current_path, home_dir);
           list_dir(win, current_path, items, & item_count, show_hidden);
@@ -715,7 +716,7 @@ int main() {
             if (result == 0) {
               log_message(LOG_LEVEL_INFO, "Directory created successfully for `%s`", name_input);
               char msg[256];
-              snprintf(msg, sizeof(msg), "Directory '%s' created at %s.", name_input, timestamp);
+              snprintf(msg, sizeof(msg), "  Directory '%s' created at %s.", name_input, timestamp);
               show_term_message(msg, 0);
             } else if (result == 1) {
               log_message(LOG_LEVEL_WARN, "Directory `%s` already exists", name_input);
@@ -730,7 +731,7 @@ int main() {
             if (result == 0) {
               char msg[256];
               log_message(LOG_LEVEL_INFO, "File created successfully for `%s`", name_input);
-              snprintf(msg, sizeof(msg), "File '%s' created at %s.", name_input, timestamp);
+              snprintf(msg, sizeof(msg), "📄 File '%s' created at %s.", name_input, timestamp);
               show_term_message(msg, 0);
             } else if (result == 1) {
               log_message(LOG_LEVEL_WARN, "File `%s` already exists", name_input);
@@ -829,6 +830,15 @@ int main() {
       break;
       case '/': // Find file or directory
       {
+        show_hidden = 1; // Toggle show_hidden flag
+        list_dir(win, current_path, items, & item_count, show_hidden);
+        highlight = 0;
+        scroll_position = 0;
+        check_term_size(win, info_win);
+        werase(win);
+        draw_colored_border(win, 2);
+        print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
+        wrefresh(win);
         wattron(win, A_BOLD | COLOR_PAIR(7));
         mvwprintw(win, LINES - 3, (COLS / 2) - 55, "🔍 Search ON ");
         wattroff(win, A_BOLD | COLOR_PAIR(7));
@@ -984,12 +994,82 @@ int main() {
       }
       case 'M':
       {
-        move_file_or_dir(win,current_path,items[highlight].name);
+        bool movingVISUAL = true;
+        halfdelay(100);
+        char basefile[MAX_PATH_LENGTH];
+        strcpy(basefile, items[highlight].name);
+        char basepath[MAX_PATH_LENGTH];
+        strcpy(basepath, current_path);
+        char termMSG[256];
+        snprintf(termMSG, 256, " [VISUAL]    Moving  %s     %s", basefile, basepath);
+
+        show_term_message(termMSG, 0);
+        do { 
+          int nextch = getch();
+            if (nextch == 'h' || nextch == KEY_LEFT) {
+              if (history_count > 0) {
+                history_count--;
+                strcpy(current_path, history[history_count].path);
+                highlight = history[history_count].highlight;
+                list_dir(win, current_path, items, & item_count, show_hidden);
+                scroll_position = 0;
+              } else { // will allow for traversal to parents of get_current_working_directory (getcwd)
+                  char parent_dir[1024];
+                  strcpy(parent_dir, current_path);
+                  strcpy(current_path, dirname(parent_dir));
+                  list_dir(win, current_path, items, & item_count, show_hidden);
+                  highlight = 0;
+                  scroll_position = 0;
+              }
+            }
+            else if (nextch == 'l' || nextch == KEY_RIGHT) {
+              if (items[highlight].is_dir) {
+                  if (history_count < MAX_HISTORY) {
+                      strcpy(history[history_count].path, current_path);
+                      history[history_count].highlight = highlight;
+                      history_count++;
+                  }
+                  strcat(current_path, "/");
+                  strcat(current_path, items[highlight].name);
+                  list_dir(win, current_path, items, &item_count, show_hidden);
+                  highlight = 0;
+                  scroll_position = 0;
+                } 
+            }
+            else if (nextch == 'k' || nextch == KEY_UP) {
+              if (highlight > 0) {
+                highlight--;
+                if (highlight < scroll_position) {
+                  scroll_position--;
+                }
+              }
+            }
+            else if (nextch == 'j' || nextch == KEY_DOWN) {
+              if (highlight < item_count - 1) {
+                highlight++;
+                if (highlight >= scroll_position + height - 8) {
+                  scroll_position++;
+                }
+              }
+            }
+            else if (nextch == '.') {
+              show_hidden = !show_hidden; // Toggle show_hidden flag
+              list_dir(win, current_path, items, & item_count, show_hidden);
+              highlight = 0;
+              scroll_position = 0;
+            }
+            else if (nextch == 10) {
+              break;
+            }
+          refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
+
+        } while (nextch != 10);
+        move_file_or_dir(win, basepath, current_path,basefile);
         list_dir(win, current_path, items, & item_count, show_hidden);
         break;
       }
       case 10: {
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (items[highlight].is_dir) {
           if (history_count < MAX_HISTORY) {
             strcpy(history[history_count].path, current_path);
@@ -1014,13 +1094,13 @@ int main() {
 
       }
       case 'y': {
-        yank_selected_item(items[highlight].name);
-        break;
-      }
-      case 'Y':
         char full_path[PATH_MAX];
         snprintf(full_path, PATH_MAX, "%s/%s", current_path, items[highlight].name);
         yank_selected_item(full_path);
+        break;
+      }
+      case 'Y':
+        /* THE COPY FILE CONTENT FUNC GOES HERE */
         break;
       case '?':
         displayHelp(win);
@@ -1031,26 +1111,7 @@ int main() {
         return 0;
       }
       // Update display after each key press
-      check_term_size(win, info_win);
-      werase(win);
-      draw_colored_border(win, 2);
-      print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
-      wrefresh(win);
-      char full_path_info[PATH_MAX];
-      snprintf(full_path_info, PATH_MAX, "%s/%s", current_path, items[highlight].name);
-      box(info_win, 0, 0);
-      wrefresh(info_win);
-      if (item_count > 0) {
-        werase(info_win);
-        box(info_win, 0, 0);
-        if (is_readable_extension(items[highlight].name)) {
-            char full_path_info[PATH_MAX];
-            snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
-            display_file(info_win, full_path_info);
-        } else {
-            get_file_info(info_win, current_path, items[highlight].name);
-        }
-      }
+       refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
     }
   }
 

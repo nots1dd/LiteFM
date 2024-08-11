@@ -381,7 +381,7 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
     attron(A_BOLD);  // Turn on bold attribute
     if (strcmp(type, "search") == 0) {
         attron(COLOR_PAIR(3));
-        mvprintw(y - 1, 0, " /");
+        mvprintw(y - 1, 0, " [Enter to quit] /");
         attroff(COLOR_PAIR(3));
     } else if (strcmp(type, "rename") == 0) {
         attron(COLOR_PAIR(2));
@@ -405,7 +405,7 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
 
     // Move the cursor to the appropriate location in the window
     if (strcmp(type, "search") == 0) {
-      wmove(win, getmaxy(win) - 1, 2);
+      wmove(win, getmaxy(win) - 1, 18);
     } else if (strcmp(type, "rename") == 0 || strcmp(type, "move") == 0) {
       wmove(win, getmaxy(win) - 1, 12);
     } else if (strcmp(type, "add") == 0) {
@@ -453,7 +453,7 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
 
 void displayHelp(WINDOW* main_win) {
     int help_win_height = LINES - 15;
-    int help_win_width = (COLS / 3);
+    int help_win_width = COLS / 3;
     int help_win_y = (LINES - help_win_height) / 4;
     int help_win_x = (COLS - help_win_width) / 2;
     WINDOW* help_win = newwin(help_win_height, help_win_width, help_win_y, help_win_x);
@@ -463,12 +463,9 @@ void displayHelp(WINDOW* main_win) {
     draw_colored_border(help_win, 4);
     draw_3d_info_win(help_win, help_win_y, help_win_x, help_win_height, help_win_width, 1, 2);
 
-    // Print the header
-    wattron(help_win, A_BOLD | COLOR_PAIR(14));
-    mvwprintw(help_win, 1, (help_win_width - 11) / 2, " Help Window ");
-    wattroff(help_win, A_BOLD | COLOR_PAIR(14));
-
-    const char *commands[] = {
+    // Define content for both pages
+    const char *page1[] = {
+        " --------- FILE CMDS --------",
         " Scroll up            - [k/UP_ARROW]",
         " Scroll down          - [j/DOWN_ARROW]",
         " Go inside sel. dir   - [l/RIGHT_ARROW/ENTER]",
@@ -478,8 +475,8 @@ void displayHelp(WINDOW* main_win) {
         " String prev match    - [N]",
         " Go to top of list    - [gg]",
         " Go to end of list    - [G]",
-        " Yank file name       - [y]",
-        " Yank file location   - [Y]",
+        " Yank file location   - [y]",
+        " Yank file contents   - [Y]",
         " Add a new file/dir   - [a]",
         " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}",
         " Recursive dir delete - [D]",
@@ -493,29 +490,61 @@ void displayHelp(WINDOW* main_win) {
         " Go to input dir      - [gt]",
         " Get help prompt      - [?]",
     };
-    int num_commands = sizeof(commands) / sizeof(commands[0]);
+
+    const char *page2[] = {
+        " --------- MODES & CREDITS --------",
+        " Mode 1: Normal - Default mode for file operations.",
+        "",
+        " Mode 2: Visual - For selecting and moving files.",
+        " ->Here, you can ONLY do the following:",
+        "    Traverse the filesystem ", 
+        "    Toggle hidden dirs",
+        "",
+        " Mode 3: Command - Direct command input. [Ex: Go to, /, so on]",
+        "",
+        "",
+        " Author: nots1dd",
+        " Version: 1.0",
+        " License: GNU GPL v3",
+        " Thank you for using LiteFM!",
+        " For more information, visit the Github page:",
+        " ->https://github.com/nots1dd/litefm",
+        "",
+        " Press 'q' to exit this help",
+    };
+
+    int num_commands_page1 = sizeof(page1) / sizeof(page1[0]);
+    int num_commands_page2 = sizeof(page2) / sizeof(page2[0]);
     int highlight = 0;
+    int current_page = 1; // Start with the first page
     int c;
 
     while (1) {
-        // Display commands
+        // Display content based on current page
+        const char** current_page_content = current_page == 1 ? page1 : page2;
+        int num_commands = current_page == 1 ? num_commands_page1 : num_commands_page2;
+
+        werase(help_win);
+        draw_colored_border(help_win, 4);
+        draw_3d_info_win(help_win, help_win_y, help_win_x, help_win_height, help_win_width, 1, 2);
+
+        // Print header
+        wattron(help_win, A_BOLD | COLOR_PAIR(14));
+        mvwprintw(help_win, 1, (help_win_width - 11) / 2, " Help Window ");
+        wattroff(help_win, A_BOLD | COLOR_PAIR(14));
+
+        // Print content
         for (int i = 0; i < num_commands; ++i) {
             if (i == highlight) {
                 wattron(help_win, A_REVERSE);
             }
-            if (i == 11 || i == 18) { // Highlighting section headers
-                wattron(help_win, A_BOLD | COLOR_PAIR(3));
-                mvwprintw(help_win, i + 3, 2, i == 11 ? " --------- FILE CMDS --------" : " --------- NAVIGATION --------");
-                wattroff(help_win, A_BOLD | COLOR_PAIR(3));
-            } else {
-                mvwprintw(help_win, i + 4, 2, "%s", commands[i]);
-            }
+            mvwprintw(help_win, i + 3, 2, "%s", current_page_content[i]);
             wattroff(help_win, A_REVERSE);
         }
 
-        // Display footer
+        // Print footer
         wattron(help_win, A_BOLD | COLOR_PAIR(3));
-        mvwprintw(help_win, help_win_height - 2, (help_win_width - 29) / 2, "Press 'q' to exit this help");
+        mvwprintw(help_win, help_win_height - 2, (help_win_width - 60) / 2, "Press 'q' to exit | 'n' for next page | 'p' for prev page");
         wattroff(help_win, A_BOLD | COLOR_PAIR(3));
 
         // Refresh and wait for user input
@@ -529,6 +558,18 @@ void displayHelp(WINDOW* main_win) {
             case KEY_DOWN:
                 highlight = (highlight == num_commands - 1) ? 0 : highlight + 1;
                 break;
+            case 'n':
+                if (current_page == 1) {
+                    current_page = 2;
+                    highlight = 0; // Reset highlight on page change
+                }
+                break;
+            case 'p':
+                if (current_page == 2) {
+                    current_page = 1;
+                    highlight = 0; // Reset highlight on page change
+                }
+                break;
             case 'q':
                 delwin(help_win);
                 refresh(); // Refresh the main window to ensure no artifacts remain
@@ -538,7 +579,6 @@ void displayHelp(WINDOW* main_win) {
         }
     }
 }
-
 
 WINDOW *create_centered_window(int height, int width) {
     int startx, starty;

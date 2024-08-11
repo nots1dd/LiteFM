@@ -39,5 +39,6 @@
 #define MAX_PATH_LENGTH 256
 
 void yank_selected_item(char *selected_item);
+void copyFileContents(const char *sourceFile, const char *destinationFile);
 
 #endif

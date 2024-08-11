@@ -56,7 +56,6 @@ void display_file(WINDOW *info_win, const char *filename);
 const char *determine_file_type(const char *filename);
 int is_readable_extension(const char *filename);
 const char *format_file_size(off_t size);
-void view_image(WINDOW *win, const char *current_path, const char *filename);
 int is_image(const char *filename);
 void launch_env_var(WINDOW* win, const char *current_path, const char *filename, const char* type);
 

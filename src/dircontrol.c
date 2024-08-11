@@ -191,25 +191,24 @@ int rename_file_or_dir(const char *old_path, const char *new_name) {
     return 0; // Return success code
 }
 
-void move_file_or_dir(WINDOW *win, const char *current_path, const char *selected_item) {
-    char destination[MAX_PATH_LENGTH];
+void move_file_or_dir(WINDOW *win, const char *basepath, const char *current_path, const char *selected_item) {
     char full_current_path[MAX_PATH_LENGTH];
     char full_destination_path[MAX_PATH_LENGTH];
 
     // Construct the full path of the selected item
-    snprintf(full_current_path, sizeof(full_current_path), "%s/%s", current_path, selected_item);
+    snprintf(full_current_path, sizeof(full_current_path), "%s/%s", basepath, selected_item);
 
     // Get the destination path from the user
-    get_user_input_from_bottom(stdscr, destination, MAX_PATH_LENGTH, "move", current_path);
+    /*get_user_input_from_bottom(stdscr, destination, MAX_PATH_LENGTH, "move", current_path);*/
 
     // Construct the full destination path
-    snprintf(full_destination_path, sizeof(full_destination_path), "%s/%s", destination, selected_item);
+    snprintf(full_destination_path, sizeof(full_destination_path), "%s/%s", current_path, selected_item);
 
     // Attempt to rename (move) the file or directory
     if (rename(full_current_path, full_destination_path) == 0) {
         char msg[256];
-        log_message(LOG_LEVEL_INFO, "Moved `%s` to `%s`", selected_item, destination);
-        snprintf(msg, sizeof(msg), "Successfully moved %s to %s", selected_item, destination);
+        log_message(LOG_LEVEL_INFO, "Moved `%s` from `%s` to `%s`", selected_item, basepath, current_path);
+        snprintf(msg, sizeof(msg), " Moved %s   %s     %s", selected_item, basepath, current_path);
         show_term_message(msg, 0);
     } else {
         log_message(LOG_LEVEL_ERROR, "Error moving file/dir `%s`", selected_item);

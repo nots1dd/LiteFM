@@ -9,6 +9,7 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 3. Easy and Fast addition, deletion of files and directories
 4. Clean and responsive TUI thanks to ncurses with cool colors and unicodes
 5. Incredibly fast extraction and compression functions thanks to `libarchive`
+6. Very transient and logical workflow
 
 
 ![litefm1](https://github.com/user-attachments/assets/4bf801e2-594e-4259-b910-11a5a277de5b)
@@ -20,8 +21,18 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > 
 > For the best experience of LiteFM:
 > 
-> Ensure that your terminal has any NERD FONT enabled.
+> 1. Ensure that your terminal has any NERD FONT enabled.
 > 
+> Without a nerd font, LiteFM will show some unreadable chars!
+> 
+> 2. Have it full screen whenever possible:
+> 
+> Despite having dynamic window scaling, a lot of
+> the outputs, strings may look weird (or not visible at all!)
+> Therefore, till I find a way to fix this issue, it is **HIGHLY**
+> recommended to use LiteFM at: 
+>   ->Full screen of originally created terminal [DE]  
+>   ->Full terminal size without resizing [WM]
 
 
 ## Usage
@@ -36,7 +47,7 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > 
 > ### Yanking
 > 
-> Yanking function only works with `WAYLAND` and `X11` display servers ONLY!!
+> Every Yanking function only work with `WAYLAND` and `X11` display servers!!
 > 
 > If you are on other display servers like `Mir`, `SurfaceFlinger` and yanking does NOT work:
 > 
@@ -93,7 +104,7 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 
 -> Run `make` in the current directory
 
--> This should give a `litefm` executable, just run it to enjoy LiteFM!
+-> This should give a `./litefm` executable, just run it to enjoy LiteFM!
 
 -> To cleanup, run `make clean`
 
@@ -151,6 +162,8 @@ This file manager is far from done there are a lot of cool and essential feature
 
 - [x] Integration of adding a text editor
 
-- [ ] Handling resizing of litefm window (maybe through `SIGWINCH`)
+- [x] Handling resizing of litefm window (maybe through `SIGWINCH`)
 
-- [ ] UPCOMING: Modular Syntax highlighting through `yaml.h` and `AVL Trees`
+- [ ] **UPCOMING: Modular Syntax highlighting through `yaml.h` and `Hashtables`**
+
+- [ ] **UPCOMING: Adding a privacy guard (using GPG maybe)**

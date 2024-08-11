@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Define colors
+# Define colors and styles
 GREEN="\e[32m"
 RED="\e[31m"
 PINK="\e[35m"
 BLUE="\e[34m"
+CYAN="\e[36m"
 RESET="\e[0m"
+BOLD="\e[1m"
+UNDERLINE="\e[4m"
 
 # Function to detect the package manager and distribution
 detect_distro() {
@@ -17,6 +20,17 @@ detect_distro() {
         echo "arch"
     else
         echo "unsupported"
+    fi
+}
+
+detect_nerd_fonts() {
+    FONT_CHECK=$(fc-list | grep -i "nerd")
+    if [ -n "$FONT_CHECK" ]; then
+        echo -e "${CYAN}Nerd Fonts are installed and available.${RESET}"
+    else
+        echo -e "${RED}Nerd Fonts are not installed or not available.${RESET}"
+        echo -e "\n${RED}${BOLD}Kindly ensure that you have a nerd font installed and enabled in your terminal for LiteFM!${RESET}"
+        exit 1
     fi
 }
 
@@ -32,7 +46,7 @@ check_package_installed() {
     elif [ "$distro" == "arch" ]; then
         pacman -Q "$package" &> /dev/null
     else
-        echo "Unsupported package manager."
+        echo -e "${RED}Unsupported package manager.${RESET}"
         return 1
     fi
 }
@@ -43,7 +57,7 @@ install_packages() {
     shift
     local packages=("$@")
     
-    echo -e "${PINK}Installing missing packages: ${packages[*]}${RESET}"
+    echo -e "${PINK}${BOLD}Installing missing packages:${RESET} ${packages[*]}"
     if [ "$distro" == "debian" ]; then
         sudo apt-get update
         sudo apt-get install -y "${packages[@]}"
@@ -69,22 +83,22 @@ detect_display_server() {
 }
 
 # Title
-echo -e "${GREEN}===================="
+echo -e "${GREEN}${BOLD}===================="
 echo -e "      LiteFM        "
 echo -e "====================${RESET}"
 
 # Detect the distribution
 distro=$(detect_distro)
 if [ "$distro" == "unsupported" ]; then
-    echo -e "${RED}Unsupported Linux distribution.${RESET}"
+    echo -e "${RED}${BOLD}Unsupported Linux distribution.${RESET}"
     exit 1
 fi
 
-echo -e "${PINK}Building for $distro...${RESET}"
+echo -e "${PINK}${BOLD}Building for $distro...${RESET}"
 
 # Detect the display server
 display_server=$(detect_display_server)
-echo -e "${PINK}Detected display server: $display_server${RESET}"
+echo -e "${PINK}${BOLD}Detected display server: $display_server${RESET}"
 
 # Define the required packages based on the distribution
 required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev" "libyaml")
@@ -111,9 +125,9 @@ missing_packages=()
 
 for package in "${required_packages[@]}"; do
     if check_package_installed "$distro" "$package"; then
-        echo -e "${GREEN}Package $package is already installed.${RESET}"
+        echo -e "${GREEN}✔ Package $package is already installed.${RESET}"
     else
-        echo -e "${RED}Package $package is missing.${RESET}"
+        echo -e "${RED}✘ Package $package is missing.${RESET}"
         missing_packages+=("$package")
     fi
 done
@@ -121,47 +135,51 @@ done
 if [ ${#missing_packages[@]} -ne 0 ]; then
     install_packages "$distro" "${missing_packages[@]}"
 else
-    echo -e "${GREEN}All required packages are already installed.${RESET}"
+    echo -e "${GREEN}${BOLD}All required packages are already installed.${RESET}"
 fi
 
 # Prompt for build type
+detect_nerd_fonts
 read -p "Enter the type of build (cmake or make): " build_type
 
 # Build commands
 if [ "$build_type" == "cmake" ]; then
+    echo -e "${CYAN}Running cmake build...${RESET}"
     cmake -S . -B build/
     cmake --build build/
 elif [ "$build_type" == "make" ]; then
+    echo -e "${CYAN}Running make build...${RESET}"
     make
 else
-    echo -e "${RED}Invalid build type. Please enter 'cmake' or 'make'.${RESET}"
+    echo -e "${RED}${BOLD}Invalid build type. Please enter 'cmake' or 'make'.${RESET}"
     exit 1
 fi
 
 # Check if the build was successful
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Build failed.${RESET}"
+    echo -e "${RED}${BOLD}Build failed.${RESET}"
     exit 1
 fi
 
 # Copy the man file and gzip it
-echo -e "${PINK}============ MAN PAGE =============${RESET}"
+echo -e "${PINK}${BOLD}============ MAN PAGE =============${RESET}"
 read -p "Add manual page? (y/n) " confirm_man
 if [ "$confirm_man" == "y" ]; then
     sudo cp components/litefm.1 /usr/share/man/man1/
     sudo gzip /usr/share/man/man1/litefm.1
 fi 
 
-echo -e "${BLUE}=========== LOGGING SETUP =============== ${RESET}"
+echo -e "${BLUE}${BOLD}=========== LOGGING SETUP =============== ${RESET}"
 mkdir -p "$HOME/.cache/litefm/log/"
 if [ $? -eq 0 ]; then
-  echo -e "${BLUE}================ LOGGING DONE ============= ${RESET}"
+  echo -e "${BLUE}${BOLD}================ LOGGING DONE ============= ${RESET}"
 else
-  echo -e "${RED} Something went wrong while trying to setup logging. Exiting with code 1${RESET}"
+  echo -e "${RED}Something went wrong while setting up logging. Exiting with code 1${RESET}"
   exit 1 
 fi
+
 # Create alias in the appropriate shell configuration file
-echo -e "${PINK}============= SETTING ALIAS =========${RESET}"
+echo -e "${PINK}${BOLD}============= SETTING ALIAS =========${RESET}"
 SHELL_NAME=$(basename "$SHELL")
 case "$SHELL_NAME" in
     bash)
@@ -175,4 +193,4 @@ case "$SHELL_NAME" in
         ;;
 esac
 
-echo -e "${GREEN}Build completed and man page installed. Please restart your terminal or source your rc file to use the litefm command.${RESET}"
+echo -e "${GREEN}${BOLD}Build completed and man page installed. Please restart your terminal or source your rc file to use the litefm command.${RESET}"

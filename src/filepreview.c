@@ -209,66 +209,6 @@ int is_image(const char *filename) {
     return 0;
 }
 
-// Function to view an image
-void view_image(WINDOW *win, const char *current_path, const char *filename) {
-    // Create a new NCurses window
-    WINDOW *image_win = newwin(10, 40, 2, 2);
-    box(image_win, 0, 0);
-    mvwprintw(image_win, 0, 2, " LiteFM ");
-    wrefresh(image_win);
-
-    // Construct the full file path
-    char file_path[PATH_MAX];
-    snprintf(file_path, sizeof(file_path), "%s/%s", current_path, filename);
-
-    // Check if the file_path is safe and exists
-    if (access(file_path, F_OK) != 0) {
-        mvwprintw(image_win, 1, 1, "File not found!");
-        wrefresh(image_win);
-        getch();
-        delwin(image_win);
-        return;
-    }
-
-    // Create a fork to execute imgcurses
-    def_prog_mode();
-    endwin();
-    pid_t pid = fork();
-    if (pid < 0) {
-        // Fork failed
-        perror("fork");
-        delwin(image_win);
-        return;
-    }
-
-    if (pid == 0) {
-        // Child process
-        execlp("imgcurses", "imgcurses", file_path, (char *)NULL);
-        // If execlp fails
-        perror("execlp");
-        exit(EXIT_FAILURE);
-    } else {
-        // Parent process
-        int status;
-        waitpid(pid, &status, 0);
-        
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            // imgcurses was successful, refresh and wait for user input
-            refresh();
-            wrefresh(image_win);
-            getch();
-        } else {
-            mvwprintw(image_win, 1, 1, "Failed to display image.");
-            wrefresh(image_win);
-            getch();
-        }
-    }
-
-    // Clean up
-    delwin(image_win);
-    reset_prog_mode();
-}
-
 
 bool is_valid_editor(const char *editor) {
     for (size_t i = 0; i < strlen(editor); ++i) {

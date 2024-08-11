@@ -4,39 +4,70 @@
 #//             //
 #// // // // // // 
 
-# BY nots1dd 
+#/*
+# * ---------------------------------------------------------------------------
+# *  File:        Makefile
+# *
+# *  Description: Default Makefile for LiteFM
+# *
+# *  Author:      nots1dd
+# *  Created:     31/07/24
+# * 
+# *  Copyright:   2024 nots1dd. All rights reserved.
+# * 
+# *  License:     <GNU GPL v3>
+# * 
+# *  Revision History:
+# *      31/07/24 - Initial creation.
+# *
+# * ---------------------------------------------------------------------------
+# */
 
-# Makefile CONFIGURATION FOR LITE FILE MANAGER
-
-# LICENSED UNDER GNU GPL v3
-
-# Variables
+# Compiler and flags
 CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic -std=c99
-LDFLAGS = $(CURSES_LIBRARIES) $(LIBARCHIVE_LIBRARIES)
-INCLUDE_DIRS = -I/usr/include -I/usr/local/include -I$(CMAKE_SOURCE_DIR)
-LIB_DIRS = -L/usr/lib -L/usr/local/lib
+LDFLAGS =
+
+# Libraries and include directories
+CURSES_LIBS = $(shell pkg-config --libs ncurses)
+CURSES_INCS = $(shell pkg-config --cflags ncurses)
+ARCHIVE_LIBS = $(shell pkg-config --libs libarchive)
+ARCHIVE_INCS = $(shell pkg-config --cflags libarchive)
+YAML_LIBS = $(shell pkg-config --libs libyaml)
+YAML_INCS = $(shell pkg-config --cflags libyaml)
 
 # Source files
-SRC = lfm.c
-OBJ = $(SRC:.c=.o)
+SRCS = lfm.c \
+       src/cursesutils.c \
+       src/filepreview.c \
+       src/dircontrol.c \
+       src/archivecontrol.c \
+       src/clipboard.c \
+       src/logging.c \
+       src/signalhandling.c \
+       src/syntax.c \
+       src/hashtable.c
 
-# Executable name
+# Object files
+OBJS = $(SRCS:.c=.o)
+
+# Target executable
 TARGET = litefm
 
 # Default target
 all: $(TARGET)
 
-# Build the executable
-$(TARGET): $(OBJ)
-	$(CC) -o $@ $(OBJ) $(LDFLAGS) $(LIB_DIRS)
+# Link the executable
+$(TARGET): $(OBJS)
+	$(CC) -o $@ $(OBJS) $(CURSES_LIBS) $(ARCHIVE_LIBS) $(YAML_LIBS)
 
-# Compile source files to object files
+# Compile source files into object files
 %.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDE_DIRS) -c $< -o $@
+	$(CC) $(CFLAGS) $(CURSES_INCS) $(ARCHIVE_INCS) $(YAML_INCS) -c $< -o $@
 
-# Clean up build artifacts
+# Clean up generated files
 clean:
-	rm -f $(TARGET) $(OBJ)
+	rm -f $(TARGET) $(OBJS)
 
-.PHONY: all clean install
+# Phony targets
+.PHONY: all clean
