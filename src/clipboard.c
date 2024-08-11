@@ -50,35 +50,72 @@ void yank_selected_item(char *selected_item) {
 }
 
 void copyFileContents(const char *sourceFile, const char *destinationFile) {
-    FILE *src = fopen(sourceFile, "r");
-    if (src == NULL) {
-        perror("Error opening source file");
-        return;
+    pid_t pid = fork();
+
+    if (pid == 0) { // Child process
+        // Create a pipe to capture the output of rsync
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
+            perror("Error creating pipe");
+            exit(EXIT_FAILURE);
+        }
+
+        pid_t rsync_pid = fork();
+
+        if (rsync_pid == 0) { // Grandchild process (rsync)
+            close(pipefd[0]); // Close read end
+            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to pipe
+            dup2(pipefd[1], STDERR_FILENO); // Redirect stderr to pipe
+            close(pipefd[1]);
+
+            // Replace the child process with the rsync command
+            execlp("rsync", "rsync", "-a", "--progress", sourceFile, destinationFile, NULL);
+
+            // If execlp fails, exit the child process
+            perror("Error executing rsync");
+            exit(EXIT_FAILURE);
+        } else if (rsync_pid > 0) { // Child process (main program)
+            close(pipefd[1]); // Close write end
+
+            // Create and display the progress window
+            FILE *rsync_output = fdopen(pipefd[0], "r");
+            if (rsync_output == NULL) {
+                perror("Error opening pipe for reading");
+                exit(EXIT_FAILURE);
+            }
+
+            show_term_message(" Copying...", -1);
+
+            pclose(rsync_output);
+
+
+            int status;
+            waitpid(rsync_pid, &status, 0); // Wait for the rsync process to complete
+            exit(WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE);
+        } else {
+            perror("Error forking rsync process");
+            exit(EXIT_FAILURE);
+        }
+    } else if (pid > 0) { // Parent process
+        int status;
+        waitpid(pid, &status, 0); // Wait for the child process to complete
+
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            // Notify user about the successful copy
+            char message[256];
+            snprintf(message, sizeof(message), "[SUCCESS] Copied 📄 '%s' to '%s'.", sourceFile, destinationFile);
+            log_message(LOG_LEVEL_INFO, "Successfully copied '%s' to '%s'.", sourceFile, destinationFile);
+            show_term_message(message, 0);
+        } else {
+            perror("Error copying file with rsync");
+        }
+    } else {
+        perror("Error forking process");
     }
-
-    FILE *dest = fopen(destinationFile, "w");
-    if (dest == NULL) {
-        perror("Error opening destination file");
-        fclose(src);
-        return;
-    }
-
-    char buffer[1024];
-    size_t bytesRead;
-
-    while ((bytesRead = fread(buffer, 1, sizeof(buffer), src)) > 0) {
-        fwrite(buffer, 1, bytesRead, dest);
-    }
-
-    fclose(src);
-    fclose(dest);
-
-    // Notify user about the successful copy
-    char message[256];
-    snprintf(message, sizeof(message), "[SUCCESS] Copied 📄 '%s' to '%s'.", sourceFile, destinationFile);
-    log_message(LOG_LEVEL_INFO, "Successfully copied '%s' to '%s'.", sourceFile, destinationFile);
-    show_term_message(message, 0);
 }
+
+
+
 
 
 

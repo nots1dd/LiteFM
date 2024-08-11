@@ -32,9 +32,9 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > Therefore, till I find a way to fix this issue, it is **HIGHLY**
 > recommended to use LiteFM at: 
 > 
->   ->Full screen of originally created terminal [DE] 
+>   -> Full screen of originally created terminal [DE] 
 > 
->   ->Full terminal size without resizing [WM]
+>   -> Full terminal size without resizing [WM]
 
 
 ## Usage

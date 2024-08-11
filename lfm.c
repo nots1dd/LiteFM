@@ -829,16 +829,7 @@ int main() {
       }
       break;
       case '/': // Find file or directory
-      {
-        show_hidden = 1; // Toggle show_hidden flag
-        list_dir(win, current_path, items, & item_count, show_hidden);
-        highlight = 0;
-        scroll_position = 0;
-        check_term_size(win, info_win);
-        werase(win);
-        draw_colored_border(win, 2);
-        print_items(win, items, item_count, highlight, current_path, show_hidden, scroll_position, height);
-        wrefresh(win);
+      { 
         wattron(win, A_BOLD | COLOR_PAIR(7));
         mvwprintw(win, LINES - 3, (COLS / 2) - 55, "🔍 Search ON ");
         wattroff(win, A_BOLD | COLOR_PAIR(7));
@@ -1101,6 +1092,7 @@ int main() {
       case 'Y':
       {
         halfdelay(100);
+        int createFile = 0;
         char basefile[MAX_PATH_LENGTH];
         strcpy(basefile, items[highlight].name);
         char basepath[MAX_PATH_LENGTH];
@@ -1162,15 +1154,29 @@ int main() {
               highlight = 0;
               scroll_position = 0;
             }
-            else if (nextch == 10 && !items[highlight].is_dir) {
+            else if ((nextch == 10 || nextch == 'p') && !items[highlight].is_dir) {
+              if (nextch == 'p') {
+                createFile = 1;
+              }
               break;
             }
+            /*else if (nextch == 'p' && !items[highlight].is_dir) {*/
+            /*  break;*/
+            /*}*/
           refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
 
         } while (nextch != 10);
         char destination_path[MAX_PATH_LENGTH];
-        snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s",current_path,items[highlight].name);
+        if (createFile != 1) {
+          snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s",current_path,items[highlight].name);
+        } else {
+          snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s", current_path, basefile);
+        }
         copyFileContents(basepath, destination_path);
+        werase(win);
+        wrefresh(win);
+        werase(info_win);
+        wrefresh(info_win);
         list_dir(win, current_path, items, & item_count, show_hidden);
         break;
       }

@@ -40,6 +40,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include <unistd.h>
+#include <time.h>
 
 // Constants
 #define MAX_PATH_LENGTH 256
@@ -62,5 +64,6 @@ void get_user_input(WINDOW *win, char *input, int max_length);
 void displayHelp(WINDOW* main_win);
 WINDOW *create_centered_window(int height, int width);
 void check_term_size(WINDOW* win, WINDOW* info_win);
+void displayProgressWindow(WINDOW *progress_win, FILE *progress_data);
 
 #endif // CURSESUTILS_H

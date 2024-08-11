@@ -452,7 +452,7 @@ void get_user_input(WINDOW *win, char *input, int max_length) {
 }
 
 void displayHelp(WINDOW* main_win) {
-    int help_win_height = LINES - 15;
+    int help_win_height = LINES - 10;
     int help_win_width = COLS / 3;
     int help_win_y = (LINES - help_win_height) / 4;
     int help_win_x = (COLS - help_win_width) / 2;
@@ -477,6 +477,8 @@ void displayHelp(WINDOW* main_win) {
         " Go to end of list    - [G]",
         " Yank file location   - [y]",
         " Yank file contents   - [Y]",
+        "  ->Copy contents to existing file - [Y+Enter]",
+        "  ->Copy contents to new file      - [Y+p]",
         " Add a new file/dir   - [a]",
         " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}",
         " Recursive dir delete - [D]",
@@ -636,4 +638,54 @@ void check_term_size(WINDOW* win, WINDOW* info_win) {
         box(info_win, 0, 0);
         wrefresh(info_win);
     }
+}
+
+void displayProgressWindow(WINDOW *progress_win, FILE *progress_data) { /* IT IS VERY SLOW ATM (TAKES LIKE 0.5-0.75s for this to work half-decently) */
+    char buffer[256];
+    time_t start_time, current_time;
+    double elapsed_time;
+
+    // Initialize the progress window
+    int max_x, max_y;
+    getmaxyx(progress_win, max_y, max_x);
+
+    // Record the start time
+    time(&start_time);
+
+    while (fgets(buffer, sizeof(buffer), progress_data) != NULL) {
+        // Clear the window
+        werase(progress_win);
+
+        // Display a simple progress message
+        mvwprintw(progress_win, 3, 1, "Progress is ongoing...");
+
+        // Calculate elapsed time
+        time(&current_time);
+        elapsed_time = difftime(current_time, start_time);
+        mvwprintw(progress_win, 5, 1, "Elapsed Time: %.2f seconds", elapsed_time);
+
+        // Add border around the window
+        box(progress_win, 0, 0);
+        wrefresh(progress_win);
+
+        // Sleep briefly to avoid high CPU usage (adjust as necessary)
+        usleep(100000); // 100 ms
+    }
+
+    // Final update after the loop ends
+    time(&current_time);
+    elapsed_time = difftime(current_time, start_time);
+    werase(progress_win);
+    mvwprintw(progress_win, 1, 1, "Progress completed.");
+    mvwprintw(progress_win, 2, 1, "Elapsed Time: %.2f seconds", elapsed_time);
+
+    // Add border around the window
+    box(progress_win, 0, 0);
+    wrefresh(progress_win);
+
+    // Clean up
+    sleep(1); // Optional: Show final state for 1 second
+    delwin(progress_win);
+    clear();
+    refresh();
 }
