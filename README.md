@@ -12,9 +12,9 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 6. Very transient and logical workflow
 
 
-![litefm1](https://github.com/user-attachments/assets/4bf801e2-594e-4259-b910-11a5a277de5b)
-![litefm2](https://github.com/user-attachments/assets/80ad77be-022b-4dde-b78e-ef49b642dbfa)
-![litefm3](https://github.com/user-attachments/assets/fb198eea-8be5-4d25-acc4-35a7c64db3de)
+![lfm1](https://github.com/user-attachments/assets/4bf801e2-594e-4259-b910-11a5a277de5b)
+![lfm2](https://github.com/user-attachments/assets/819dd99c-69c1-456f-a92b-fdb60a7c558e)
+![lfm3](https://github.com/user-attachments/assets/a3273802-4dd2-4642-a5f4-512570591a11)
 
 
 > [!NOTE]
@@ -40,8 +40,8 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 ## Usage
 
 -> Currently LiteFM has only been tested on the following Linux Distros:
-   1. Arch Linux 6.9.9 and 6.10.0 kernels (zen and base) x86_64 arch (1920x1080)
-   2. Ubuntu 22 x86_64
+   1. Arch Linux kernels >= 6.9 (zen and base) x86_64 arch (1920x1080)
+   2. Ubuntu versions >= 20 x86_64 arch
 
 -> There are no plans on expanding this beyond Linux distributions
 
@@ -76,11 +76,15 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 > 
 > Dependencies to install for LiteFM:
 > 
-> CMake / Make
+> **CMake / Make**
 > 
-> Ncurses library (libncurses-dev for debian)
+> **Ncurses library** (libncurses-dev for debian)
 > 
-> libarchive (for extraction and compression)
+> **libarchive** (for extraction and compression)
+>
+> **libyaml** (for future integration of [synhas](https://github.com/nots1dd/synhash))
+>
+> **rsync** (for super fast copying tool for local files [rsync](https://github.com/RsyncProject/rsync))
 > 
 > A C compiler (like GCC)
 > 
