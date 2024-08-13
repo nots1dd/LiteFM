@@ -19,22 +19,30 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 
 > [!NOTE]
 > 
-> For the best experience of LiteFM:
+> **For the best experience of LiteFM:**
+> --------------------------------------
 > 
-> 1. Ensure that your terminal has any NERD FONT enabled.
+> **1. Ensure that your terminal has any NERD FONT enabled.**
 > 
 > Without a nerd font, LiteFM will show some unreadable chars!
 > 
-> 2. Have it full screen whenever possible:
+> **2. Have it full screen whenever possible:**
 > 
-> Despite having dynamic window scaling, a lot of
-> the outputs, strings may look weird (or not visible at all!)
+> Despite having dynamic window scaling, in a lot of
+> the outputs the strings may look weird (or not visible at all!) upon resizing.
 > Therefore, till I find a way to fix this issue, it is **HIGHLY**
 > recommended to use LiteFM at: 
 > 
 >   -> Full screen of originally created terminal [DE] 
 > 
 >   -> Full terminal size without resizing [WM]
+>
+> **3. Launch LiteFM with `superuser`**
+>
+> LiteFM allows for fast file/dir actions,
+> as such it is optimal to use LiteFM with any user
+> that has `sudo` permissions to make every LiteFM
+> incredibly productive.
 
 
 ## Usage
@@ -57,15 +65,17 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 > 
 > ### Environment Vars
 > 
-> LiteFM uses `getenv` to get the env vars `$EDITOR` and `WAYLAND_SERVER` to detect the default editor and display server.
+> LiteFM uses `getenv` to get the env vars `$EDITOR`, `$VISUAL` and `WAYLAND_SERVER` to detect the default editor, default image viewer and display server.
 > 
 > Hence, ensure that you have your preferred display server and editor setup in your UNIX system so that LiteFM can be even more productive to you!
 > 
 > To set an env var: `echo 'export $EDITOR=/path/to/editor' >> ~/yourshellrc`
 > 
-> Setting your `$EDITOR` as any editor that creates a new window that resizes the main litefm window, will lead to litefm breaking so,
+> Setting your `$EDITOR` as any editor that creates a new window that resizes the main litefm window, will lead to litefm breaking so, (NOT LIKELY)
 > 
 > It is HIGHLY recommended that you pick a `terminal editor` like `nano`, `vi`, `vim`, `nvim`, so on
+>
+> You can setup `$VISUAL` as whatever you please (even if it creates a new window and resizes litefm)
 
 
 ## Building
