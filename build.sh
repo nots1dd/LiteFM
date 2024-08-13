@@ -39,16 +39,21 @@ check_package_installed() {
     local distro="$1"
     local package="$2"
     
-    if [ "$distro" == "debian" ]; then
-        dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -c "ok installed"
-    elif [ "$distro" == "rpm" ]; then
-        rpm -q "$package" &> /dev/null
-    elif [ "$distro" == "arch" ]; then
-        pacman -Q "$package" &> /dev/null
-    else
-        echo -e "${RED}Unsupported package manager.${RESET}"
-        return 1
-    fi
+    case "$distro" in
+        debian)
+            dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -c "ok installed"
+            ;;
+        rpm)
+            rpm -q "$package" &> /dev/null
+            ;;
+        arch)
+            pacman -Q "$package" &> /dev/null
+            ;;
+        *)
+            echo -e "${RED}Unsupported package manager.${RESET}"
+            return 1
+            ;;
+    esac
 }
 
 # Function to install packages based on the distribution
@@ -58,17 +63,22 @@ install_packages() {
     local packages=("$@")
     
     echo -e "${PINK}${BOLD}Installing missing packages:${RESET} ${packages[*]}"
-    if [ "$distro" == "debian" ]; then
-        sudo apt-get update
-        sudo apt-get install -y "${packages[@]}"
-    elif [ "$distro" == "rpm" ]; then
-        sudo yum install -y "${packages[@]}"
-    elif [ "$distro" == "arch" ]; then
-        sudo pacman -S --needed "${packages[@]}"
-    else
-        echo -e "${RED}Unsupported distribution.${RESET}"
-        exit 1
-    fi
+    case "$distro" in
+        debian)
+            sudo apt-get update
+            sudo apt-get install -y "${packages[@]}"
+            ;;
+        rpm)
+            sudo yum install -y "${packages[@]}"
+            ;;
+        arch)
+            sudo pacman -S --needed "${packages[@]}"
+            ;;
+        *)
+            echo -e "${RED}Unsupported distribution.${RESET}"
+            exit 1
+            ;;
+    esac
 }
 
 # Function to detect the display server
@@ -100,29 +110,26 @@ echo -e "${PINK}${BOLD}Building for $distro...${RESET}"
 display_server=$(detect_display_server)
 echo -e "${PINK}${BOLD}Detected display server: $display_server${RESET}"
 
-# Define the required packages based on the distribution
-required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev" "libyaml" "rsync")
+# Define the required packages based on the distribution and display server
+required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev" "libyaml" "rsync" "pkg-config")
 
-if [ "$display_server" == "wayland" ]; then
-    required_packages+=("wl-clipboard")
-elif [ "$display_server" == "x11" ]; then
-    required_packages+=("xclip")
-fi
+case "$display_server" in
+    wayland)
+        required_packages+=("wl-clipboard")
+        ;;
+    x11)
+        required_packages+=("xclip")
+        ;;
+esac
 
 if [ "$distro" == "rpm" ]; then
-    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync")
+    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync" "pkg-config")
 elif [ "$distro" == "arch" ]; then
-    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync")
-    if [ "$display_server" == "wayland" ]; then
-        required_packages+=("wl-clipboard")
-    elif [ "$display_server" == "x11" ]; then
-        required_packages+=("xclip")
-    fi
+    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync" "pkg-config")
 fi
 
 # Check for required packages
 missing_packages=()
-
 for package in "${required_packages[@]}"; do
     if check_package_installed "$distro" "$package"; then
         echo -e "${GREEN}✔ Package $package is already installed.${RESET}"
@@ -143,17 +150,21 @@ detect_nerd_fonts
 read -p "Enter the type of build (cmake or make): " build_type
 
 # Build commands
-if [ "$build_type" == "cmake" ]; then
-    echo -e "${CYAN}Running cmake build...${RESET}"
-    cmake -S . -B build/
-    cmake --build build/
-elif [ "$build_type" == "make" ]; then
-    echo -e "${CYAN}Running make build...${RESET}"
-    make
-else
-    echo -e "${RED}${BOLD}Invalid build type. Please enter 'cmake' or 'make'.${RESET}"
-    exit 1
-fi
+case "$build_type" in
+    cmake)
+        echo -e "${CYAN}Running cmake build...${RESET}"
+        cmake -S . -B build/
+        cmake --build build/
+        ;;
+    make)
+        echo -e "${CYAN}Running make build...${RESET}"
+        make
+        ;;
+    *)
+        echo -e "${RED}${BOLD}Invalid build type. Please enter 'cmake' or 'make'.${RESET}"
+        exit 1
+        ;;
+esac
 
 # Check if the build was successful
 if [ $? -ne 0 ]; then
@@ -169,6 +180,7 @@ if [ "$confirm_man" == "y" ]; then
     sudo gzip /usr/share/man/man1/litefm.1
 fi 
 
+# Setup logging
 echo -e "${BLUE}${BOLD}=========== LOGGING SETUP =============== ${RESET}"
 mkdir -p "$HOME/.cache/litefm/log/"
 if [ $? -eq 0 ]; then

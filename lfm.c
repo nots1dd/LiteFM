@@ -118,6 +118,7 @@ void print_items(WINDOW * win, FileItem items[], int count, int highlight,
   }
   // getting system free space from / dir 
   double systemFreeSpace = system_free_space("/");
+  double totalSystemSpace = system_total_space("/");
 
   color_pair_init();
 
@@ -145,8 +146,8 @@ void print_items(WINDOW * win, FileItem items[], int count, int highlight,
   print_limited(win, 2, 20, sanitizedCurPath); 
   wattroff(win, COLOR_PAIR(9));
   wattron(win, COLOR_PAIR(9));
-  mvwprintw(win, LINES - 3, (COLS / 2) - 40, " Hidden Dirs: %s ", hidden_dir);
-  mvwprintw(win, LINES - 3, (COLS / 2) - 18, " 💾 %.2f GiB ", systemFreeSpace);
+  mvwprintw(win, LINES - 3, (COLS / 2) - 55, " Hidden Dirs: %s ", hidden_dir);
+  mvwprintw(win, LINES - 3, (COLS / 2) - 30, " 💾 %.2f / %.2f GiB ", systemFreeSpace, totalSystemSpace);
   wattroff(win, COLOR_PAIR(9));
   wattroff(win, A_BOLD);
 
@@ -831,7 +832,7 @@ int main() {
       case '/': // Find file or directory
       { 
         wattron(win, A_BOLD | COLOR_PAIR(7));
-        mvwprintw(win, LINES - 3, (COLS / 2) - 55, "🔍 Search ON ");
+        mvwprintw(win, LINES - 3, (COLS / 2) - 75, "🔍 Search ON ");
         wattroff(win, A_BOLD | COLOR_PAIR(7));
         wrefresh(win);
         char query[NAME_MAX];
