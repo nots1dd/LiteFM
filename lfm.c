@@ -13,7 +13,7 @@
  *  Author:      nots1dd
  *  Created:     <31/07/24>
  * 
- *  Copyright:   2024 nots1dd. All rights reserved.
+ *  Copyright:   2024 Siddharth Karanam. All rights reserved.
  * 
  *  License:     <GNU GPL v3>
  *
@@ -58,6 +58,22 @@ const char * err_message[] = {
   "|_| \\_|\\___/  |_|   |___|_____|_____|____/_/    |____/___|_| \\_\\____/  (_)",
   " "
 };
+
+
+
+
+const char *denied_message[] = {
+" .__   __.   ______           _______. __    __      ",
+" |  \\ |  |  /  __  \\         /       ||  |  |  |     ",
+" |   \\|  | |  |  |  |       |   (----`|  |  |  |     ",
+" |  . `  | |  |  |  |        \\   \\    |  |  |  |     ",
+" |  |\\   | |  `--'  |    .----)   |   |  `--'  |  __ ",
+" |__| \\__|  \\______/     |_______/     \\______/  (__)",
+"                                                     "
+};
+
+
+
 
 typedef struct {
   char name[NAME_MAX];
@@ -379,10 +395,23 @@ void get_file_info(WINDOW * info_win,
   // Get file information
   if (stat(full_path, & file_stat) == -1) {
     log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
-    show_message(info_win, "Error retrieving file information.");
+    char errMSG[256];
+    snprintf(errMSG, 256, "Error retrieving file info for %s",full_path);
+    show_message(info_win, errMSG);
     box(info_win, 0, 0);
     wrefresh(info_win);
     return;
+  }
+  if (access(full_path, R_OK) != 0) {
+        log_message(LOG_LEVEL_ERROR, "Access denied for %s", full_path);
+        int denied_message_size = sizeof(denied_message) / sizeof(denied_message[0]);
+        for (int j = 0; j < denied_message_size; j++) {
+            mvwprintw(info_win, j + 3, 2, "%s", denied_message[j]);
+        }
+        show_message(info_win, "Access denied for you!");
+        box(info_win, 0, 0);
+        wrefresh(info_win);
+        return;
   }
 
   // Display file information
@@ -541,7 +570,7 @@ void refreshMainWin(WINDOW *win, WINDOW *info_win, FileItem items[], int item_co
   }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   init_curses(); 
 
   int highlight = 0;
@@ -552,9 +581,12 @@ int main() {
   int history_count = 0;
   int show_hidden = 0; // Flag to toggle showing hidden files
   int scroll_position = 0; // Position of the first visible item
-
-  get_current_working_directory(current_path, sizeof(current_path));
-
+  char *cur_user = get_current_user();
+  if (argc == 2 && is_directory(argv[1])) {
+    realpath(argv[1], current_path);
+  } else {
+    get_current_working_directory(current_path, sizeof(current_path));
+  }
   // Create a new window with a border
   int startx = 0, starty = 0;
   int width = COLS / 2, height = LINES - 1;
@@ -579,19 +611,20 @@ int main() {
   char last_query[NAME_MAX] = "";
   bool firstKeyPress = true;
   log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE STARTED =================");
+  log_message(LOG_LEVEL_DEBUG, "Entering as USER: %s",cur_user);
 
   while (true) { 
     int choice = getch();
     if (firstKeyPress) {
         refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
-        show_term_message("", -1);
+        show_term_message("", -1);
     }
     firstKeyPress = false;
     if (choice != ERR) {
       switch (choice) {
       case KEY_UP:
       case 'k':
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (highlight > 0) {
           highlight--;
           if (highlight < scroll_position) {
@@ -601,7 +634,7 @@ int main() {
         break;
       case KEY_DOWN:
       case 'j':
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (highlight < item_count - 1) {
           highlight++;
           if (highlight >= scroll_position + height - 8) {
@@ -609,51 +642,88 @@ int main() {
           }
         }
         break;
+      
       case KEY_LEFT:
       case 'h':
-        show_term_message("", -1);
-        if (history_count > 0) {
-          history_count--;
-          strcpy(current_path, history[history_count].path);
-          highlight = history[history_count].highlight;
-          list_dir(win, current_path, items, & item_count, show_hidden);
+          show_term_message("", -1);
+
+          if (history_count > 0) {
+              // Navigate using history
+              history_count--;
+              log_message(LOG_LEVEL_DEBUG, " [PARENT] Navigating back to %s", current_path);
+              strcpy(current_path, history[history_count].path);
+              highlight = history[history_count].highlight;
+          } else {
+              // Navigate to parent directory
+              char parent_dir[1024];
+              // Ensure parent_dir is initialized
+              snprintf(parent_dir, sizeof(parent_dir), "%s", current_path);
+              
+              // Use dirname safely
+              char *parent_path = dirname(parent_dir);
+              log_message(LOG_LEVEL_DEBUG, " Checking out parent %s", parent_path);
+              
+              // Handle edge cases, such as navigating from the root directory
+              if (strcmp(parent_path, "/") == 0 && strlen(current_path) > 1) {
+                  // Special handling for root directory
+                  strcpy(current_path, "/");
+              } else {
+                  snprintf(current_path, sizeof(current_path), "%s", parent_path);
+                  log_message(LOG_LEVEL_DEBUG, " [PARENT] Navigating back to %s", current_path);
+              }
+              
+              highlight = 0;
+          }
+
+          // List the contents of the new directory
+          list_dir(win, current_path, items, &item_count, show_hidden);
           scroll_position = 0;
-        } else { // will allow for traversal to parents of get_current_working_directory (getcwd)
-            char parent_dir[1024];
-            strcpy(parent_dir, current_path);
-            strcpy(current_path, dirname(parent_dir));
-            list_dir(win, current_path, items, & item_count, show_hidden);
-            highlight = 0;
-            scroll_position = 0;
-        }
-        break;
+          break;
+
       
       case KEY_RIGHT:
       case 'l':
-        show_term_message("", -1);
-        if (items[highlight].is_dir) {
-            if (history_count < MAX_HISTORY) {
-                strcpy(history[history_count].path, current_path);
-                history[history_count].highlight = highlight;
-                history_count++;
-            }
-            strcat(current_path, "/");
-            strcat(current_path, items[highlight].name);
-            list_dir(win, current_path, items, &item_count, show_hidden);
-            highlight = 0;
-            scroll_position = 0;
-          } else {
-            if (is_readable_extension(items[highlight].name) || !is_image(items[highlight].name)) {
+        show_term_message("", -1);
+        char fullPath[MAX_PATH_LENGTH];
+        snprintf(fullPath, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
+
+        // Check access to the directory or file
+        if (access(fullPath, R_OK) != 0) {
+            char errmsg[100];
+            snprintf(errmsg, 100, "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath, strerror(errno));
+            log_message(LOG_LEVEL_ERROR, errmsg);
+            show_term_message(errmsg, 1);
+            break;
+        }
+        
+        // Check access to the realPath
+        if (items[highlight].is_dir) { 
+              if (history_count < MAX_HISTORY) {
+                  strcpy(history[history_count].path, current_path);
+                  history[history_count].highlight = highlight;
+                  history_count++;
+              }
+              strcat(current_path, "/");
+              log_message(LOG_LEVEL_DEBUG, " [CHILD] Checking into %s", items[highlight].name);
+              strcat(current_path, items[highlight].name);
+              log_message(LOG_LEVEL_DEBUG, " [CHILD] Navigating into to %s", current_path);
+              list_dir(win, current_path, items, &item_count, show_hidden);
+              highlight = 0;
+              scroll_position = 0;
+            } else {
+              if ((is_readable_extension(items[highlight].name) || !is_image(items[highlight].name)) && !items[highlight].is_dir) {
+                firstKeyPress = true;
+                launch_env_var(win, current_path, items[highlight].name, "EDITOR");
+                /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
+            } else if (is_image(items[highlight].name) && !items[highlight].is_dir) {
               firstKeyPress = true;
-              launch_env_var(win, current_path, items[highlight].name, "EDITOR");
-              /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
-          } else if (is_image(items[highlight].name)) {
-            firstKeyPress = true;
-            launch_env_var(win, current_path, items[highlight].name, "VISUAL");
-          }
-          check_term_size(win, info_win);
-          werase(win);
-      }
+              launch_env_var(win, current_path, items[highlight].name, "VISUAL");
+            } else {
+              show_term_message("Cannot enter this directory/file.", 1);
+            }
+            check_term_size(win, info_win);
+            werase(win);
+        }
       break; 
       case 'G':
         highlight = item_count - 1; // will go to the last element in the currently displaying list
@@ -663,7 +733,7 @@ int main() {
         halfdelay(100);
         char nextch = getch();
         if (nextch == 'g') {
-          show_term_message("", -1);
+          show_term_message("", -1);
           highlight = 0; // will go to the top most element in the current displaying list
         } else if (nextch == 't') { // GO TO func
           char destination_path[PATH_MAX];
@@ -679,7 +749,7 @@ int main() {
           }
           break;
         } else if (nextch == 'h') {
-          show_term_message("", -1);
+          show_term_message("", -1);
           char* home_dir = getenv("HOME");
           strcpy(current_path, home_dir);
           list_dir(win, current_path, items, & item_count, show_hidden);
@@ -789,8 +859,6 @@ int main() {
               }
             }
             list_dir(win, current_path, items, & item_count, show_hidden);
-            highlight = 0;
-            scroll_position = 0;
           }
         }
       }
@@ -823,8 +891,6 @@ int main() {
               }
             }
             list_dir(win, current_path, items, & item_count, show_hidden);
-            highlight = 0;
-            scroll_position = 0;
           }
         }
       }
@@ -992,7 +1058,7 @@ int main() {
         char basepath[MAX_PATH_LENGTH];
         strcpy(basepath, current_path);
         char termMSG[256];
-        snprintf(termMSG, 256, " [VISUAL]    Moving  %s     %s", basefile, basepath);
+        snprintf(termMSG, 256, " [VISUAL]    Moving  %s     %s", basefile, basepath);
 
         show_term_message(termMSG, 0);
         do { 
@@ -1049,6 +1115,30 @@ int main() {
               highlight = 0;
               scroll_position = 0;
             }
+            else if (nextch == '/') {
+              wattron(win, A_BOLD | COLOR_PAIR(7));
+              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "🔍 Search ON ");
+              wattroff(win, A_BOLD | COLOR_PAIR(7));
+              wrefresh(win);
+              char query[NAME_MAX];
+              get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
+
+              if (strlen(query) > 0) {
+                int start_index = highlight + 1;
+                int found_index = find_item(query, items, item_count, & start_index, 1);
+                if (found_index != -1) {
+                  highlight = found_index;
+                  if (highlight >= scroll_position + height - 8) {
+                    scroll_position = highlight - height + 8;
+                  } else if (highlight < scroll_position) {
+                    scroll_position = highlight;
+                  }
+                  strncpy(last_query, query, NAME_MAX);
+                } else {
+                  show_term_message("Item not found.", 1);
+                }
+              }
+            }
             else if (nextch == 10) {
               break;
             }
@@ -1060,7 +1150,7 @@ int main() {
         break;
       }
       case 10: {
-        show_term_message("", -1);
+        show_term_message("", -1);
         if (items[highlight].is_dir) {
           if (history_count < MAX_HISTORY) {
             strcpy(history[history_count].path, current_path);
@@ -1099,7 +1189,7 @@ int main() {
         char basepath[MAX_PATH_LENGTH];
         snprintf(basepath, MAX_PATH_LENGTH, "%s/%s",current_path,basefile);
         char termMSG[256];
-        snprintf(termMSG, 256, " [VISUAL]    Copying  %s to .... ", basepath);
+        snprintf(termMSG, 256, " [VISUAL]    Copying  %s to .... ", basepath);
         show_term_message(termMSG, 0);
         do { 
           int nextch = getch();
@@ -1155,8 +1245,32 @@ int main() {
               highlight = 0;
               scroll_position = 0;
             }
-            else if ((nextch == 10 || nextch == 'p') && !items[highlight].is_dir) {
-              if (nextch == 'p') {
+            else if (nextch == '/') {
+              wattron(win, A_BOLD | COLOR_PAIR(7));
+              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "🔍 Search ON ");
+              wattroff(win, A_BOLD | COLOR_PAIR(7));
+              wrefresh(win);
+              char query[NAME_MAX];
+              get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
+
+              if (strlen(query) > 0) {
+                int start_index = highlight + 1;
+                int found_index = find_item(query, items, item_count, & start_index, 1);
+                if (found_index != -1) {
+                  highlight = found_index;
+                  if (highlight >= scroll_position + height - 8) {
+                    scroll_position = highlight - height + 8;
+                  } else if (highlight < scroll_position) {
+                    scroll_position = highlight;
+                  }
+                  strncpy(last_query, query, NAME_MAX);
+                } else {
+                  show_term_message("Item not found.", 1);
+                }
+              }
+            }
+            else if ((nextch == 10 || nextch == 'p')) {
+              if (nextch == 'p' && !items[highlight].is_dir) {
                 createFile = 1;
               }
               break;
@@ -1167,11 +1281,12 @@ int main() {
           refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
 
         } while (nextch != 10);
+          
         char destination_path[MAX_PATH_LENGTH];
         if (createFile != 1) {
-          snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s",current_path,items[highlight].name);
+          snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s",current_path,basefile);
         } else {
-          snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s", current_path, basefile);
+          snprintf(destination_path, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
         }
         copyFileContents(basepath, destination_path);
         werase(win);
@@ -1180,6 +1295,7 @@ int main() {
         wrefresh(info_win);
         list_dir(win, current_path, items, & item_count, show_hidden);
         break;
+        
       }
       case '?':
         displayHelp(win);

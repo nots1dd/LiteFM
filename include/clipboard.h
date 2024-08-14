@@ -12,7 +12,7 @@
  *               the user, and accordingly using the right 
  *               copy/paste modules to `yank` file contents & file/dirpath
  *
- *  Author:      nots1dd
+ *  Author:      Siddharth Karanam
  *  Created:     <31/07/24>
  * 
  *  Copyright:   <2024> nots1dd. All rights reserved.
@@ -36,6 +36,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <dirent.h>
 
 #define MAX_PATH_LENGTH 256
 

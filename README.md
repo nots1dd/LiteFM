@@ -77,27 +77,51 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 >
 > You can setup `$VISUAL` as whatever you please (even if it creates a new window and resizes litefm)
 
+## Dependencies
+
+As LiteFM can only be built manually, here is a table of all deps used:
+
+
+| Package Manager | Debian                  | Fedora (rpm)             | Arch Linux (arch)       |
+|-----------------|-------------------------|--------------------------|-------------------------|
+| **64-bit**      |                         |                          |                         |
+|                 | `libncursesw5-dev`      | `ncurses-devel`          | `ncurses`               |
+|                 | `cmake`                 | `cmake`                  | `cmake`                 |
+|                 | `make`                  | `make`                   | `make`                  |
+|                 | `libarchive-dev`        | `libarchive-devel`       | `libarchive`            |
+|                 | `libyaml-dev`           | `libyaml-devel`          | `yaml-cpp`              |
+|                 | `rsync`                 | `rsync`                  | `rsync`                 |
+|                 | `pkg-config`            | `pkg-config`             | `pkg-config`            |
+| **32-bit**      |                         |                          |                         |
+|                 | `libncurses5-dev`       | `ncurses-libs`           | `lib32-ncurses5`        |
+|                 | `libarchive-dev:i386`   | `libarchive-devel.i686`  | `lib32-libarchive`      |
+|                 | `libyaml-dev:i386`      | `libyaml-devel.i686`     | `lib32-yaml-cpp`        |
+|                 | `rsync:i386`            | `rsync.i686`             | `lib32-rsync`           |
+|                 | `pkg-config:i386`       | `pkg-config.i686`        | `lib32-pkg-config`      |
+
+
+The above are the listed **32-bit** and **64-bit** libraries that are used in this project.
+
+->Only 64-bit libs have been tested to fruition so far 
+
+Refer to this table to understand the **Building** procedure better
 
 ## Building
 
+REFER TO **Dependencies** TO BETTER UNDERSTAND THE BUILDING PROCESS AND FLOW.
+
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
 
-> [!IMPORTANT]
+> [!NOTE]
+> Building LiteFM with build.sh (**HIGHLY RECOMMENDED**) 
 > 
-> Dependencies to install for LiteFM:
+> The script contains every method of installation, logging and setup of litefm
 > 
-> **CMake / Make**
+> Just run `chmod +x build.sh` 
 > 
-> **Ncurses library** (libncurses-dev for debian)
+> Execute it by `./build.sh` 
 > 
-> **libarchive** (for extraction and compression)
->
-> **libyaml** (for future integration of [synhas](https://github.com/nots1dd/synhash))
->
-> **rsync** (for super fast copying tool for local files [rsync](https://github.com/RsyncProject/rsync))
-> 
-> A C compiler (like GCC)
-> 
+> Just wait for it to setup and answer a few questions, thats it!
 
 #### Building with CMake:
 
@@ -136,17 +160,6 @@ You can add the man page for LiteFM in your system by the following commands:
 
 Thats it! The man page is ready to be used via `man litefm`
 
-> [!NOTE]
-> Building LiteFM with build.sh (**HIGHLY RECOMMENDED**) 
-> 
-> The script contains every method of installation, logging and setup of litefm
-> 
-> Just run `chmod +x build.sh` 
-> 
-> Execute it by `./build.sh` 
-> 
-> Just wait for it to setup and answer a few questions, thats it!
-
 
 ## SECURITY
 
@@ -177,6 +190,8 @@ This file manager is far from done there are a lot of cool and essential feature
 - [x] Improve the build script
 
 - [x] Integration of adding a text editor
+
+- [ ] Better handling of `dynamically linked files` and `symbolic links`
 
 - [x] Handling resizing of litefm window (maybe through `SIGWINCH`)
 

@@ -10,7 +10,7 @@
  *  Description: Contains all the hashtable datastructure
  *               framework and functions to use
  *
- *  Author:      nots1dd
+ *  Author:      Siddharth Karanam
  *  Created:     <08/08/24>
  * 
  *  Copyright:   2024 nots1dd. All rights reserved.

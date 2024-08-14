@@ -14,7 +14,7 @@
  *                functionalities for handling user input, displaying messages,
  *                initializing colors, and creating windows with custom borders.
  *
- *  Author:      nots1dd
+ *  Author:      Siddharth Karanam
  *  Created:     31/07/24
  * 
  *  Copyright:   2024 nots1dd. All rights reserved.

@@ -11,7 +11,7 @@
  *  Description: Header file for directory and file control operations
  *               in LiteFM.
  *
- *  Author:      nots1dd
+ *  Author:      Siddharth Karanam
  *  Created:     <31/07/24>
  * 
  *  Copyright:   <2024> nots1dd. All rights reserved.
@@ -59,5 +59,6 @@ void move_file_or_dir(WINDOW *win, const char *basepath, const char *current_pat
 int is_directory(const char *path);
 void handle_rename(WINDOW *win, const char *path);
 int create_file(const char * path, const char * filename, char * timestamp);
+void resolve_path(const char *base_path, const char *relative_path, char *resolved_path);
 
 #endif

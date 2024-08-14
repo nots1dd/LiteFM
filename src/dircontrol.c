@@ -301,3 +301,21 @@ int create_file(const char * path,
 
   return 0; // File created successfully
 }
+
+void resolve_path(const char *base_path, const char *relative_path, char *resolved_path) {
+    // Create a buffer to hold the concatenated path
+    char full_path[MAX_PATH_LENGTH];
+    
+    // Ensure base_path ends with a '/'
+    if (base_path[strlen(base_path) - 1] != '/') {
+        snprintf(full_path, MAX_PATH_LENGTH, "%s/%s", base_path, relative_path);
+    } else {
+        snprintf(full_path, MAX_PATH_LENGTH, "%s%s", base_path, relative_path);
+    }
+
+    // Resolve the absolute path
+    if (realpath(full_path, resolved_path) == NULL) {
+        perror("Error resolving path");
+        strcpy(resolved_path, ""); // Return an empty string on error
+    }
+}

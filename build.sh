@@ -111,7 +111,7 @@ display_server=$(detect_display_server)
 echo -e "${PINK}${BOLD}Detected display server: $display_server${RESET}"
 
 # Define the required packages based on the distribution and display server
-required_packages=("libncurses-dev" "cmake" "make" "libarchive-dev" "libyaml" "rsync" "pkg-config")
+required_packages=("libncursesw5-dev" "cmake" "make" "libarchive-dev" "libyaml-dev" "rsync" "pkg-config")
 
 case "$display_server" in
     wayland)

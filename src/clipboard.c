@@ -84,7 +84,7 @@ void copyFileContents(const char *sourceFile, const char *destinationFile) {
                 exit(EXIT_FAILURE);
             }
 
-            show_term_message(" Copying...", -1);
+            show_term_message("Copying...", -1);
 
             pclose(rsync_output);
 
@@ -113,10 +113,4 @@ void copyFileContents(const char *sourceFile, const char *destinationFile) {
         perror("Error forking process");
     }
 }
-
-
-
-
-
-
 

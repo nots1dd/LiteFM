@@ -257,15 +257,15 @@ void show_term_message(const char *message, int err) {
     
     if (err==1) {
       attron(COLOR_PAIR(12));
-      mvprintw(message_y, 0, " \u2718 %s", message); // \u2718 is unicode for ✘
+      mvprintw(message_y, 0, "  \u2718 %s", message); // \u2718 is unicode for ✘
       attroff(COLOR_PAIR(12));
     } else if (err==0) {
       attron(COLOR_PAIR(1));
-      mvprintw(message_y, 0, " \u2714 %s", message); // \u2714 is unicode for ✔
+      mvprintw(message_y, 0, "  \u2714 %s", message); // \u2714 is unicode for ✔
       attroff(COLOR_PAIR(1));
     } else if (err=-1) {
       attron(COLOR_PAIR(4));
-      mvprintw(message_y, 0, "%s", message);
+      mvprintw(message_y, 0, " %s", message);
       attroff(COLOR_PAIR(4));
     }
     refresh();
@@ -381,23 +381,23 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
     attron(A_BOLD);  // Turn on bold attribute
     if (strcmp(type, "search") == 0) {
         attron(COLOR_PAIR(3));
-        mvprintw(y - 1, 0, " [Enter to quit] /");
+        mvprintw(y - 1, 0, " [Enter to quit] /");
         attroff(COLOR_PAIR(3));
     } else if (strcmp(type, "rename") == 0) {
         attron(COLOR_PAIR(2));
-        mvprintw(y - 1, 0, " Rename to: ");
+        mvprintw(y - 1, 0, " Rename to: ");
         attroff(COLOR_PAIR(2));
     } else if (strcmp(type, "add") == 0) {
         attron(COLOR_PAIR(2));
-        mvprintw(y - 1, 0, " Add: ");
+        mvprintw(y - 1, 0, " Add: ");
         attroff(COLOR_PAIR(2));
     } else if (strcmp(type, "move") == 0) {
         attron(COLOR_PAIR(2));
-        mvprintw(y-1,0, " Move to: ");
+        mvprintw(y-1,0, " Move to: ");
         attroff(COLOR_PAIR(2));
     } else if (strcmp(type, "goto") == 0) {
       attron(COLOR_PAIR(2));
-      mvprintw(y-1,0," Go to: %s/",current_path);
+      mvprintw(y-1,0," Go to: %s/",current_path);
       attroff(COLOR_PAIR(2));
     }
     attroff(A_BOLD);  // Turn off bold attribute
@@ -405,13 +405,13 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
 
     // Move the cursor to the appropriate location in the window
     if (strcmp(type, "search") == 0) {
-      wmove(win, getmaxy(win) - 1, 18);
+      wmove(win, getmaxy(win) - 1, 20);
     } else if (strcmp(type, "rename") == 0 || strcmp(type, "move") == 0) {
-      wmove(win, getmaxy(win) - 1, 12);
+      wmove(win, getmaxy(win) - 1, 14);
     } else if (strcmp(type, "add") == 0) {
-      wmove(win, getmaxy(win) - 1, 6);
+      wmove(win, getmaxy(win) - 1, 8);
     } else if (strcmp(type, "goto") == 0) {
-      wmove(win, getmaxy(win) - 1, 9+strlen(current_path));
+      wmove(win, getmaxy(win) - 1, 11+strlen(current_path));
     }
     else {
       wmove(win, getmaxy(win) - 1, 1);
@@ -432,7 +432,7 @@ void get_user_input_from_bottom(WINDOW *win, char *buffer, int max_length, const
     noecho();
     nodelay(win, TRUE);
 
-    mvprintw(y - 1, 0, " ");  // Clear the prompt after getting input
+    mvprintw(y - 1, 0, " ");  // Clear the prompt after getting input
     clrtoeol();  // Clear the rest of the line to handle previous content
     attroff(COLOR_PAIR(3));
     refresh();
@@ -477,8 +477,8 @@ void displayHelp(WINDOW* main_win) {
         " Go to end of list    - [G]",
         " Yank file location   - [y]",
         " Yank file contents   - [Y]",
-        "  ->Copy contents to existing file - [Y+Enter]",
-        "  ->Copy contents to new file      - [Y+p]",
+        "  ->Copy contents to existing file - [Y+p]",
+        "  ->Copy contents to new file      - [Y+Enter]",
         " Add a new file/dir   - [a]",
         " Delete file/dir      - [d] {NON-RECURSIVE DIR DELETE!}",
         " Recursive dir delete - [D]",

@@ -13,7 +13,7 @@
  *                window, checking file extensions for readability, and formatting 
  *                file sizes for display.
  *
- *  Author:      nots1dd
+ *  Author:      Siddharth Karanam
  *  Created:     <31/07/24>
  * 
  *  Copyright:   2024 nots1dd. All rights reserved.

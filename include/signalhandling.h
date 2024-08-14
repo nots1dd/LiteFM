@@ -11,7 +11,7 @@
  *  Description: Header file for handling signals that might
  *               lead to unexpected errors or issues
  *
- *  Author:      nots1dd
+ *  Author:      Siddharth Karanam
  *  Created:     <03/08/24>
  * 
  *  Copyright:   <2024> nots1dd. All rights reserved.

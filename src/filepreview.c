@@ -221,9 +221,29 @@ bool is_valid_editor(const char *editor) {
 
 void launch_env_var(WINDOW* win, const char *current_path, const char *filename, const char* env_var) {
     const char* editor = getenv(env_var);
+    int isVISUAL = 0;
+    if (strcmp(env_var, "VISUAL") == 0)
+      isVISUAL = 1; // just getting info on what env_var is being launched based on that will decide the delay
+    /* 
+     * THIS IS BECAUSE WHEN WINDOW RESIZES, LITEFM HAS A FUNCTION TO RESIZE THE WINDOWING SYSTEM
+     *
+     * BUT SINCE A WINDOW ON HYPRLAND FOR INSTANCE KILLS IN LESS THAN A SECOND, THE WINDOW DIMENSIONS
+     * ARE NOT REGISTERED TO CHANGE AND HENCE WOULD RESULT IN A WEIRD HALF TERMINAL USED CONDITION
+     *
+     * IF YOU USE A TERMINAL BASED EDITOR (NVIM, VIM, VI, NANO, etc) THIS WILL NOT BE A PROBLEM AS IN 
+     * WILL NOT LEAD TO RESIZING ISSUES
+     *
+     * THIS FUNCTIONALITY IS OF COURSE NOT PERFECT BUT IS SIMPLE AND QUITE ELEGANT IN A LOT OF WAYS
+     * I FIND MANY NCURSES APPLICATIONS STRUGGLING TO COPE WITH RESIZING (THIS DOES TOO TBF),
+     * BUT ATLEAST IT DOES TRY TO STAY AND DYNAMICALLY RESIZE.
+     *
+     * ANY SUGGESTIONS ON HOW I CAN APPROACH THIS ISSUE/SOLN IS MUCH APPRECIATED.
+     *
+    */
     if (editor == NULL) {
         if (strcmp(env_var, "EDITOR") == 0) {
             editor = getenv("VISUAL");
+            isVISUAL = 1;
         } else if (strcmp(env_var, "VISUAL") == 0) {
             editor = getenv("EDITOR");
         }
@@ -272,6 +292,9 @@ void launch_env_var(WINDOW* win, const char *current_path, const char *filename,
 
     // Restore default SIGWINCH handler after the editor exits
     restore_sigwinch();
+    if (isVISUAL == 1) {
+      sleep(1);
+    }
 
     // Reinitialize NCurses mode after the editor exits
     initscr();
