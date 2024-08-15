@@ -59,9 +59,6 @@ const char * err_message[] = {
   " "
 };
 
-
-
-
 const char *denied_message[] = {
 " .__   __.   ______           _______. __    __      ",
 " |  \\ |  |  /  __  \\         /       ||  |  |  |     ",
@@ -71,8 +68,6 @@ const char *denied_message[] = {
 " |__| \\__|  \\______/     |_______/     \\______/  (__)",
 "                                                     "
 };
-
-
 
 
 typedef struct {
@@ -87,208 +82,303 @@ typedef struct {
 }
 DirHistory;
 
-void list_dir(WINDOW * win,
-  const char * path, FileItem items[], int * count, int show_hidden) {
-  DIR * dir;
-  struct dirent * entry;
-  werase(win);
-  if (!(dir = opendir(path)))
-    return;
-  * count = 0;
-  // First pass: List directories
-  while ((entry = readdir(dir)) != NULL) {
-    if ((!show_hidden && entry -> d_name[0] == '.') || strcmp(entry -> d_name, ".") == 0 || strcmp(entry -> d_name, "..") == 0)
-      continue;
+void truncate_symlink_name(char *name);
 
-    if (entry -> d_type == DT_DIR) {
-      strcpy(items[ * count].name, entry -> d_name);
-      items[ * count].is_dir = 1;
-      ( * count) ++;
-    }
-  }
-  // Rewind directory stream for the second pass
-  rewinddir(dir);
-  // Second pass: List non-directory files
-  while ((entry = readdir(dir)) != NULL) {
-    if ((!show_hidden && entry -> d_name[0] == '.') || strcmp(entry -> d_name, ".") == 0 || strcmp(entry -> d_name, "..") == 0)
-      continue;
+void list_dir(WINDOW *win, const char *path, FileItem items[], int *count, int show_hidden) {
+    DIR *dir;
+    struct dirent *entry;
+    char full_path[PATH_MAX];
+    struct stat entry_stat;
+    char symlink_target[PATH_MAX];
 
-    if (entry -> d_type != DT_DIR) {
-      strcpy(items[ * count].name, entry -> d_name);
-      items[ * count].is_dir = 0;
-      ( * count) ++;
-    }
-  }
+    werase(win);
 
-  closedir(dir);
-  wrefresh(win);
-}
+    if (!(dir = opendir(path)))
+        return;
 
-void print_items(WINDOW * win, FileItem items[], int count, int highlight,
-  const char * current_path, int show_hidden, int scroll_position, int height) {
-  char * hidden_dir;
-  if (show_hidden) {
-    hidden_dir = "ON\u25C6";
-  } else {
-    hidden_dir = "OFF\u25C7";
-  }
-  // getting system free space from / dir 
-  double systemFreeSpace = system_free_space("/");
-  double totalSystemSpace = system_total_space("/");
+    *count = 0;
 
-  color_pair_init();
+    // First pass: List directories and symlinks
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip hidden files if not showing hidden files
+        if ((!show_hidden && entry->d_name[0] == '.') || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
 
-  // Print title
-  wattron(win, COLOR_PAIR(9));
-  char * cur_user = get_current_user();
-  char * cur_hostname = get_hostname();
-  wattron(win, A_BOLD | COLOR_PAIR(14));
-  mvwprintw(win, 0, 2, " 🗄️ LITE FM: ");
-  wattroff(win, A_BOLD | COLOR_PAIR(14));
+        // Build the full path for the current entry
+        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
 
-  char sanitizedCurPath[PATH_MAX];
-  if (strncmp(current_path, "//", 2) == 0) {
-    snprintf(sanitizedCurPath, sizeof(sanitizedCurPath), "%s", current_path + 1);
-  } else {
-    strcpy(sanitizedCurPath, current_path);
-  }
-
-  // Print current path and hidden directories status
-  wattron(win, A_BOLD);
-  wattron(win, COLOR_PAIR(8));
-  mvwprintw(win, 2, 2, " %s@%s ", cur_hostname, cur_user);
-  wattroff(win, COLOR_PAIR(8));
-  wattron(win, COLOR_PAIR(9));
-  print_limited(win, 2, 20, sanitizedCurPath); 
-  wattroff(win, COLOR_PAIR(9));
-  wattron(win, COLOR_PAIR(9));
-  mvwprintw(win, LINES - 3, (COLS / 2) - 55, " Hidden Dirs: %s ", hidden_dir);
-  mvwprintw(win, LINES - 3, (COLS / 2) - 30, " 💾 %.2f / %.2f GiB ", systemFreeSpace, totalSystemSpace);
-  wattroff(win, COLOR_PAIR(9));
-  wattroff(win, A_BOLD);
-
-  // Print items
-  if (count == 0) {
-    wattron(win, COLOR_PAIR(3));
-    int err_msg_size = sizeof(err_message) / sizeof(err_message[0]);
-    for (int i = 0; i < err_msg_size; i++) {
-      mvwprintw(win, i + 5, 2, "%s", err_message[i]);
-    }
-    wattroff(win, COLOR_PAIR(3));
-    wattron(win, A_BOLD | COLOR_PAIR(5));
-    mvwprintw(win, 15, 2, "<== PRESS H or <-");
-    wattroff(win, A_BOLD | COLOR_PAIR(5));
-  } else {
-    for (int i = 0; i < height - 7 && i + scroll_position < count; i++) {
-      int index = i + scroll_position;
-      if (index == highlight)
-        wattron(win, A_REVERSE);
-
-      // Apply color based on file type
-      if (items[index].is_dir) {
-        wattron(win, COLOR_PAIR(2));
-        mvwprintw(win, i + 4, 5, "📁");
-      } else {
-        // Determine file type by extension
-        char * extension = strrchr(items[index].name, '.');
-        if (extension) {
-          if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".7z") == 0 || strcmp(extension, ".tar") == 0 || strcmp(extension, ".xz") == 0 || strcmp(extension, ".gz") == 0 || strcmp(extension, ".jar") == 0) {
-            wattron(win, COLOR_PAIR(3));
-            mvwprintw(win, i + 4, 5, "📦");
-          } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".mp4") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
-            wattron(win, COLOR_PAIR(4));
-            mvwprintw(win, i + 4, 5, "🎵 ");
-          } else if (strcmp(extension, ".png") == 0 || strcmp(extension, ".jpg") == 0 || strcmp(extension, ".webp") == 0 || strcmp(extension, ".gif") == 0) {
-            wattron(win, COLOR_PAIR(5));
-            mvwprintw(win, i + 4, 5, "🖼️");
-          } else {
-            wattron(win, COLOR_PAIR(1));
-            mvwprintw(win, i + 4, 5, "📄");
-          }
-        } else {
-          wattron(win, COLOR_PAIR(1));
-          mvwprintw(win, i + 4, 5, "📄");
+        // Get file information
+        if (lstat(full_path, &entry_stat) == -1) {
+            // Handle error if necessary
+            continue;
         }
-      }
-      wattron(win, A_BOLD);
 
-      mvwprintw(win, i + 4, 7, " %s ", items[index].name);
-
-      // Turn off color attributes
-      wattroff(win, A_BOLD);
-      wattroff(win, COLOR_PAIR(1));
-      wattroff(win, COLOR_PAIR(2));
-      wattroff(win, COLOR_PAIR(3));
-      wattroff(win, COLOR_PAIR(4));
-      wattroff(win, COLOR_PAIR(5));
-      wattroff(win, COLOR_PAIR(9));
-
-      if (index == highlight)
-        wattroff(win, A_REVERSE);
+        if (S_ISLNK(entry_stat.st_mode)) {
+            // If it's a symlink, get the target
+            ssize_t len = readlink(full_path, symlink_target, sizeof(symlink_target) - 1);
+            if (len != -1) {
+                symlink_target[len] = '\0';  // Null-terminate the symlink target string
+                snprintf(items[*count].name, sizeof(items[*count].name), "%s ->%s", entry->d_name, symlink_target);
+            } else {
+                snprintf(items[*count].name, sizeof(items[*count].name), "%s ->unknown", entry->d_name);
+            }
+            items[*count].is_dir = (entry_stat.st_mode & S_IFDIR) ? 1 : 0;
+            (*count)++;
+        } else if (entry->d_type == DT_DIR) {
+            strcpy(items[*count].name, entry->d_name);
+            items[*count].is_dir = 1;
+            (*count)++;
+        }
     }
-  }
+
+    // Rewind directory stream for the second pass
+    rewinddir(dir);
+
+    // Second pass: List non-directory files
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip hidden files if not showing hidden files
+        if ((!show_hidden && entry->d_name[0] == '.') || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        // Build the full path for the current entry
+        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
+
+        // Get file information
+        if (lstat(full_path, &entry_stat) == -1) {
+            // Handle error if necessary
+            continue;
+        }
+
+        if (!S_ISLNK(entry_stat.st_mode) && entry->d_type != DT_DIR) {
+            strcpy(items[*count].name, entry->d_name);
+            items[*count].is_dir = 0;
+            (*count)++;
+        }
+    }
+
+    closedir(dir);
+    wrefresh(win);
 }
 
-int find_item(const char * query, FileItem items[], int item_count, int * start_index, int direction) {
-  char lower_query[NAME_MAX];
-  for (int i = 0; query[i] && i < NAME_MAX; i++) {
-    lower_query[i] = tolower(query[i]);
-  }
-  lower_query[strlen(query)] = '\0';
-
-  if (direction == 1) { // Forward search
-    for (int i = * start_index; i < item_count; i++) {
-      char lower_name[NAME_MAX];
-      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-        lower_name[j] = tolower(items[i].name[j]);
-      }
-      lower_name[strlen(items[i].name)] = '\0';
-
-      if (strstr(lower_name, lower_query) != NULL) {
-        * start_index = i;
-        return i;
-      }
+int is_symlink(const char *path) {
+    struct stat statbuf;
+    char tmpPath[MAX_PATH_LENGTH];
+    strcpy(tmpPath, path);
+    truncate_symlink_name(tmpPath);
+    // Use lstat to check for symbolic links
+    if (lstat(tmpPath, &statbuf) == 0) {
+        if (S_ISLNK(statbuf.st_mode)) {
+            return 1; // Return 1 (true) if it's a symbolic link
+        }
     }
-    for (int i = 0; i < * start_index; i++) {
-      char lower_name[NAME_MAX];
-      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-        lower_name[j] = tolower(items[i].name[j]);
-      }
-      lower_name[strlen(items[i].name)] = '\0';
 
-      if (strstr(lower_name, lower_query) != NULL) {
-        * start_index = i;
-        return i;
-      }
+    return 0; // Return 0 (false) if it's not a symbolic link or lstat fails
+}
+
+void print_items(WINDOW *win, FileItem items[], int count, int highlight,
+                 const char *current_path, int show_hidden, int scroll_position, int height) {
+    char *hidden_dir;
+    if (show_hidden) {
+        hidden_dir = "ON\u25C6";
+    } else {
+        hidden_dir = "OFF\u25C7";
     }
-  } else if (direction == -1) { // Backward search
-    for (int i = * start_index; i >= 0; i--) {
-      char lower_name[NAME_MAX];
-      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-        lower_name[j] = tolower(items[i].name[j]);
-      }
-      lower_name[strlen(items[i].name)] = '\0';
 
-      if (strstr(lower_name, lower_query) != NULL) {
-        * start_index = i;
-        return i;
-      }
+    // Getting system free space from / dir
+    double systemFreeSpace = system_free_space("/");
+    double totalSystemSpace = system_total_space("/");
+
+    color_pair_init();
+
+    // Print title
+    wattron(win, COLOR_PAIR(9));
+    char *cur_user = get_current_user();
+    char *cur_hostname = get_hostname();
+    wattron(win, A_BOLD | COLOR_PAIR(14));
+    mvwprintw(win, 0, 2, " 🗄️ LITE FM: ");
+    wattroff(win, A_BOLD | COLOR_PAIR(14));
+
+    char sanitizedCurPath[PATH_MAX];
+    if (strncmp(current_path, "//", 2) == 0) {
+        snprintf(sanitizedCurPath, sizeof(sanitizedCurPath), "%s", current_path + 1);
+    } else {
+        strcpy(sanitizedCurPath, current_path);
     }
-    for (int i = item_count - 1; i > * start_index; i--) {
-      char lower_name[NAME_MAX];
-      for (int j = 0; items[i].name[j] && j < NAME_MAX; j++) {
-        lower_name[j] = tolower(items[i].name[j]);
-      }
-      lower_name[strlen(items[i].name)] = '\0';
 
-      if (strstr(lower_name, lower_query) != NULL) {
-        * start_index = i;
-        return i;
-      }
+    // Print current path and hidden directories status
+    wattron(win, A_BOLD);
+    wattron(win, COLOR_PAIR(8));
+    mvwprintw(win, 2, 2, " %s@%s ", cur_hostname, cur_user);
+    wattroff(win, COLOR_PAIR(8));
+    wattron(win, COLOR_PAIR(9));
+    print_limited(win, 2, 20, sanitizedCurPath);
+    wattroff(win, COLOR_PAIR(9));
+    wattron(win, COLOR_PAIR(9));
+    mvwprintw(win, LINES - 3, (COLS / 2) - 55, " Hidden Dirs: %s ", hidden_dir);
+    mvwprintw(win, LINES - 3, (COLS / 2) - 30, " 💾 %.2f / %.2f GiB ", systemFreeSpace, totalSystemSpace);
+    wattroff(win, COLOR_PAIR(9));
+    wattroff(win, A_BOLD);
+
+    // Print items
+    if (count == 0) {
+        wattron(win, COLOR_PAIR(3));
+        int err_msg_size = sizeof(err_message) / sizeof(err_message[0]);
+        for (int i = 0; i < err_msg_size; i++) {
+            mvwprintw(win, i + 5, 2, "%s", err_message[i]);
+        }
+        wattroff(win, COLOR_PAIR(3));
+        wattron(win, A_BOLD | COLOR_PAIR(5));
+        mvwprintw(win, 15, 2, "<== PRESS H or <-");
+        wattroff(win, A_BOLD | COLOR_PAIR(5));
+    } else {
+        for (int i = 0; i < height - 7 && i + scroll_position < count; i++) {
+            int index = i + scroll_position;
+            if (index == highlight) {
+                wattron(win, A_REVERSE);
+            }
+            char full_path[MAX_PATH_LENGTH];
+            snprintf(full_path, sizeof(full_path), "%s/%s", current_path, items[index].name);
+            // Apply color based on file type
+            if (items[index].is_dir) {
+                wattron(win, COLOR_PAIR(2));
+                mvwprintw(win, i + 4, 5, "📁");
+            } else if (is_symlink(full_path)) {
+                wattron(win, COLOR_PAIR(6));  // Choose an appropriate color pair for symlinks
+                mvwprintw(win, i + 4, 5, "🔗"); // Unicode for symlink
+            } else {
+                // Determine file type by extension
+                char *extension = strrchr(items[index].name, '.');
+                if (extension) {
+                    if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".7z") == 0 || strcmp(extension, ".tar") == 0 || strcmp(extension, ".xz") == 0 || strcmp(extension, ".gz") == 0 || strcmp(extension, ".jar") == 0) {
+                        wattron(win, COLOR_PAIR(3));
+                        mvwprintw(win, i + 4, 5, "📦");
+                    } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".mp4") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
+                        wattron(win, COLOR_PAIR(4));
+                        mvwprintw(win, i + 4, 5, "🎵 ");
+                    } else if (strcmp(extension, ".png") == 0 || strcmp(extension, ".jpg") == 0 || strcmp(extension, ".webp") == 0 || strcmp(extension, ".gif") == 0) {
+                        wattron(win, COLOR_PAIR(5));
+                        mvwprintw(win, i + 4, 5, "🖼️");
+                    } else {
+                        wattron(win, COLOR_PAIR(1));
+                        mvwprintw(win, i + 4, 5, "📄");
+                    }
+                } else {
+                    wattron(win, COLOR_PAIR(1));
+                    mvwprintw(win, i + 4, 5, "📄");
+                }
+            }
+            wattron(win, A_BOLD);
+
+            mvwprintw(win, i + 4, 7, " %s ", items[index].name);
+
+            // Turn off color attributes
+            wattroff(win, A_BOLD);
+            wattroff(win, COLOR_PAIR(1));
+            wattroff(win, COLOR_PAIR(2));
+            wattroff(win, COLOR_PAIR(3));
+            wattroff(win, COLOR_PAIR(4));
+            wattroff(win, COLOR_PAIR(5));
+            wattroff(win, COLOR_PAIR(6)); // Turn off the color pair for symlinks
+            wattroff(win, COLOR_PAIR(9));
+
+            if (index == highlight)
+                wattroff(win, A_REVERSE);
+        }
     }
-  }
+}
 
-  return -1; // Not found
+/*
+ * TRUNCATING A SYMLINK NAME IS NECESSARY AS THE ITEM NAME MIGHT HAVE 
+ * THE STRING QUERY WE ARE LOOKING FOR,
+ *
+ * EXAMPLE: LIB64 ->LIB 
+ * IF I WANT TO SEARCH FOR LIB, I SHOULD GO TO THE ITEM THAT ACTUALLY 
+ * HAS THE STRING `LIB`, AND NOT A SYMLINK OF IT.
+ * 
+*/
+void truncate_symlink_name(char *name) {
+    char *arrow = strstr(name, " ->");
+    if (arrow) {
+        *arrow = '\0'; // Truncate the name at the " -> " point
+    }
+}
+
+int find_item(const char *query, FileItem items[], int item_count, int *start_index, int direction) {
+    char lower_query[NAME_MAX];
+    for (int i = 0; query[i] && i < NAME_MAX; i++) {
+        lower_query[i] = tolower(query[i]);
+    }
+    lower_query[strlen(query)] = '\0'; 
+
+    if (direction == 1) { // Forward search
+        for (int i = *start_index; i < item_count; i++) {
+            char truncated_name[NAME_MAX];
+            strcpy(truncated_name, items[i].name);
+            truncate_symlink_name(truncated_name);
+
+            char lower_name[NAME_MAX];
+            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
+                lower_name[j] = tolower(truncated_name[j]);
+            }
+            lower_name[strlen(truncated_name)] = '\0';
+
+            if (strstr(lower_name, lower_query) != NULL) {
+                *start_index = i;
+                return i;
+            }
+        }
+        for (int i = 0; i < *start_index; i++) {
+            char truncated_name[NAME_MAX];
+            strcpy(truncated_name, items[i].name);
+            truncate_symlink_name(truncated_name);
+
+            char lower_name[NAME_MAX];
+            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
+                lower_name[j] = tolower(truncated_name[j]);
+            }
+            lower_name[strlen(truncated_name)] = '\0';
+
+            if (strstr(lower_name, lower_query) != NULL) {
+                *start_index = i;
+                return i;
+            }
+        }
+    } else if (direction == -1) { // Backward search
+        for (int i = *start_index; i >= 0; i--) {
+            char truncated_name[NAME_MAX];
+            strcpy(truncated_name, items[i].name);
+            truncate_symlink_name(truncated_name);
+
+            char lower_name[NAME_MAX];
+            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
+                lower_name[j] = tolower(truncated_name[j]);
+            }
+            lower_name[strlen(truncated_name)] = '\0';
+
+            if (strstr(lower_name, lower_query) != NULL) {
+                *start_index = i;
+                return i;
+            }
+        }
+        for (int i = item_count - 1; i > *start_index; i--) {
+            char truncated_name[NAME_MAX];
+            strcpy(truncated_name, items[i].name);
+            truncate_symlink_name(truncated_name);
+
+            char lower_name[NAME_MAX];
+            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
+                lower_name[j] = tolower(truncated_name[j]);
+            }
+            lower_name[strlen(truncated_name)] = '\0';
+
+            if (strstr(lower_name, lower_query) != NULL) {
+                *start_index = i;
+                return i;
+            }
+        }
+    }
+
+    return -1; // Not found
 }
 
 void get_file_info_popup(WINDOW * main_win,
@@ -377,16 +467,23 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     werase(info_win);
     struct stat file_stat;
     char full_path[PATH_MAX];
-    snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
+    char truncated_file_name[PATH_MAX];
+    char symlink_target[PATH_MAX];
+    ssize_t len;
 
-    // Get file information
-    if (stat(full_path, &file_stat) == -1) {
+    strcpy(truncated_file_name, filename);
+    truncate_symlink_name(truncated_file_name);
+    snprintf(full_path, PATH_MAX, "%s/%s", path, truncated_file_name);
+
+    // Get file information using lstat to handle symlinks
+    if (lstat(full_path, &file_stat) == -1) {
         log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
         show_message(info_win, "Error retrieving file/dir info.");
         box(info_win, 0, 0);
         wrefresh(info_win);
         return;
     }
+
     if (access(full_path, R_OK) != 0) {
         log_message(LOG_LEVEL_ERROR, "Access denied for %s", full_path);
         int denied_message_size = sizeof(denied_message) / sizeof(denied_message[0]);
@@ -486,7 +583,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         int sub_dir_line = 12;
         int max_y, max_x;
         getmaxyx(info_win, max_y, max_x);
-        
+
         // Print parent directories on the left 
         DIR *dir = opendir(parent_dir);
         struct dirent *entry;
@@ -528,7 +625,20 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
             show_message(info_win, "Error opening directory.");
         }
     } else if (S_ISLNK(file_stat.st_mode)) {
+        wattron(info_win, COLOR_PAIR(6));
         wprintw(info_win, "Symbolic Link");
+
+        // Read the symlink target
+        len = readlink(full_path, symlink_target, sizeof(symlink_target) - 1);
+        if (len != -1) {
+            symlink_target[len] = '\0'; // Null-terminate the string
+            wattron(info_win, COLOR_PAIR(4));
+            wprintw(info_win, "  to  %s", symlink_target);
+            wattroff(info_win, COLOR_PAIR(4));
+        } else {
+            show_message(info_win, "Error reading symlink target.");
+        }
+        wattroff(info_win, COLOR_PAIR(6));
     } else if (S_ISFIFO(file_stat.st_mode)) {
         wprintw(info_win, "FIFO");
     } else if (S_ISCHR(file_stat.st_mode)) {
