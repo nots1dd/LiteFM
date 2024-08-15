@@ -30,7 +30,6 @@ detect_nerd_fonts() {
     else
         echo -e "${RED}Nerd Fonts are not installed or not available.${RESET}"
         echo -e "\n${RED}${BOLD}Kindly ensure that you have a nerd font installed and enabled in your terminal for LiteFM!${RESET}"
-        exit 1
     fi
 }
 
