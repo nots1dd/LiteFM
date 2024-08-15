@@ -60,5 +60,6 @@ const char *format_file_size(off_t size);
 int is_image(const char *filename);
 void launch_env_var(WINDOW* win, const char *current_path, const char *filename, const char* type);
 void print_permissions(WINDOW *info_win, struct stat *file_stat);
+void display_archive_contents(WINDOW *info_win, const char *full_path, const char *file_ext);
 
 #endif // FILEPREVIEW_H

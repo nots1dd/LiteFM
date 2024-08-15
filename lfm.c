@@ -462,31 +462,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         // Check if the file is an archive
         if (file_ext != NULL && (strcmp(file_ext, ".zip") == 0 || strcmp(file_ext, ".7z") == 0 || strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0)) {
             // Display archive contents
-            wattron(info_win, COLOR_PAIR(9));
-            mvwprintw(info_win, 11, 2, " Archive Contents: ");
-            wattroff(info_win, COLOR_PAIR(9));
-
-            // Command to list archive contents
-            char cmd[PATH_MAX + 50];
-            if (strcmp(file_ext, ".zip") == 0) {
-                snprintf(cmd, sizeof(cmd), "unzip -l '%s'", full_path);
-            } else if (strcmp(file_ext, ".7z") == 0) {
-                snprintf(cmd, sizeof(cmd), "7z l '%s'", full_path);
-            } else if (strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0) {
-                snprintf(cmd, sizeof(cmd), "tar -tvf '%s'", full_path);
-            }
-
-            FILE *fp = popen(cmd, "r");
-            if (fp != NULL) {
-                char line[256];
-                int line_num = 12;
-                while (fgets(line, sizeof(line), fp) != NULL && line_num < getmaxy(info_win) - 1) {
-                    mvwprintw(info_win, line_num++, 2, "%s", line);
-                }
-                pclose(fp);
-            } else {
-                show_message(info_win, "Error retrieving archive contents.");
-            }
+            display_archive_contents(info_win, full_path, file_ext);
         }
     } else if (S_ISDIR(file_stat.st_mode)) {
         wattron(info_win, COLOR_PAIR(11));
