@@ -382,9 +382,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     // Get file information
     if (stat(full_path, &file_stat) == -1) {
         log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
-        char errMSG[256];
-        snprintf(errMSG, 256, "Error retrieving file info for %s", full_path);
-        show_message(info_win, errMSG);
+        show_message(info_win, "Error retrieving file/dir info.");
         box(info_win, 0, 0);
         wrefresh(info_win);
         return;
@@ -703,12 +701,9 @@ int main(int argc, char* argv[]) {
 
         // Check access to the directory or file
         
-        if (access(fullPath, R_OK) != 0) {
-            char errmsg[256];  // Ensure the buffer is large enough
-            snprintf(errmsg, sizeof(errmsg), "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath, strerror(errno));
-            
+        if (access(fullPath, R_OK) != 0) { 
             // Log the message safely
-            log_message(LOG_LEVEL_ERROR, errmsg);
+            log_message(LOG_LEVEL_ERROR, "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath, strerror(errno));
             
             // Show the message to the user
             show_term_message(errmsg, 1);
