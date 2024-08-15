@@ -346,18 +346,7 @@ void get_file_info_popup(WINDOW * main_win,
   wattroff(info_win, COLOR_PAIR(4));
 
   colorLine(info_win, "Permissions: ", 3, 7, 2);
-  wattron(info_win, COLOR_PAIR(4));
-  wprintw(info_win, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IROTH) ? "r" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
-  wattroff(info_win, COLOR_PAIR(4));
+  print_permissions(info_win, &file_stat);
 
   colorLine(info_win, "Inode: ", 3, 8, 2);
   wattron(info_win, COLOR_PAIR(4));
@@ -384,25 +373,23 @@ void get_file_info_popup(WINDOW * main_win,
   wrefresh(main_win);
 }
 
-void get_file_info(WINDOW * info_win,
-  const char * path,
-    const char * filename) {
-  werase(info_win);
-  struct stat file_stat;
-  char full_path[PATH_MAX];
-  snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
+void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
+    werase(info_win);
+    struct stat file_stat;
+    char full_path[PATH_MAX];
+    snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
 
-  // Get file information
-  if (stat(full_path, & file_stat) == -1) {
-    log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
-    char errMSG[256];
-    snprintf(errMSG, 256, "Error retrieving file info for %s",full_path);
-    show_message(info_win, errMSG);
-    box(info_win, 0, 0);
-    wrefresh(info_win);
-    return;
-  }
-  if (access(full_path, R_OK) != 0) {
+    // Get file information
+    if (stat(full_path, &file_stat) == -1) {
+        log_message(LOG_LEVEL_ERROR, "Error retrieving file information for %s", full_path);
+        char errMSG[256];
+        snprintf(errMSG, 256, "Error retrieving file info for %s", full_path);
+        show_message(info_win, errMSG);
+        box(info_win, 0, 0);
+        wrefresh(info_win);
+        return;
+    }
+    if (access(full_path, R_OK) != 0) {
         log_message(LOG_LEVEL_ERROR, "Access denied for %s", full_path);
         int denied_message_size = sizeof(denied_message) / sizeof(denied_message[0]);
         for (int j = 0; j < denied_message_size; j++) {
@@ -412,132 +399,183 @@ void get_file_info(WINDOW * info_win,
         box(info_win, 0, 0);
         wrefresh(info_win);
         return;
-  }
-
-  // Display file information
-  wattron(info_win, A_BOLD);
-  mvwprintw(info_win, 1, 2, "File/Dir Information:");
-  wattroff(info_win, A_BOLD);
-
-  clearLine(info_win, 3, 2);
-  colorLine(info_win, "Name: ", 3, 3, 2);
-  wattron(info_win, COLOR_PAIR(4));
-  wprintw(info_win, "%s", filename);
-  wattroff(info_win, COLOR_PAIR(4));
-
-  clearLine(info_win, 4, 2);
-  colorLine(info_win, "Size: ", 3, 4, 2);
-  wattron(info_win, COLOR_PAIR(4));
-  wprintw(info_win, "%s", format_file_size(file_stat.st_size));
-  wattroff(info_win, COLOR_PAIR(4));
-
-  const char * file_ext = strrchr(filename, '.');
-  clearLine(info_win, 5, 2);
-  colorLine(info_win, "Extension: ", 3, 5, 2);
-  wattron(info_win, COLOR_PAIR(4));
-  if (file_ext != NULL && !S_ISDIR(file_stat.st_mode)) {
-    wprintw(info_win, "%s", file_ext + 1);
-  } else {
-    wprintw(info_win, "none");
-  }
-  wattroff(info_win, COLOR_PAIR(4));
-
-  char mod_time[20];
-  strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime( & file_stat.st_mtime));
-  clearLine(info_win, 6, 2);
-  colorLine(info_win, "Last Modified: ", 3, 6, 2);
-  wattron(info_win, COLOR_PAIR(4));
-  wprintw(info_win, "%s", mod_time);
-  wattroff(info_win, COLOR_PAIR(4));
-
-  colorLine(info_win, "Inode: ", 3, 7, 2);
-  wattron(info_win, COLOR_PAIR(4));
-  wprintw(info_win, "%lu", file_stat.st_ino);
-  wattroff(info_win, COLOR_PAIR(4));
-
-  clearLine(info_win, 8, 2);
-  colorLine(info_win, "Type: ", 3, 8, 2);
-  wattron(info_win, COLOR_PAIR(5));
-  if (S_ISREG(file_stat.st_mode)) {
-    wprintw(info_win, "Regular File");
-  } else if (S_ISDIR(file_stat.st_mode)) {
-    wattron(info_win, COLOR_PAIR(11));
-    wprintw(info_win, "Directory");
-    wattroff(info_win, COLOR_PAIR(11));
-    // Count and display subdirectories
-    DIR * dir;
-    struct dirent * entry;
-    int line = 14;
-    dir = opendir(full_path);
-    if (dir != NULL) {
-      wattron(info_win, A_BOLD | COLOR_PAIR(9));
-      mvwprintw(info_win, line++, 2, " Subdirectories: ");
-      wattroff(info_win, A_BOLD | COLOR_PAIR(9));
-      wattron(info_win, A_BOLD | COLOR_PAIR(2));
-      while ((entry = readdir(dir)) != NULL) {
-        if (entry -> d_type == DT_DIR) {
-          if (strcmp(entry -> d_name, ".") != 0 && strcmp(entry -> d_name, "..") != 0) {
-            mvwprintw(info_win, line++, 2, "  %s", entry -> d_name);
-          }
-        }
-      }
-      closedir(dir);
-      wattroff(info_win, A_BOLD | COLOR_PAIR(2));
-    } else {
-      show_message(info_win, "Error opening directory.");
     }
-  } else if (S_ISLNK(file_stat.st_mode)) {
-    wprintw(info_win, "Symbolic Link");
-  } else if (S_ISFIFO(file_stat.st_mode)) {
-    wprintw(info_win, "FIFO");
-  } else if (S_ISCHR(file_stat.st_mode)) {
-    wprintw(info_win, "Character Device");
-  } else if (S_ISBLK(file_stat.st_mode)) {
-    wprintw(info_win, "Block Device");
-  } else if (S_ISSOCK(file_stat.st_mode)) {
-    wprintw(info_win, "Socket");
-  } else {
-    wprintw(info_win, "Unknown");
-  }
-  wattroff(info_win, COLOR_PAIR(5));
 
-  clearLine(info_win, 9, 2);
-  wattron(info_win, COLOR_PAIR(3));
-  mvwprintw(info_win, 9, 2, "Permissions: ");
-  wattroff(info_win, COLOR_PAIR(3));
-  wattron(info_win, COLOR_PAIR(4));
-  wprintw(info_win, (S_ISDIR(file_stat.st_mode)) ? "d" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IRUSR) ? "r" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IWUSR) ? "w" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IXUSR) ? "x" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IRGRP) ? "r" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IWGRP) ? "w" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IXGRP) ? "x" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IROTH) ? "r" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IWOTH) ? "w" : "-");
-  wprintw(info_win, (file_stat.st_mode & S_IXOTH) ? "x" : "-");
-  wattroff(info_win, COLOR_PAIR(4));
+    // Display file information
+    wattron(info_win, A_BOLD);
+    mvwprintw(info_win, 1, 2, "File/Dir Information:");
+    wattroff(info_win, A_BOLD);
 
-  clearLine(info_win, 10, 2);
-  struct passwd * pwd = getpwuid(file_stat.st_uid);
-  wattron(info_win, COLOR_PAIR(6));
-  mvwprintw(info_win, 10, 2, "Owner: %s (%d)", pwd -> pw_name, file_stat.st_uid);
-  wattroff(info_win, COLOR_PAIR(6));
+    clearLine(info_win, 3, 2);
+    colorLine(info_win, "Name: ", 3, 3, 2);
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", filename);
+    wattroff(info_win, COLOR_PAIR(4));
 
-  struct group * grp = getgrgid(file_stat.st_gid);
-  if (grp != NULL) {
-    wattron(info_win, COLOR_PAIR(6));
-    mvwprintw(info_win, 11, 2, "Group: %s (%d)", grp -> gr_name, file_stat.st_gid);
-    wattroff(info_win, COLOR_PAIR(6));
-  } else {
-    wattron(info_win, COLOR_PAIR(6));
-    mvwprintw(info_win, 11, 2, "Group: %d", file_stat.st_gid);
-    wattroff(info_win, COLOR_PAIR(6));
-  }
+    clearLine(info_win, 4, 2);
+    colorLine(info_win, "Size: ", 3, 4, 2);
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", format_file_size(file_stat.st_size));
+    wattroff(info_win, COLOR_PAIR(4));
 
-  // Refresh the main window to ensure no artifacts remain
-  box(info_win, 0, 0);
-  wrefresh(info_win);
+    const char *file_ext = strrchr(filename, '.');
+    clearLine(info_win, 5, 2);
+    colorLine(info_win, "Extension: ", 3, 5, 2);
+    wattron(info_win, COLOR_PAIR(4));
+    if (file_ext != NULL && !S_ISDIR(file_stat.st_mode)) {
+        wprintw(info_win, "%s", file_ext + 1);
+    } else {
+        wprintw(info_win, "none");
+    }
+    wattroff(info_win, COLOR_PAIR(4));
+
+    char mod_time[20];
+    strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime(&file_stat.st_mtime));
+    clearLine(info_win, 6, 2);
+    colorLine(info_win, "Last Modified: ", 3, 6, 2);
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%s", mod_time);
+    wattroff(info_win, COLOR_PAIR(4));
+
+    colorLine(info_win, "Inode: ", 3, 7, 2);
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, "%lu", file_stat.st_ino);
+    wattroff(info_win, COLOR_PAIR(4));
+
+    clearLine(info_win, 8, 2);
+    colorLine(info_win, "Group: ", 3, 8, 2);
+    wattron(info_win, COLOR_PAIR(4));
+    struct group *grp = getgrgid(file_stat.st_gid);
+    if (grp != NULL) {
+        wprintw(info_win, "%s", grp->gr_name);
+    } else {
+        wprintw(info_win, "Unknown");
+    }
+    wattroff(info_win, COLOR_PAIR(4));
+
+    clearLine(info_win, 9, 2);
+    colorLine(info_win, "Type: ", 3, 9, 2);
+    wattron(info_win, COLOR_PAIR(5));
+    if (S_ISREG(file_stat.st_mode)) {
+        wprintw(info_win, "Regular File");
+
+        // Check if the file is an archive
+        if (file_ext != NULL && (strcmp(file_ext, ".zip") == 0 || strcmp(file_ext, ".7z") == 0 || strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0)) {
+            // Display archive contents
+            wattron(info_win, COLOR_PAIR(9));
+            mvwprintw(info_win, 11, 2, " Archive Contents: ");
+            wattroff(info_win, COLOR_PAIR(9));
+
+            // Command to list archive contents
+            char cmd[PATH_MAX + 50];
+            if (strcmp(file_ext, ".zip") == 0) {
+                snprintf(cmd, sizeof(cmd), "unzip -l '%s'", full_path);
+            } else if (strcmp(file_ext, ".7z") == 0) {
+                snprintf(cmd, sizeof(cmd), "7z l '%s'", full_path);
+            } else if (strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0) {
+                snprintf(cmd, sizeof(cmd), "tar -tvf '%s'", full_path);
+            }
+
+            FILE *fp = popen(cmd, "r");
+            if (fp != NULL) {
+                char line[256];
+                int line_num = 12;
+                while (fgets(line, sizeof(line), fp) != NULL && line_num < getmaxy(info_win) - 1) {
+                    mvwprintw(info_win, line_num++, 2, "%s", line);
+                }
+                pclose(fp);
+            } else {
+                show_message(info_win, "Error retrieving archive contents.");
+            }
+        }
+    } else if (S_ISDIR(file_stat.st_mode)) {
+        wattron(info_win, COLOR_PAIR(11));
+        wprintw(info_win, "Directory");
+        wattroff(info_win, COLOR_PAIR(11));
+
+        // Horizontal Layout for Parent Directories and Subdirectories
+        wattron(info_win, A_BOLD | COLOR_PAIR(9));
+        mvwprintw(info_win, 11, 2, " Parent Directories: ");
+        mvwprintw(info_win, 11, getmaxx(info_win) / 2, "Subdirectories: ");
+        wattroff(info_win, A_BOLD | COLOR_PAIR(9));
+
+        char parent_dir[PATH_MAX];
+        char current_path[PATH_MAX];
+        strncpy(current_path, path, sizeof(current_path));
+        current_path[sizeof(current_path) - 1] = '\0'; // Ensure null termination
+        char *parent_dir_ptr = dirname(current_path);
+
+        // Make a copy of the parent directory path to avoid modifying the original path
+        strncpy(parent_dir, parent_dir_ptr, sizeof(parent_dir));
+        parent_dir[sizeof(parent_dir) - 1] = '\0'; // Ensure null termination
+        int line = 12;
+        int sub_dir_line = 12;
+        int max_y, max_x;
+        getmaxyx(info_win, max_y, max_x);
+        
+        // Print parent directories on the left 
+        DIR *dir = opendir(parent_dir);
+        struct dirent *entry;
+        if (dir != NULL) {
+            wattron(info_win, A_BOLD | COLOR_PAIR(9));
+            mvwprintw(info_win, 10, 2, " Parent Directories: ");
+            wattroff(info_win, A_BOLD | COLOR_PAIR(9));
+
+            int col = 2; // Starting column
+            wattron(info_win, A_BOLD | COLOR_PAIR(2));
+            while ((entry = readdir(dir)) != NULL) {
+                if (entry->d_type == DT_DIR) {
+                    // Exclude the current directory and the special entries "." and ".."
+                    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                        // Print the directory name
+                        mvwprintw(info_win, line++, 2, "%s", entry->d_name);
+                    }
+                }
+            }
+            closedir(dir);
+            wattroff(info_win, A_BOLD | COLOR_PAIR(2));
+        } else {
+            show_message(info_win, "Error opening parent directory.");
+        }
+        // Print subdirectories on the right
+        dir = opendir(full_path);
+        if (dir != NULL) {
+            wattron(info_win, A_BOLD | COLOR_PAIR(2));
+            while ((entry = readdir(dir)) != NULL && sub_dir_line < max_y - 1) {
+                if (entry->d_type == DT_DIR) {
+                    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                        mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", entry->d_name);
+                    }
+                }
+            }
+            closedir(dir);
+            wattroff(info_win, A_BOLD | COLOR_PAIR(2));
+        } else {
+            show_message(info_win, "Error opening directory.");
+        }
+    } else if (S_ISLNK(file_stat.st_mode)) {
+        wprintw(info_win, "Symbolic Link");
+    } else if (S_ISFIFO(file_stat.st_mode)) {
+        wprintw(info_win, "FIFO");
+    } else if (S_ISCHR(file_stat.st_mode)) {
+        wprintw(info_win, "Character Device");
+    } else if (S_ISBLK(file_stat.st_mode)) {
+        wprintw(info_win, "Block Device");
+    } else if (S_ISSOCK(file_stat.st_mode)) {
+        wprintw(info_win, "Socket");
+    } else {
+        wprintw(info_win, "Unknown");
+    }
+    wattroff(info_win, COLOR_PAIR(5));
+
+    clearLine(info_win, 10, 2);
+    wattron(info_win, COLOR_PAIR(3));
+    mvwprintw(info_win, 10, 2, "Permissions: ");
+    wattroff(info_win, COLOR_PAIR(3));
+    print_permissions(info_win, &file_stat);
+
+    box(info_win, 0, 0);
+    wrefresh(info_win);
 }
 
 void refreshMainWin(WINDOW *win, WINDOW *info_win, FileItem items[], int item_count, int highlight, const char *current_path, int show_hidden, int scroll_position, int height, int info_height, int info_width, int info_starty, int info_startx) {
@@ -688,13 +726,19 @@ int main(int argc, char* argv[]) {
         snprintf(fullPath, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
 
         // Check access to the directory or file
+        
         if (access(fullPath, R_OK) != 0) {
-            char errmsg[100];
-            snprintf(errmsg, 100, "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath, strerror(errno));
+            char errmsg[256];  // Ensure the buffer is large enough
+            snprintf(errmsg, sizeof(errmsg), "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath, strerror(errno));
+            
+            // Log the message safely
             log_message(LOG_LEVEL_ERROR, errmsg);
+            
+            // Show the message to the user
             show_term_message(errmsg, 1);
             break;
         }
+
         
         // Check access to the realPath
         if (items[highlight].is_dir) { 

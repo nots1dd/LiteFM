@@ -43,6 +43,7 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <ctype.h>
+#include <sys/stat.h>
 
 #include "syntax.h"
 
@@ -58,5 +59,6 @@ int is_readable_extension(const char *filename);
 const char *format_file_size(off_t size);
 int is_image(const char *filename);
 void launch_env_var(WINDOW* win, const char *current_path, const char *filename, const char* type);
+void print_permissions(WINDOW *info_win, struct stat *file_stat);
 
 #endif // FILEPREVIEW_H

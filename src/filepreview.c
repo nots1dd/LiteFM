@@ -305,3 +305,19 @@ void launch_env_var(WINDOW* win, const char *current_path, const char *filename,
     clear();
 }
 
+void print_permissions(WINDOW *info_win, struct stat *file_stat) {
+    
+    wattron(info_win, COLOR_PAIR(4));
+    wprintw(info_win, (S_ISDIR(file_stat->st_mode)) ? "d" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IRUSR) ? "r" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IWUSR) ? "w" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IXUSR) ? "x" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IRGRP) ? "r" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IWGRP) ? "w" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IXGRP) ? "x" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IROTH) ? "r" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IWOTH) ? "w" : "-");
+    wprintw(info_win, (file_stat->st_mode & S_IXOTH) ? "x" : "-");
+    wattroff(info_win, COLOR_PAIR(4));
+}
+
