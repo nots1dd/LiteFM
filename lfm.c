@@ -706,7 +706,7 @@ int main(int argc, char* argv[]) {
             log_message(LOG_LEVEL_ERROR, "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath, strerror(errno));
             
             // Show the message to the user
-            show_term_message(errmsg, 1);
+            show_term_message("Access denied for this inode. Check log more details..", 1);
             break;
         }
 
