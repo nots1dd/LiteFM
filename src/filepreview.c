@@ -321,6 +321,26 @@ void print_permissions(WINDOW *info_win, struct stat *file_stat) {
     wattroff(info_win, COLOR_PAIR(4));
 }
 
+/*
+ * AN EXPLANATION OF HOW A FEW FUNCTIONS WITH POPEN/SYSTEM CALLS ARE SUPPOSED TO BE STRUCTURED:
+ * 
+ * SUCH FUNCTIONS ARE SUSCEPTIBLE TO CWE (COMMON WEAKNESS ENUMERATIONS) LIKE 78, 88 WHICH INVOLVE
+ * OS COMMAND INJECTION, STRING MANIPULATION SO ON 
+ *
+ * IN ORDER TO FIX SUCH ISSUES,
+ *
+ *  -> We create a pipe using pipe to communicate between the parent and child processes.
+ *
+ *  -> We fork a child process using fork.
+ *
+ *  -> In the child process, we close the read end of the pipe and execute the command using execlp, passing the arguments separately to avoid command injection.
+ *
+ *  -> In the parent process, we close the write end of the pipe and read from the pipe using fdopen and fgets. We display the output using mvwprintw.
+ *
+ *  -> We wait for the child process to finish using waitpid.
+ *
+ */ 
+
 void display_archive_contents(WINDOW *info_win, const char *full_path, const char *file_ext) {
     wattron(info_win, COLOR_PAIR(9));
     mvwprintw(info_win, 11, 2, " Archive Contents: ");
@@ -328,27 +348,50 @@ void display_archive_contents(WINDOW *info_win, const char *full_path, const cha
 
     // Validate file_ext and full_path
     if (file_ext != NULL && (strcmp(file_ext, ".zip") == 0 || strcmp(file_ext, ".7z") == 0 || strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0)) {
-        // Command to list archive contents
-        char cmd[PATH_MAX + 50];
-        if (strcmp(file_ext, ".zip") == 0) {
-            snprintf(cmd, sizeof(cmd), "unzip -l %s", full_path);
-        } else if (strcmp(file_ext, ".7z") == 0) {
-            snprintf(cmd, sizeof(cmd), "7z l %s", full_path);
-        } else if (strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0) {
-            snprintf(cmd, sizeof(cmd), "tar -tvf %s", full_path);
+        pid_t pid;
+        int pipefd[2];
+
+        // Create a pipe for communication between parent and child processes
+        if (pipe(pipefd) == -1) {
+            show_message(info_win, "Error creating pipe.");
+            return;
         }
 
-        // Execute the command safely
-        FILE *fp = popen(cmd, "r");
-        if (fp != NULL) {
+        // Fork a child process
+        pid = fork();
+        if (pid == -1) {
+            show_message(info_win, "Error forking process.");
+            return;
+        }
+
+        if (pid == 0) { // Child process
+            close(pipefd[0]); // Close read end of pipe
+
+            // Execute the command with separate arguments
+            if (strcmp(file_ext, ".zip") == 0) {
+                execlp("unzip", "unzip", "-l", full_path, (char *)NULL);
+            } else if (strcmp(file_ext, ".7z") == 0) {
+                execlp("7z", "7z", "l", full_path, (char *)NULL);
+            } else if (strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0) {
+                execlp("tar", "tar", "-tvf", full_path, (char *)NULL);
+            }
+
+            // If execlp fails, exit with an error
+            _exit(1);
+        } else { // Parent process
+            close(pipefd[1]); // Close write end of pipe
+
+            // Read from the pipe and display the output
             char line[256];
             int line_num = 12;
+            FILE *fp = fdopen(pipefd[0], "r");
             while (fgets(line, sizeof(line), fp) != NULL && line_num < getmaxy(info_win) - 1) {
                 mvwprintw(info_win, line_num++, 2, "%s", line);
             }
-            pclose(fp);
-        } else {
-            show_message(info_win, "Error retrieving archive contents.");
+            fclose(fp);
+
+            // Wait for the child process to finish
+            waitpid(pid, NULL, 0);
         }
     }
 }
