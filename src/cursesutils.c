@@ -314,12 +314,7 @@ void color_pair_init() {
     init_pair(12, COLOR_RED, COLOR_BLACK); // Regular color red
     init_custom_color(13, 0xDC, 0x9A, 0x1F); // #BDAE93 #DC9A1F
     init_pair(14, 235, 175); // ping bg, black fg
-    init_pair(15, 175, 175);
-    init_pair(20, COLOR_BLUE + 1, COLOR_BLACK); // Keywords
-    init_pair(21, COLOR_GREEN + 1, COLOR_BLACK); // Comments
-    init_pair(22, COLOR_YELLOW, COLOR_BLACK); // Numbers
-    init_pair(23, COLOR_CYAN, COLOR_BLACK);   // Strings
-    init_pair(24, COLOR_WHITE, COLOR_BLACK);  // Default text
+    init_pair(15, 175, 175); 
 }
 
 int confirm_action(WINDOW *win, const char *message) {

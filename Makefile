@@ -45,7 +45,7 @@ SRCS = lfm.c \
        src/clipboard.c \
        src/logging.c \
        src/signalhandling.c \
-       src/syntax.c \
+       src/highlight.c \
        src/hashtable.c
 
 # Object files

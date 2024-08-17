@@ -10,11 +10,14 @@
 #include "../include/cursesutils.h"
 #include "../include/signalhandling.h"
 #include "../include/logging.h"
-#include "../include/syntax.h"
+#include "../include/highlight.h"
 
 #define MAX_LINES 60   // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length
 #define MAX_FILE_HEADER_SIZE 18  // Maximum size needed for the longest signature
+#define BUFFER_SIZE 1024
+
+int singlecommentslen = 0;
 
 typedef struct {
     const char *signature;
@@ -62,6 +65,61 @@ const char *determine_file_type(const char *filename) {
     return "Unknown";
 }
 
+const char* read_lines(const char *filename, size_t max_lines) {
+    FILE *file = fopen(filename, "r"); // Open file in text mode
+    if (file == NULL) {
+        perror("Error opening file");
+        return NULL;
+    }
+
+    // Allocate buffer for the entire content
+    char *content = (char *)malloc(BUFFER_SIZE);
+    if (content == NULL) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return NULL;
+    }
+
+    size_t content_size = BUFFER_SIZE;
+    size_t total_length = 0;
+    size_t line_count = 0;
+
+    while (line_count < max_lines) {
+        if (fgets(content + total_length, content_size - total_length, file) == NULL) {
+            if (feof(file)) {
+                break; // End of file reached
+            }
+            perror("Error reading file");
+            free(content);
+            fclose(file);
+            return NULL;
+        }
+
+        total_length = strlen(content);
+        if (total_length > 0 && content[total_length - 1] == '\n') {
+            line_count++;
+        }
+
+        // Reallocate if needed
+        if (total_length + BUFFER_SIZE > content_size) {
+            content_size += BUFFER_SIZE;
+            content = (char *)realloc(content, content_size);
+            if (content == NULL) {
+                perror("Memory reallocation failed");
+                fclose(file);
+                return NULL;
+            }
+        }
+    }
+
+    fclose(file);
+
+    // Ensure the string is null-terminated
+    content[total_length] = '\0';
+
+    return content;
+}
+
 const char *empty_message[] = {
     " _____ __  __ ____ _______   __  _____ ___ _     _____   _ ",
     "| ____|  \\/  |  _ \\_   _\\ \\ / / |  ___|_ _| |   | ____| | |",
@@ -72,6 +130,16 @@ const char *empty_message[] = {
 };
 
 void display_file(WINDOW *info_win, const char *filename) {
+
+    HashTable *keywords = create_table();
+    HashTable *singlecomments = create_table();
+    HashTable *multicomments1 = create_table();
+    HashTable *multicomments2 = create_table();
+    HashTable *strings = create_table();
+    HashTable *functions = create_table();
+    HashTable *symbols = create_table();
+    HashTable *operators = create_table();
+
     FILE *file = fopen(filename, "r");
     if (!file) {
         werase(info_win);  // Clear the window first
@@ -80,7 +148,11 @@ void display_file(WINDOW *info_win, const char *filename) {
         wrefresh(info_win);  // Refresh the window to show the error message
         return;
     }
-
+    char keywords_file[256];
+    const char *ext = get_file_extension(filename);
+    snprintf(keywords_file, 256, "/home/s1dd/misc/LiteFM/keywords/%s-keywords.yaml",ext);
+    log_message(LOG_LEVEL_DEBUG, " [SYNHASH] Loading in %s",keywords_file);
+    bool syntaxLoad = load_syntax(keywords_file, keywords, singlecomments, multicomments1, multicomments2, strings, functions, symbols, operators, &singlecommentslen);
     werase(info_win);  // Clear the window before displaying content
     mvwprintw(info_win, 0, 2, " File Preview: ");  // Add a title to the window
 
@@ -99,24 +171,38 @@ void display_file(WINDOW *info_win, const char *filename) {
 
     // Initialize color pairs for syntax highlighting
     start_color();
-    init_pair(20, COLOR_BLUE, COLOR_BLACK); // Keywords
-    init_pair(21, COLOR_GREEN, COLOR_BLACK); // Comments
-    init_pair(22, COLOR_YELLOW, COLOR_BLACK); // Numbers
-    init_pair(23, COLOR_CYAN, COLOR_BLACK);   // Strings
-    init_pair(24, COLOR_WHITE, COLOR_BLACK);  // Default text
+    use_default_colors();
+    if (can_change_color()) {
+        // Normalize RGB values to the range 0-1000
+        init_color(COLOR_CYAN, 70 * 1000 / 255, 70 * 1000 / 255, 70 * 1000 / 255);
+    }
+
+    init_pair(21, COLOR_CYAN, -1); // comments
+    init_pair(22, COLOR_GREEN, -1); // strings
+    init_pair(23, COLOR_YELLOW, -1); // numbers
+    init_pair(24, COLOR_BLUE, -1); // keywords
+    init_pair(25, COLOR_MAGENTA, -1); // symbols
+    init_pair(26, 167, 235);  // functions
+    init_pair(27, COLOR_RED, -1);
 
     // Read file and display lines with syntax highlighting
+    if (syntaxLoad) {
+      const char *text = read_lines(filename, MAX_LINES);
+      highlight_code(info_win, 3, 1,text,keywords, singlecomments, multicomments1, multicomments2, strings, functions, symbols, operators,&singlecommentslen);
+      wrefresh(info_win);
+    } else {
     while (fgets(line, sizeof(line), file) && row < MAX_LINES - 1) {
         // Remove newline character from the line if present
         line[strcspn(line, "\n")] = '\0';
 
         // Highlight syntax in the line and display
-        mvwprintw(info_win, row, 1, "%s", line);
+        mvwprintw(info_win, row, 1, "%s", line); 
         row++;
         lines_read++;
     }
+  }
 
-    if (lines_read == 0) { 
+    if (lines_read == 0 && !syntaxLoad) { 
         int empty_message_size = sizeof(empty_message) / sizeof(empty_message[0]);
         for (int j = 0; j < empty_message_size; j++) {
             mvwprintw(info_win, j + 3, 2, "%s", empty_message[j]);
@@ -128,7 +214,7 @@ void display_file(WINDOW *info_win, const char *filename) {
     // Draw border and refresh window
     draw_colored_border(info_win, 4);
     wrefresh(info_win);  // Refresh the window to show the content
-}
+  }
 
 
 int is_readable_extension(const char *filename) {

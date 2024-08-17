@@ -1,0 +1,101 @@
+keywords:
+  - if
+  - then
+  - elif
+  - else
+  - fi
+  - for
+  - in
+  - do
+  - done
+  - case
+  - esac
+  - while
+  - until
+  - break
+  - continue
+  - function
+  - return
+  - export
+  - local
+  - source
+  - unset
+  - select
+  - eval
+  - let
+  - time
+
+functions:
+  - echo
+  - printf
+  - read
+  - test
+  - expr
+  - bc
+
+operators:
+  - '+'
+  - '-'
+  - '*'
+  - '/'
+  - '%'
+  - '&&'
+  - '||'
+  - '!'
+  - '>'
+  - '<'
+  - '=='
+  - '!='
+  - '-eq'
+  - '-ne'
+  - '-lt'
+  - '-le'
+  - '-gt'
+  - '-ge'
+  - '|'
+
+symbols:
+  - '('
+  - ')'
+  - '{'
+  - '}'
+  - '['
+  - ']'
+  - ';'
+  - ','
+  - '.'
+  - '&'
+  - '|'
+  - '<'
+  - '>'
+  - '$'
+  - '`'
+  - '~'
+  - '\\'
+  - '='
+  - ':'
+  - '>>'
+  - '<<'
+  - '=>'
+
+singlecomments:
+  - '#'
+
+singlecommentslen:
+  - '1'
+
+multicomments1:
+  # Shell scripting does not have multi-line comments like C, but you can use a block of comments
+  # which is effectively multi-line.
+  # We use `: <<'END_COMMENT'` as a substitute for multi-line comments.
+
+multicomments2:
+  # Shell scripting does not have multi-line comments like C, but you can use a block of comments
+  # which is effectively multi-line.
+  # We use `: <<'END_COMMENT'` as a substitute for multi-line comments.
+  # The end of the comment block is indicated by 'END_COMMENT' or any other delimiter.
+  - ':'
+
+strings:
+  - "\""
+  - "'"

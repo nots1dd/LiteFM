@@ -1,46 +1,67 @@
 keywords:
-  - auto
+  - abstract
+  - assert
+  - boolean
   - break
+  - byte
   - case
+  - catch
+  - char
+  - class
   - const
   - continue
   - default
   - do
-  - double
   - else
   - enum
-  - extern
+  - extends
+  - final
+  - finally
   - for
-  - goto
   - if
+  - implements
+  - import
+  - instanceof
+  - interface
   - long
-  - register
+  - native
+  - new
+  - 'null'
+  - package
+  - private
+  - protected
+  - public
   - return
   - short
-  - signed
-  - sizeof
   - static
-  - struct
+  - strictfp
+  - super
   - switch
-  - typedef
-  - union
-  - unsigned
+  - synchronized
+  - this
+  - throw
+  - throws
+  - transient
+  - try
   - void
   - volatile
   - while
-  - '#include'
-  - '#define'
 
 functions:
-  - int
-  - char
-  - float
+  - 'System'
+  - Integer.parseInt
+  - 'String'
+  - int 
+  - char 
+  - float 
+  - double
 
 operators:
   - '+'
   - '-'
   - '*'
   - '/'
+  - '%'
   - '='
   - '=='
   - '!='
@@ -48,6 +69,9 @@ operators:
   - '>'
   - '<='
   - '>='
+  - '&&'
+  - '||'
+  - '!'
 
 symbols:
   - '('
@@ -62,7 +86,8 @@ symbols:
   - ';'
   - '='
   - '->'
-  - '!'
+  - '::'
+  - '@'
 
 singlecomments:
   - '/'

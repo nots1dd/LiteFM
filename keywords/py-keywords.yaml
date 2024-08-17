@@ -1,0 +1,102 @@
+keywords:
+  - None
+  - and
+  - as
+  - assert
+  - break
+  - class
+  - continue
+  - def
+  - del
+  - elif
+  - else
+  - except
+  - finally
+  - for
+  - from
+  - global
+  - if
+  - import
+  - in
+  - is
+  - lambda
+  - nonlocal
+  - not
+  - or
+  - pass
+  - raise
+  - return
+  - try
+  - while
+  - with
+  - yield
+
+functions:
+  - abs
+  - all
+  - any
+  - bin
+  - bool
+  - chr
+  - callable
+  - len
+  - max
+  - min
+  - oct
+  - ord
+  - pow
+  - round
+  - sum
+  - type
+  - zip
+  - "True"
+  - "False"
+
+operators:
+  - '+'
+  - '-'
+  - '*'
+  - '**'
+  - '/'
+  - '%'
+  - '=='
+  - '!='
+  - '<'
+  - '>'
+  - '<='
+  - '>='
+  - 'and'
+  - 'or'
+  - 'not'
+  - 'is'
+  - 'in'
+
+symbols:
+  - '('
+  - ')'
+  - '{'
+  - '}'
+  - '['
+  - ']'
+  - ':'
+  - ','
+  - '.'
+  - ';'
+  - '='
+  - '->'
+
+singlecomments:
+  - '#'
+
+singlecommentslen:
+  - '1'
+
+multicomments1:
+  - "\"\"\""
+
+multicomments2:
+  - "\"\"\""
+
+strings:
+  - "\""
+  - "'"

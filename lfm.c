@@ -44,7 +44,7 @@
 #include "include/logging.h"
 #include "include/clipboard.h"
 #include "include/signalhandling.h"
-#include "include/syntax.h"
+#include "include/highlight.h"
 #include "include/hashtable.h"
 
 #define MAX_ITEMS 1024
@@ -685,6 +685,7 @@ void refreshMainWin(WINDOW *win, WINDOW *info_win, FileItem items[], int item_co
     if (is_readable_extension(items[highlight].name) && !items[highlight].is_dir) {
         char full_path_info[PATH_MAX];
         snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
+        // Load syntax elements from YAML file
         display_file(info_win, full_path_info);
     } else {
         get_file_info(info_win, current_path, items[highlight].name);

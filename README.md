@@ -1,6 +1,8 @@
 # Lite FM
 
-Lightweight and Fast as FUCK file manager written in C with ncurses library
+Light and fast file manager meant to be useful to power users 
+
+Written in C with NCurses, libyaml, rsync and more!
 
 ## Features
 
@@ -10,6 +12,7 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 4. Clean and responsive TUI thanks to ncurses with cool colors and unicodes
 5. Incredibly fast extraction and compression functions thanks to `libarchive`
 6. Very transient and logical workflow
+7. Insanely **FAST** and **MODULAR** Syntax Highlighting system [SYNHASH](https://github.com/nots1dd/synhash)
 
 
 ![lfm1](https://github.com/user-attachments/assets/4bf801e2-594e-4259-b910-11a5a277de5b)
@@ -50,6 +53,7 @@ Lightweight and Fast as FUCK file manager written in C with ncurses library
 -> Currently LiteFM has only been tested on the following Linux Distros:
    1. Arch Linux kernels >= 6.9 (zen and base) x86_64 arch (1920x1080)
    2. Ubuntu versions >= 20 x86_64 arch
+   3. Linux Mint >= 20 x86_64 arch
 
 -> There are no plans on expanding this beyond Linux distributions
 
@@ -133,6 +137,12 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 
 -> Set it as an alias in your respective shell rc and enjoy!
 
+```sh
+cmake -S . -B build 
+cmake --build build/
+./build/litefm
+```
+
 > [!IMPORTANT]
 > Ensure that you set up litefm.log in your ``~/.cache/litefm/log/`` directory (create if not there)
 > 
@@ -147,6 +157,11 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 -> This should give a `./litefm` executable, just run it to enjoy LiteFM!
 
 -> To cleanup, run `make clean`
+
+```sh
+make 
+./litefm
+```
 
 #### Adding Man Page (Optional):
 
@@ -169,8 +184,9 @@ Other steps I plan on taking to ensure that you are always in control of the fil
 
 1. A `litefm.log` and it's functionality has been implemented (`src/logging.c`) that will log EVERY file/dir control in every litefm instance
 2. Possibly set up a trash system so that accidental deletion of any file/dir can be restored [priority/low]
+3. Trying to add password protected files [priority/med]
 
-Check out `SECURITY.md` for the security policy that this repository follows.
+Check out [SECURITY](https://github.com/nots1dd/litefm/blob/main/SECURITY.md) for the security policy that this repository follows.
 
 
 ## FUTURE
@@ -195,6 +211,6 @@ This file manager is far from done there are a lot of cool and essential feature
 
 - [x] Handling resizing of litefm window (maybe through `SIGWINCH`)
 
-- [ ] **UPCOMING: Modular Syntax highlighting through `yaml.h` and `Hashtables`**
+- [x] **UPCOMING: Modular Syntax highlighting through `yaml.h` and `Hashtables`**
 
 - [ ] **UPCOMING: Adding a privacy guard (using GPG maybe)**

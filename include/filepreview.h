@@ -45,7 +45,7 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
-#include "syntax.h"
+#include "highlight.h"
 
 // Constants
 #define MAX_LINES 60       // Define the maximum number of lines to display
