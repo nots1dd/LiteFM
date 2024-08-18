@@ -44,6 +44,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <libgen.h>
 
 #include "highlight.h"
 

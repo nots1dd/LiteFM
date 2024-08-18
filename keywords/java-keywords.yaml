@@ -1,12 +1,10 @@
 keywords:
   - abstract
   - assert
-  - boolean
   - break
   - byte
   - case
   - catch
-  - char
   - class
   - const
   - continue
@@ -43,7 +41,6 @@ keywords:
   - throws
   - transient
   - try
-  - void
   - volatile
   - while
 
@@ -55,6 +52,8 @@ functions:
   - char 
   - float 
   - double
+  - void
+  - boolean
 
 operators:
   - '+'

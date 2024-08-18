@@ -129,6 +129,35 @@ const char *empty_message[] = {
     " "
 };
 
+const char *get_keywords_file(const char *ext) {
+    static char keywords_file[256];
+    char *project_dir;
+    char resolved_path[PATH_MAX];
+
+    // Get the full path of the current file
+    if (realpath(__FILE__, resolved_path) != NULL) {
+        // Get the directory where this source file is located
+        project_dir = dirname(resolved_path);
+
+        // Map multiple extensions to the same YAML file
+        if (strcmp(ext, "h") == 0 || strcmp(ext, "hpp") == 0 || strcmp(ext, "cpp") == 0 ||
+            strcmp(ext, "c") == 0 || strcmp(ext, "cxx") == 0) {
+            snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/c-keywords.yaml", project_dir);
+        }
+        // Add more mappings as needed
+        else {
+            snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/%s-keywords.yaml", project_dir, ext);
+        }
+        log_message(LOG_LEVEL_DEBUG, " [SYNHASH] Loading in %s", keywords_file);
+    } else {
+        log_message(LOG_LEVEL_ERROR, " [SYNHASH] Could not resolve the project directory.");
+        return NULL;
+    }
+
+    return keywords_file;
+}
+
+
 void display_file(WINDOW *info_win, const char *filename) {
 
     HashTable *keywords = create_table();
@@ -150,9 +179,8 @@ void display_file(WINDOW *info_win, const char *filename) {
     }
     char keywords_file[256];
     const char *ext = get_file_extension(filename);
-    snprintf(keywords_file, 256, "/home/s1dd/misc/LiteFM/keywords/%s-keywords.yaml",ext);
-    log_message(LOG_LEVEL_DEBUG, " [SYNHASH] Loading in %s",keywords_file);
-    bool syntaxLoad = load_syntax(keywords_file, keywords, singlecomments, multicomments1, multicomments2, strings, functions, symbols, operators, &singlecommentslen);
+    const char *keywords_file_path = get_keywords_file(ext);
+    bool syntaxLoad = load_syntax(keywords_file_path, keywords, singlecomments, multicomments1, multicomments2, strings, functions, symbols, operators, &singlecommentslen);
     werase(info_win);  // Clear the window before displaying content
     mvwprintw(info_win, 0, 2, " File Preview: ");  // Add a title to the window
 
@@ -184,6 +212,7 @@ void display_file(WINDOW *info_win, const char *filename) {
     init_pair(25, COLOR_MAGENTA, -1); // symbols
     init_pair(26, 167, 235);  // functions
     init_pair(27, COLOR_RED, -1);
+    init_pair(28, 108, 235);
 
     // Read file and display lines with syntax highlighting
     if (syntaxLoad) {

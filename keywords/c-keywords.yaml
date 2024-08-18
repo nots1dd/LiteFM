@@ -25,16 +25,20 @@ keywords:
   - typedef
   - union
   - unsigned
-  - void
   - volatile
   - while
   - '#include'
   - '#define'
+  - '#ifndef'
+  - '#endif'
+  - '#pragma'
 
 functions:
   - int
   - char
   - float
+  - void
+  - bool
 
 operators:
   - '+'
