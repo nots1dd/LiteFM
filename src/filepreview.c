@@ -457,56 +457,54 @@ void print_permissions(WINDOW *info_win, struct stat *file_stat) {
  */ 
 
 void display_archive_contents(WINDOW *info_win, const char *full_path, const char *file_ext) {
-    wattron(info_win, COLOR_PAIR(9));
-    mvwprintw(info_win, 11, 2, " Archive Contents: ");
-    wattroff(info_win, COLOR_PAIR(9));
+    // Validate and sanitize user input
+    char *file_name = basename(full_path);
+    char *dir_name = dirname(full_path);
+    if (file_name == NULL || dir_name == NULL) {
+        show_message(info_win, "Invalid file path.");
+        return;
+    }
 
-    // Validate file_ext and full_path
-    if (file_ext != NULL && (strcmp(file_ext, ".zip") == 0 || strcmp(file_ext, ".7z") == 0 || strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0)) {
-        pid_t pid;
-        int pipefd[2];
-
-        // Create a pipe for communication between parent and child processes
-        if (pipe(pipefd) == -1) {
-            show_message(info_win, "Error creating pipe.");
-            return;
-        }
-
-        // Fork a child process
-        pid = fork();
-        if (pid == -1) {
-            show_message(info_win, "Error forking process.");
-            return;
-        }
-
-        if (pid == 0) { // Child process
-            close(pipefd[0]); // Close read end of pipe
-
-            // Execute the command with separate arguments
-            if (strcmp(file_ext, ".zip") == 0) {
-                execlp("unzip", "unzip", "-l", full_path, (char *)NULL);
-            } else if (strcmp(file_ext, ".7z") == 0) {
-                execlp("7z", "7z", "l", full_path, (char *)NULL);
-            } else if (strcmp(file_ext, ".tar") == 0 || strcmp(file_ext, ".gz") == 0) {
-                execlp("tar", "tar", "-tvf", full_path, (char *)NULL);
-            }
-
-            // If execlp fails, exit with an error
-            _exit(1);
-        } else { // Parent process
-            close(pipefd[1]); // Close write end of pipe
-
-            // Read from the pipe and display the output
-            char line[256];
-            int line_num = 12;
-            FILE *fp = fdopen(pipefd[0], "r");
-            while (fgets(line, sizeof(line), fp) != NULL && line_num < getmaxy(info_win) - 1) {
-                mvwprintw(info_win, line_num++, 2, "%s", line);
-            }
-            fclose(fp);
-
-            // Wait for the child process to finish
-            waitpid(pid, NULL, 0);
+    // Whitelist valid file extensions
+    const char *valid_exts[] = {".zip", ".7z", ".tar", ".gz"};
+    int ext_len = strlen(file_ext);
+    bool is_valid_ext = false;
+    for (int i = 0; i < sizeof(valid_exts) / sizeof(valid_exts[0]); i++) {
+        if (strcmp(file_ext, valid_exts[i]) == 0) {
+            is_valid_ext = true;
+            break;
         }
     }
+    if (!is_valid_ext) {
+        show_message(info_win, "Unsupported file extension.");
+        return;
+    }
+
+    // Construct the command
+    char *cmd;
+    if (strcmp(file_ext, ".zip") == 0) {
+        asprintf(&cmd, "unzip -l %s/%s", dir_name, file_name);
+    } else if (strcmp(file_ext, ".7z") == 0) {
+        asprintf(&cmd, "7z l %s/%s", dir_name, file_name);
+    } else {
+        asprintf(&cmd, "tar -tvf %s/%s", dir_name, file_name);
+    }
+
+    // Execute the command and capture its output
+    FILE *fp = popen(cmd, "r");
+    if (fp == NULL) {
+        show_message(info_win, "Error executing command.");
+        return;
+    }
+
+    // Read from the pipe and display the output
+    char line[256];
+    int line_num = 12;
+    while (fgets(line, sizeof(line), fp) != NULL && line_num < getmaxy(info_win) - 1) {
+        mvwprintw(info_win, line_num++, 2, "%s", line);
+    }
+    pclose(fp);
+
+    // Refresh the window to display the output
+    wrefresh(info_win);
 }
