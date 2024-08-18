@@ -483,6 +483,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     ssize_t len;
 
     snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
+    truncate_symlink_name(full_path);
 
     // Get file information using lstat to handle symlinks
     if (lstat(full_path, &file_stat) == -1) {
