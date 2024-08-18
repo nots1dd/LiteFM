@@ -115,3 +115,5 @@ void log_message(LogLevel level, const char *format, ...) {
 
     fclose(log_file);
 }
+
+

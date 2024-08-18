@@ -33,8 +33,8 @@ CURSES_LIBS = $(shell pkg-config --libs ncurses)
 CURSES_INCS = $(shell pkg-config --cflags ncurses)
 ARCHIVE_LIBS = $(shell pkg-config --libs libarchive)
 ARCHIVE_INCS = $(shell pkg-config --cflags libarchive)
-YAML_LIBS = $(shell pkg-config --libs libyaml)
-YAML_INCS = $(shell pkg-config --cflags libyaml)
+YAML_LIBS = $(shell pkg-config --libs yaml-0.1)
+YAML_INCS = $(shell pkg-config --cflags yaml-0.1)
 
 # Source files
 SRCS = lfm.c \
@@ -46,7 +46,8 @@ SRCS = lfm.c \
        src/logging.c \
        src/signalhandling.c \
        src/highlight.c \
-       src/hashtable.c
+       src/hashtable.c \
+			 src/helpers.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)

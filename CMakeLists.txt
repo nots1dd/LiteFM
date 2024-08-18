@@ -46,7 +46,7 @@ include_directories(${LIBYAML_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 
 # Add the executable
-add_executable(litefm lfm.c src/cursesutils.c src/filepreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c src/logging.c src/signalhandling.c src/highlight.c src/hashtable.c)
+add_executable(litefm lfm.c src/cursesutils.c src/filepreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c src/logging.c src/signalhandling.c src/highlight.c src/hashtable.c src/helpers.c)
 
 # Link required libraries
 target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYAML_LIBRARIES})

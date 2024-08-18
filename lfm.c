@@ -46,9 +46,11 @@
 #include "include/signalhandling.h"
 #include "include/highlight.h"
 #include "include/hashtable.h"
+#include "include/helpers.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
+#define MAX_ITEM_NAME_LENGTH 80  // Define a maximum length for item names
 
 const char * err_message[] = {
   " _   _  ___    _____ ___ _     _____ ____    __  ____ ___ ____  ____      ",
@@ -238,6 +240,7 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
             }
             char full_path[MAX_PATH_LENGTH];
             snprintf(full_path, sizeof(full_path), "%s/%s", current_path, items[index].name);
+            
             // Apply color based on file type
             if (items[index].is_dir) {
                 wattron(win, COLOR_PAIR(2));
@@ -267,9 +270,17 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
                     mvwprintw(win, i + 4, 5, "📄");
                 }
             }
-            wattron(win, A_BOLD);
 
-            mvwprintw(win, i + 4, 7, " %s ", items[index].name);
+            // Truncate the item name if it exceeds MAX_ITEM_NAME_LENGTH
+            char truncated_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
+            if (strlen(items[index].name) > MAX_ITEM_NAME_LENGTH) {
+                snprintf(truncated_name, sizeof(truncated_name), "%.40s...", items[index].name);
+            } else {
+                snprintf(truncated_name, sizeof(truncated_name), "%s", items[index].name);
+            }
+
+            wattron(win, A_BOLD);
+            mvwprintw(win, i + 4, 7, " %s ", truncated_name);
 
             // Turn off color attributes
             wattroff(win, A_BOLD);
@@ -467,13 +478,11 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     werase(info_win);
     struct stat file_stat;
     char full_path[PATH_MAX];
-    char truncated_file_name[PATH_MAX];
+    char truncated_file_name[MAX_ITEM_NAME_LENGTH + 4];  // +4 for ellipsis and space
     char symlink_target[PATH_MAX];
     ssize_t len;
 
-    strcpy(truncated_file_name, filename);
-    truncate_symlink_name(truncated_file_name);
-    snprintf(full_path, PATH_MAX, "%s/%s", path, truncated_file_name);
+    snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
 
     // Get file information using lstat to handle symlinks
     if (lstat(full_path, &file_stat) == -1) {
@@ -496,6 +505,13 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         return;
     }
 
+    // Truncate the filename if necessary
+    if (strlen(filename) > MAX_ITEM_NAME_LENGTH) {
+        snprintf(truncated_file_name, sizeof(truncated_file_name), "%.80s...", filename);
+    } else {
+        snprintf(truncated_file_name, sizeof(truncated_file_name), "%s", filename);
+    }
+
     // Display file information
     wattron(info_win, A_BOLD);
     mvwprintw(info_win, 1, 2, "File/Dir Information:");
@@ -504,7 +520,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     clearLine(info_win, 3, 2);
     colorLine(info_win, "Name: ", 3, 3, 2);
     wattron(info_win, COLOR_PAIR(4));
-    wprintw(info_win, "%s", filename);
+    wprintw(info_win, "%s", truncated_file_name);
     wattroff(info_win, COLOR_PAIR(4));
 
     clearLine(info_win, 4, 2);
@@ -567,7 +583,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         // Horizontal Layout for Parent Directories and Subdirectories
         wattron(info_win, A_BOLD | COLOR_PAIR(9));
         mvwprintw(info_win, 11, 2, " Parent Directories: ");
-        mvwprintw(info_win, 11, getmaxx(info_win) / 2, "Subdirectories: ");
+        mvwprintw(info_win, 11, getmaxx(info_win) / 2, " Children: ");
         wattroff(info_win, A_BOLD | COLOR_PAIR(9));
 
         char parent_dir[PATH_MAX];
@@ -584,7 +600,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         int max_y, max_x;
         getmaxyx(info_win, max_y, max_x);
 
-        // Print parent directories on the left 
+        // Print parent directories on the left
         DIR *dir = opendir(parent_dir);
         struct dirent *entry;
         if (dir != NULL) {
@@ -597,9 +613,16 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
             while ((entry = readdir(dir)) != NULL) {
                 if (entry->d_type == DT_DIR) {
                     // Exclude the current directory and the special entries "." and ".."
-                    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0 && entry->d_name[0] != '.') {
+                        // Truncate directory name if necessary
+                        char truncated_dir_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
+                        if (strlen(entry->d_name) > MAX_ITEM_NAME_LENGTH) {
+                            snprintf(truncated_dir_name, sizeof(truncated_dir_name), "%.40s...", entry->d_name);
+                        } else {
+                            snprintf(truncated_dir_name, sizeof(truncated_dir_name), "%s", entry->d_name);
+                        }
                         // Print the directory name
-                        mvwprintw(info_win, line++, 2, "%s", entry->d_name);
+                        mvwprintw(info_win, line++, 2, "%s", truncated_dir_name);
                     }
                 }
             }
@@ -608,19 +631,42 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         } else {
             show_message(info_win, "Error opening parent directory.");
         }
-        // Print subdirectories on the right
+
+        // Print subdirectories and files on the right
         dir = opendir(full_path);
         if (dir != NULL) {
-            wattron(info_win, A_BOLD | COLOR_PAIR(2));
             while ((entry = readdir(dir)) != NULL && sub_dir_line < max_y - 1) {
                 if (entry->d_type == DT_DIR) {
                     if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-                        mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", entry->d_name);
+                        // Truncate directory name if necessary
+                        char truncated_sub_dir_name[MAX_ITEM_NAME_LENGTH + 4];
+                        if (strlen(entry->d_name) > MAX_ITEM_NAME_LENGTH) {
+                            snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%.40s...", entry->d_name);
+                        } else {
+                            snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%s", entry->d_name);
+                        }
+                        wattron(info_win, A_BOLD | COLOR_PAIR(2));
+                        mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_sub_dir_name);
+                        wattroff(info_win, A_BOLD | COLOR_PAIR(2));
                     }
                 }
             }
+            rewinddir(dir);
+            while ((entry = readdir(dir)) != NULL && sub_dir_line < max_y - 1) {
+                if (entry->d_type != DT_DIR) {
+                    // Truncate file name if necessary
+                    char truncated_file_name[MAX_ITEM_NAME_LENGTH + 4];
+                    if (strlen(entry->d_name) + sub_dir_line > MAX_ITEM_NAME_LENGTH) {
+                        snprintf(truncated_file_name, sizeof(truncated_file_name), "%.40s...", entry->d_name);
+                    } else {
+                        snprintf(truncated_file_name, sizeof(truncated_file_name), "%s", entry->d_name);
+                    }
+                    wattron(info_win, A_BOLD | COLOR_PAIR(1));
+                    mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_file_name);
+                    wattroff(info_win, A_BOLD | COLOR_PAIR(1));
+                }
+            }
             closedir(dir);
-            wattroff(info_win, A_BOLD | COLOR_PAIR(2));
         } else {
             show_message(info_win, "Error opening directory.");
         }
@@ -707,6 +753,14 @@ int main(int argc, char* argv[]) {
   char *cur_user = get_current_user();
   if (argc == 2 && is_directory(argv[1])) {
     realpath(argv[1], current_path);
+  } else if (argc == 2 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1],"--help") == 0)) {
+    endwin();
+    show_help();
+    return 0;
+  } else if (argc == 2 && (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0)) {
+    endwin();
+    show_version();
+    return 0;
   } else {
     get_current_working_directory(current_path, sizeof(current_path));
   }
