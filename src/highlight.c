@@ -3,7 +3,6 @@
 #include "../include/cursesutils.h"
 #include "../include/logging.h"
 
-/*#define TABLE_SIZE 1000*/
 int multicomments1_length = 0;
 int multicomments2_length = 0;
 
@@ -142,6 +141,7 @@ void highlightLine(WINDOW* win, int color_pair, int y, int x, char *buffer) {
 
 // Function to highlight code snippet
 void highlight_code(WINDOW *win, int start_y, int start_x, const char *code, HashTable *keywords, HashTable *singlecomments, HashTable *multicomments1, HashTable *multicomments2, HashTable *strings, HashTable *functions, HashTable *symbols, HashTable *operators, int *singlecommentslen) {
+    int max_x_coord = getmaxx(win) - 1;
     const char *cursor = code;
     char buffer[256];
     int in_string = 0;
@@ -150,7 +150,7 @@ void highlight_code(WINDOW *win, int start_y, int start_x, const char *code, Has
     int buffer_index = 0;
     int x = start_x, y = start_y;
 
-    while (*cursor != '\0') {
+    while (*cursor != '\0' && x != max_x_coord) {
         // Check for multiline comments first
         if (hash_table_contains(multicomments1, cursor) && hash_table_contains(multicomments2, cursor + 1)) {
             in_multiline_comment = 1;

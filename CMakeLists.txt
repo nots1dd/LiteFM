@@ -35,21 +35,23 @@ set(CMAKE_C_STANDARD 99)
 find_package(Curses REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
-# Manually specify YAML include and library paths
 pkg_check_modules(LIBYAML REQUIRED yaml-0.1)
+pkg_check_modules(SDL2 REQUIRED sdl2)
+pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
 
-
-# Include directories for ncurses, libarchive, libyaml, and project headers
+# Include directories for ncurses, libarchive, libyaml, SDL2, SDL2_mixer, and project headers
 include_directories(${CURSES_INCLUDE_DIR})
 include_directories(${LIBARCHIVE_INCLUDE_DIRS})
 include_directories(${LIBYAML_INCLUDE_DIRS})
+include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(${SDL2_MIXER_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 
 # Add the executable
-add_executable(litefm lfm.c src/cursesutils.c src/filepreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c src/logging.c src/signalhandling.c src/highlight.c src/hashtable.c src/helpers.c)
+add_executable(litefm lfm.c src/cursesutils.c src/filepreview.c src/dircontrol.c src/archivecontrol.c src/clipboard.c src/logging.c src/signalhandling.c src/highlight.c src/hashtable.c src/arg_helpers.c src/musicpreview.c)
 
 # Link required libraries
-target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYAML_LIBRARIES})
+target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYAML_LIBRARIES} ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
 
 # Add additional compiler flags
 target_compile_options(litefm PRIVATE -Wall -Wextra -Wpedantic)

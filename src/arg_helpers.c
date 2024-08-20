@@ -1,5 +1,5 @@
 
-#include "../include/helpers.h"
+#include "../include/arg_helpers.h"
 
 void show_help() {
     // Print the header in blue color

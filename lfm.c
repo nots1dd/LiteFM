@@ -46,7 +46,8 @@
 #include "include/signalhandling.h"
 #include "include/highlight.h"
 #include "include/hashtable.h"
-#include "include/helpers.h"
+#include "include/arg_helpers.h"
+#include "include/musicpreview.h"
 
 #define MAX_ITEMS 1024
 #define MAX_HISTORY 256
@@ -762,6 +763,17 @@ int main(int argc, char* argv[]) {
     endwin();
     show_version();
     return 0;
+  } else if (argc == 2 && (strcmp(argv[1], "-l") == 0 || strcmp(argv[1], "--log-dir") == 0)) {
+    endwin();
+    printf("Log file at: ~/%s\n", LOG_FILE_RELATIVE_PATH);
+    return 0;
+  } else if (argc == 2 && (strcmp(argv[1], "-lc") == 0 || strcmp(argv[1], "--log-clear") == 0)) {
+    endwin();
+    char termbuf[256];
+    snprintf(termbuf, 256, "echo '' > ~/%s", LOG_FILE_RELATIVE_PATH);
+    system(termbuf);
+    printf("Cleared log for LiteFM.\n"); // will implement this later
+    return 0;
   } else {
     get_current_working_directory(current_path, sizeof(current_path));
   }
@@ -788,6 +800,7 @@ int main(int argc, char* argv[]) {
   int find_index = 0;
   char last_query[NAME_MAX] = "";
   bool firstKeyPress = true;
+  bool firstPlay = true;
   log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE STARTED =================");
   log_message(LOG_LEVEL_DEBUG, "Entering as USER: %s",cur_user);
 
@@ -892,13 +905,19 @@ int main(int argc, char* argv[]) {
               highlight = 0;
               scroll_position = 0;
             } else {
-              if ((is_readable_extension(items[highlight].name) || !is_image(items[highlight].name)) && !items[highlight].is_dir) {
+              if ((is_readable_extension(items[highlight].name) || !is_image(items[highlight].name)) && !items[highlight].is_dir && !is_audio(items[highlight].name)) {
                 firstKeyPress = true;
                 launch_env_var(win, current_path, items[highlight].name, "EDITOR");
                 /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
             } else if (is_image(items[highlight].name) && !items[highlight].is_dir) {
               firstKeyPress = true;
               launch_env_var(win, current_path, items[highlight].name, "VISUAL");
+            } else if (is_audio(items[highlight].name) && !items[highlight].is_dir) {
+              char file_path[MAX_PATH_LENGTH];
+              snprintf(file_path, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
+              show_term_message(" [PREVIEW] Previewing audio file. Press q to quit.", 0);
+              preview_audio(file_path);
+              show_term_message("", -1);
             } else {
               show_term_message("Cannot enter this directory/file.", 1);
             }
@@ -1456,9 +1475,6 @@ int main(int argc, char* argv[]) {
               }
               break;
             }
-            /*else if (nextch == 'p' && !items[highlight].is_dir) {*/
-            /*  break;*/
-            /*}*/
           refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
 
         } while (nextch != 10);

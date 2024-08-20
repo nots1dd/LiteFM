@@ -36,6 +36,11 @@ ARCHIVE_INCS = $(shell pkg-config --cflags libarchive)
 YAML_LIBS = $(shell pkg-config --libs yaml-0.1)
 YAML_INCS = $(shell pkg-config --cflags yaml-0.1)
 
+SDL2_LIBS = $(shell pkg-config --libs sdl2)
+SDL2_INCS = $(shell pkg-config --cflags sdl2)
+SDL2_MIXER_LIBS = $(shell pkg-config --libs sdl2_mixer)
+SDL2_MIXER_INCS = $(shell pkg-config --cflags sdl2_mixer)
+
 # Source files
 SRCS = lfm.c \
        src/cursesutils.c \
@@ -47,7 +52,8 @@ SRCS = lfm.c \
        src/signalhandling.c \
        src/highlight.c \
        src/hashtable.c \
-			 src/helpers.c
+       src/arg_helpers.c \
+       src/musicpreview.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)
@@ -60,11 +66,11 @@ all: $(TARGET)
 
 # Link the executable
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $(OBJS) $(CURSES_LIBS) $(ARCHIVE_LIBS) $(YAML_LIBS)
+	$(CC) -o $@ $(OBJS) $(CURSES_LIBS) $(ARCHIVE_LIBS) $(YAML_LIBS) $(SDL2_LIBS) $(SDL2_MIXER_LIBS)
 
 # Compile source files into object files
 %.o: %.c
-	$(CC) $(CFLAGS) $(CURSES_INCS) $(ARCHIVE_INCS) $(YAML_INCS) -c $< -o $@
+	$(CC) $(CFLAGS) $(CURSES_INCS) $(ARCHIVE_INCS) $(YAML_INCS) $(SDL2_INCS) $(SDL2_MIXER_INCS) -c $< -o $@
 
 # Clean up generated files
 clean:

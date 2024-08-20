@@ -16,6 +16,7 @@
 #define MAX_LINE_LENGTH 256 // Define the maximum line length
 #define MAX_FILE_HEADER_SIZE 18  // Maximum size needed for the longest signature
 #define BUFFER_SIZE 1024
+#define MAX_FILE_TYPE_LENGTH 256
 
 int singlecommentslen = 0;
 
@@ -35,35 +36,49 @@ FileSignature file_signatures[] = {
     {NULL, 0, NULL}  // End of list marker
 };
 
-const char * get_file_extension(const char * filename) {
-  const char * dot = strrchr(filename, '.');
-  if (!dot || dot == filename) return "";
-  return dot + 1;
+const char *determine_file_type(const char *filename);
+
+const char *get_file_extension(const char *filename) {
+    const char *dot = strrchr(filename, '.');
+    
+    // If there's no dot in the filename, check file type
+    if (dot == NULL) {
+        const char *file_type = determine_file_type(filename);
+        if (file_type && strcmp(file_type, "text/x-shellscript") == 0) {
+            return "sh"; // Return the extension for shell scripts
+        }
+        return ""; // No extension found and not a shell script
+    }
+
+    // Return the extension without the dot
+    return dot + 1;
 }
 
 const char *determine_file_type(const char *filename) {
-    FILE *file = fopen(filename, "rb");
-    if (!file) {
-        return NULL;
+    static char file_type[MAX_FILE_TYPE_LENGTH];
+    char command[MAX_FILE_TYPE_LENGTH + 50];
+
+    // Construct the command to run the 'file' command with the provided filename
+    snprintf(command, sizeof(command), "file --brief --mime-type \"%s\"", filename);
+
+    FILE *fp = popen(command, "r");
+    if (!fp) {
+        return "Error";
     }
 
-    unsigned char header[MAX_FILE_HEADER_SIZE];
-    size_t bytes_read = fread(header, 1, MAX_FILE_HEADER_SIZE, file);
-    fclose(file);
-
-    if (bytes_read == 0) {
-        return NULL;
+    // Read the output from the 'file' command
+    if (fgets(file_type, sizeof(file_type), fp) == NULL) {
+        pclose(fp);
+        return "Unknown";
     }
 
-    for (int i = 0; file_signatures[i].signature != NULL; i++) {
-        if (bytes_read >= file_signatures[i].length &&
-            memcmp(header, file_signatures[i].signature, file_signatures[i].length) == 0) {
-            return file_signatures[i].file_type;
-        }
-    }
+    // Remove trailing newline character
+    file_type[strcspn(file_type, "\n")] = '\0';
 
-    return "Unknown";
+    pclose(fp);
+    return file_type;
 }
+
 
 const char* read_lines(const char *filename, size_t max_lines) {
     FILE *file = fopen(filename, "r"); // Open file in text mode
@@ -144,7 +159,7 @@ const char *get_keywords_file(const char *ext) {
             strcmp(ext, "c") == 0 || strcmp(ext, "cxx") == 0) {
             snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/c-keywords.yaml", project_dir);
         }
-        // Add more mappings as needed
+        // Add more mappings as needed 
         else {
             snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/%s-keywords.yaml", project_dir, ext);
         }
@@ -245,45 +260,42 @@ void display_file(WINDOW *info_win, const char *filename) {
     wrefresh(info_win);  // Refresh the window to show the content
   }
 
-
 int is_readable_extension(const char *filename) {
-    // List of supported extensions
+    // List of supported extensions (excluding the dot)
     const char *supported_extensions[] = {
-        ".txt", ".sh", ".json", ".conf", ".log", ".md", ".c", ".h", ".hpp", ".cpp", ".cxx", ".cc", ".js", 
-        ".ts", ".jsx", ".java", ".dart", ".asm", ".py", ".rs", ".go", ".pl", ".backup", ".rasi", ".nix", 
-        ".yaml", ".html", ".css", ".scss", NULL
+        "txt", "sh", "json", "conf", "log", "md", "c", "h", "hpp", "cpp", "cxx", "cc", "js", 
+        "ts", "jsx", "java", "dart", "asm", "py", "rs", "go", "pl", "backup", "rasi", "nix", 
+        "yaml", "html", "css", "scss", NULL
     };
     
     // Check if the file has a supported extension
     const char *ext = get_file_extension(filename);
     if (ext[0] != '\0') {
         for (int i = 0; supported_extensions[i] != NULL; i++) {
-            if (strcmp(ext, supported_extensions[i] + 1) == 0) {  // +1 to skip the initial dot
+            if (strcmp(ext, supported_extensions[i]) == 0) {  // Compare directly with the extension list
                 return 1;
             }
         }
     }
 
-    // Check file type based on header
+    // Check file type based on MIME type
     const char *file_type = determine_file_type(filename);
     if (file_type && (
-        strcmp(file_type, "ASCII text") == 0 ||
-        strcmp(file_type, "shell script") == 0 ||
-        strcmp(file_type, "JSON data") == 0 ||
-        strcmp(file_type, "UTF-8 Unicode text") == 0 ||
-        strcmp(file_type, "C source") == 0 ||
-        strcmp(file_type, "C++ source") == 0 ||
-        strcmp(file_type, "Python script") == 0 ||
-        strcmp(file_type, "Java source") == 0 ||
-        strcmp(file_type, "HTML document") == 0 ||
-        strcmp(file_type, "CSS document") == 0
+        strcmp(file_type, "text/plain") == 0 ||
+        strcmp(file_type, "text/x-shellscript") == 0 ||
+        strcmp(file_type, "application/json") == 0 ||
+        strcmp(file_type, "text/x-c") == 0 ||          // C source code
+        strcmp(file_type, "text/x-c++") == 0 ||        // C++ source code
+        strcmp(file_type, "text/x-python") == 0 ||     // Python script
+        strcmp(file_type, "text/x-java-source") == 0 ||// Java source code
+        strcmp(file_type, "text/html") == 0 ||
+        strcmp(file_type, "text/css") == 0
     )) {
         return 1;
     }
 
     return 0;
 }
-
 
 const char *format_file_size(off_t size) {
     static char formatted_size[64];
@@ -303,6 +315,29 @@ const char *format_file_size(off_t size) {
 
 int is_image(const char *filename) {
     const char *image_extensions[] = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"};
+    size_t num_extensions = sizeof(image_extensions) / sizeof(image_extensions[0]);
+
+    const char *ext = strrchr(filename, '.');
+    if (!ext) return 0;
+
+    char ext_lower[16];
+    size_t i;
+    for (i = 0; ext[i] && i < sizeof(ext_lower) - 1; i++) {
+        ext_lower[i] = tolower((unsigned char)ext[i]);
+    }
+    ext_lower[i] = '\0';
+
+    for (i = 0; i < num_extensions; i++) {
+        if (strcmp(ext_lower, image_extensions[i]) == 0) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int is_audio(const char *filename) {
+    const char *image_extensions[] = {".mp3", ".wav", ".flac", ".opus", ".m4a"};
     size_t num_extensions = sizeof(image_extensions) / sizeof(image_extensions[0]);
 
     const char *ext = strrchr(filename, '.');

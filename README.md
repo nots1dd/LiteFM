@@ -29,17 +29,12 @@ Written in C with NCurses, libyaml, rsync and more!
 > 
 > Without a nerd font, LiteFM will show some unreadable chars!
 > 
-> **2. Have it full screen whenever possible:**
+> **2. Dynamic resizing:**
 > 
-> Despite having dynamic window scaling, in a lot of
-> the outputs the strings may look weird (or not visible at all!) upon resizing.
-> Therefore, till I find a way to fix this issue, it is **HIGHLY**
-> recommended to use LiteFM at: 
+> There is dynamic windowing setup in LiteFM. However,
 > 
->   -> Full screen of originally created terminal [DE] 
+> Upon resizing, you will have to press any key for it to show!
 > 
->   -> Full terminal size without resizing [WM]
->
 > **3. Launch LiteFM with `superuser`**
 >
 > LiteFM allows for fast file/dir actions,
