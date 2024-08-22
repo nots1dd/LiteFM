@@ -44,21 +44,14 @@ const char* get_file_extension(const char* filename)
 const char* determine_file_type(const char* filename)
 {
   static char file_type[MAX_FILE_TYPE_LENGTH];
-  char        command[MAX_FILE_TYPE_LENGTH + 50];
-
-  // Validate filename to prevent command injection
-  if (strpbrk(filename, "`;&|*?~<>^()[]{}\\\"'") != NULL)
-  {
-    return "Invalid filename";
-  }
+  char        *command;
 
   // Construct the command to run the 'file' command with the provided filename
-  snprintf(command, sizeof(command), "file --brief --mime-type %s", filename);
+  asprintf(&command, "file --brief --mime-type \"%s\"", filename);
 
   FILE* fp = popen(command, "r");
   if (!fp)
   {
-    perror("popen");
     return "Error";
   }
 
@@ -72,12 +65,7 @@ const char* determine_file_type(const char* filename)
   // Remove trailing newline character
   file_type[strcspn(file_type, "\n")] = '\0';
 
-  if (pclose(fp) == -1)
-  {
-    perror("pclose");
-    return "Error";
-  }
-
+  pclose(fp);
   return file_type;
 }
 
@@ -597,6 +585,16 @@ void display_archive_contents(WINDOW* info_win, const char* full_path, const cha
   }
 
   // Construct the command
+  /* 
+   * Using ASPRINTF:
+   *
+   * ASPRINTF IS THE GNU VERSION OF SPRINTF 
+   *
+   * IT DYNAMICALLY ALLOCATES MEMORY BASED ON THE INPUT STRING TO AVOID OVERFLOWS 
+   *
+   * SAFER TO USE ASPRINTF OVER SPRINTF AND SNPRINTF 
+   *
+   */
   char* cmd;
   if (strcmp(file_ext, ".zip") == 0)
   {
