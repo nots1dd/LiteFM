@@ -1,4 +1,4 @@
-## ## ## ## ## ## 
+## ## ## ## ## ##
 ##             ##
 ##   LITE FM   ##
 ##             ##
@@ -53,15 +53,18 @@ src_files = files(
   'src/musicpreview.c'
 )
 
+# UNCOMMENT LINES 59, 60, 68, 69 to ENABLE ASAN Memory leak VERBOSE output
+
 # AddressSanitizer arguments
-asan_c_args = ['-fsanitize=address', '-fno-omit-frame-pointer']
-asan_link_args = ['-fsanitize=address']
+# asan_c_args = ['-fsanitize=address', '-fno-omit-frame-pointer']
+# asan_link_args = ['-fsanitize=address']
 
 # Executable target
 executable('litefm', src_files,
   include_directories : inc_dirs,
   dependencies : [ncurses_dep, libarchive_dep, libyaml_dep, sdl2_dep, sdl2_mixer_dep],
   install : true,
-  c_args : ['-Wall', '-Wextra', '-Wpedantic'] + asan_c_args,
-  link_args : asan_link_args
+  c_args : ['-Wall', '-Wextra', '-Wpedantic'],
+  # c_args : ['-Wall', '-Wextra', '-Wpedantic'] + asan_c_args,
+  # link_args : asan_link_args
 )

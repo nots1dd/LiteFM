@@ -20,23 +20,6 @@
 
 int singlecommentslen = 0;
 
-typedef struct
-{
-  const char* signature;
-  size_t      length;
-  const char* file_type;
-} FileSignature;
-
-// List of known file signatures
-FileSignature file_signatures[] = {
-  {"\x7F\x45\x4C\x46", 4, "ELF executable"},            // ELF executable
-  {"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8, "PNG image"}, // PNG image
-  {"\xFF\xD8\xFF", 3, "JPEG image"},                    // JPEG image
-  {"#!/bin/bash", 10, "shell script"},                  // Shell script
-  {"#!/usr/bin/env bash", 18, "shell script"},          // Shell script
-  {NULL, 0, NULL}                                       // End of list marker
-};
-
 const char* determine_file_type(const char* filename);
 
 const char* get_file_extension(const char* filename)

@@ -146,7 +146,10 @@ fi
 
 # Prompt for build type
 detect_nerd_fonts
-read -p "Enter the type of build (cmake or make): " build_type
+read -p "Enter the type of build (cmake, meson, or make): " build_type
+
+# Set ASan options
+export ASAN_OPTIONS=log_path=asan_log.txt
 
 # Build commands
 case "$build_type" in
@@ -155,12 +158,17 @@ case "$build_type" in
         cmake -S . -B build/
         cmake --build build/
         ;;
+    meson)
+        echo -e "${CYAN}Running meson build...${RESET}"
+        meson setup mesbuild
+        meson compile -C mesbuild
+        ;;
     make)
         echo -e "${CYAN}Running make build...${RESET}"
         make
         ;;
     *)
-        echo -e "${RED}${BOLD}Invalid build type. Please enter 'cmake' or 'make'.${RESET}"
+        echo -e "${RED}${BOLD}Invalid build type. Please enter 'cmake', 'meson', or 'make'.${RESET}"
         exit 1
         ;;
 esac
@@ -195,9 +203,11 @@ SHELL_NAME=$(basename "$SHELL")
 case "$SHELL_NAME" in
     bash)
         echo "alias lfm='$(pwd)/build/litefm'" >> ~/.bashrc
+        echo "export ASAN_OPTIONS=log_path=$(pwd)/asan_log.txt " >> ~/.bashrc
         ;;
     zsh)
         echo "alias lfm='$(pwd)/build/litefm'" >> ~/.zshrc
+        echo "export ASAN_OPTIONS=log_path=$(pwd)/memlogs/asan_log.txt " >> ~/.zshrc
         ;;
     *)
         echo -e "${RED}Shell $SHELL_NAME not supported for alias creation. Please create the alias manually.${RESET}"

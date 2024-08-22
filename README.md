@@ -207,6 +207,20 @@ Other steps I plan on taking to ensure that you are always in control of the fil
 
 Check out [SECURITY](https://github.com/nots1dd/litefm/blob/main/SECURITY.md) for the security policy that this repository follows.
 
+Security Tools that can be used in LiteFM:
+
+-> AddressSanitizer (ASan): Gives an in-depth view of how memory leaks take place, overflows and much more 
+
+> [!NOTE]
+> ASan is **DISABLED** by default
+> 
+> To enable it:
+> 
+> Uncomment lines `77` and `78` in [CMakeLists](https://github/com/nots1dd/litefm/blob/main/CMakeLists.txt)
+> 
+> Uncomment lines `59`, `60`, `68`, `69` in [meson.build](https://github.com/nots1dd/litefm/blob/main/meson.build) (comments are provided to help)
+> 
+> TO BE NOTED: If ASan is enabled, there is a high possiblility LiteFM will exit with code 1 in a few situations, unexpectedly!
 
 ## FUTURE
 
