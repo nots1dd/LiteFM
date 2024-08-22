@@ -69,3 +69,17 @@ target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYA
 
 # Add additional compiler flags
 target_compile_options(litefm PRIVATE -Wall -Wextra -Wpedantic)
+
+# ENABLE AddressSanitizer (ASan) for memory error detection
+
+# CHECK SECURITY.md for more on this
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+
+# Optionally, make AddressSanitizer toggleable (uncomment if needed)
+# option(ENABLE_ASAN "Enable AddressSanitizer" ON)
+# if(ENABLE_ASAN)
+#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+#     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+# endif()

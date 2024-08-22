@@ -182,6 +182,13 @@ sudo ninja uninstall
 -> Run the executable `litefm` and enjoy!
 
 
+#### Debugging
+
+In order check how LiteFM works under the hood and further understand any issues, redundancies or vulnerabilities,
+
+Check out [debug](https://github.com/nots1dd/litefm/blob/main/debug) to build LiteFM with **AddressSanitizer** (ASan)
+
+
 #### Adding Man Page (Optional):
 
 You can add the man page for LiteFM in your system by the following commands:
@@ -214,13 +221,9 @@ Security Tools that can be used in LiteFM:
 > [!NOTE]
 > ASan is **DISABLED** by default
 > 
-> To enable it:
+> To enable it you will to undergo a **debug build**
 > 
-> Uncomment lines `77` and `78` in [CMakeLists](https://github/com/nots1dd/litefm/blob/main/CMakeLists.txt)
-> 
-> Uncomment lines `59`, `60`, `68`, `69` in [meson.build](https://github.com/nots1dd/litefm/blob/main/meson.build) (comments are provided to help)
-> 
-> TO BE NOTED: If ASan is enabled, there is a high possiblility LiteFM will exit with code 1 in a few situations, unexpectedly!
+> Check out [debug build](https://github.com/nots1dd/LiteFM?tab=readme-ov-file#debugging)
 
 ## FUTURE
 
