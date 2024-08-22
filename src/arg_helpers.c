@@ -179,9 +179,13 @@ int handle_arguments(int argc, char* argv[], char* current_path)
       system(termbuf);
       printf("Cleared log for LiteFM.\n");
       return 0;
-    } else {
+    }
+    else
+    {
       get_current_working_directory(current_path, PATH_MAX);
     }
+  } else {
+    get_current_working_directory(current_path, PATH_MAX);
   }
   return 1;
 }

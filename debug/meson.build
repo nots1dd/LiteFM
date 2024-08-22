@@ -39,18 +39,18 @@ inc_dirs = include_directories('.')
 
 # Source files
 src_files = files(
-  'lfm.c',
-  'src/cursesutils.c',
-  'src/filepreview.c',
-  'src/dircontrol.c',
-  'src/archivecontrol.c',
-  'src/clipboard.c',
-  'src/logging.c',
-  'src/signalhandling.c',
-  'src/highlight.c',
-  'src/hashtable.c',
-  'src/arg_helpers.c',
-  'src/musicpreview.c'
+  '../lfm.c',
+  '../src/cursesutils.c',
+  '../src/filepreview.c',
+  '../src/dircontrol.c',
+  '../src/archivecontrol.c',
+  '../src/clipboard.c',
+  '../src/logging.c',
+  '../src/signalhandling.c',
+  '../src/highlight.c',
+  '../src/hashtable.c',
+  '../src/arg_helpers.c',
+  '../src/musicpreview.c'
 )
 
 # UNCOMMENT LINES 59, 60, 68, 69 to ENABLE ASAN Memory leak VERBOSE output

@@ -8,6 +8,6 @@
 
 void show_help();
 void show_version();
-int handle_arguments(int argc, char *argv[], char *current_path);
+int  handle_arguments(int argc, char* argv[], char* current_path);
 
 #endif

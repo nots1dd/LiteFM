@@ -46,12 +46,19 @@ const char* determine_file_type(const char* filename)
   static char file_type[MAX_FILE_TYPE_LENGTH];
   char        command[MAX_FILE_TYPE_LENGTH + 50];
 
+  // Validate filename to prevent command injection
+  if (strpbrk(filename, "`;&|*?~<>^()[]{}\\\"'") != NULL)
+  {
+    return "Invalid filename";
+  }
+
   // Construct the command to run the 'file' command with the provided filename
-  snprintf(command, sizeof(command), "file --brief --mime-type \"%s\"", filename);
+  snprintf(command, sizeof(command), "file --brief --mime-type %s", filename);
 
   FILE* fp = popen(command, "r");
   if (!fp)
   {
+    perror("popen");
     return "Error";
   }
 
@@ -65,7 +72,12 @@ const char* determine_file_type(const char* filename)
   // Remove trailing newline character
   file_type[strcspn(file_type, "\n")] = '\0';
 
-  pclose(fp);
+  if (pclose(fp) == -1)
+  {
+    perror("pclose");
+    return "Error";
+  }
+
   return file_type;
 }
 
