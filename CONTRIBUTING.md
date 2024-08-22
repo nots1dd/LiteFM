@@ -42,6 +42,18 @@ If you're ready to contribute code, follow these steps:
 4. Push to the branch: `git push origin feature/my-feature`.
 5. Open a pull request.
 
+### Coding Style
+
+Check [CLANG-FORMAT](https://github.com/nots1dd/litefm/blob/main/.clang-format) to understand how your code should align with the LiteFM code structure.
+
+To run `clang-format`:
+
+```sh 
+clang-format -i src/*.c
+clang-format -i include/*.h 
+clang-format lfm.c 
+```
+
 ### Improving Documentation
 Documentation improvements are always appreciated! You can:
 - Improve existing documentation.

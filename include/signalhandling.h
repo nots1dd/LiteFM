@@ -1,4 +1,4 @@
-// // // // // // 
+// // // // // //
 //             //
 //   LITE FM   //
 //             //
@@ -13,9 +13,9 @@
  *
  *  Author:      Siddharth Karanam
  *  Created:     <03/08/24>
- * 
+ *
  *  Copyright:   <2024> nots1dd. All rights reserved.
- * 
+ *
  *  License:     <GNU GPL v3>
  *
  *  Notes:       This header provides function declarations for signwinch,
@@ -30,10 +30,10 @@
 #ifndef SIGNAL_HANDLING_H
 #define SIGNAL_HANDLING_H
 
-#include <signal.h>
-#include <sys/wait.h>
 #include <errno.h>
+#include <signal.h>
 #include <stddef.h>
+#include <sys/wait.h>
 
 void ignore_sigwinch();
 void restore_sigwinch();
