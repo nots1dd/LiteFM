@@ -753,29 +753,9 @@ int main(int argc, char* argv[]) {
   int show_hidden = 0; // Flag to toggle showing hidden files
   int scroll_position = 0; // Position of the first visible item
   char *cur_user = get_current_user();
-  if (argc == 2 && is_directory(argv[1])) {
-    realpath(argv[1], current_path);
-  } else if (argc == 2 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1],"--help") == 0)) {
-    endwin();
-    show_help();
-    return 0;
-  } else if (argc == 2 && (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0)) {
-    endwin();
-    show_version();
-    return 0;
-  } else if (argc == 2 && (strcmp(argv[1], "-l") == 0 || strcmp(argv[1], "--log-dir") == 0)) {
-    endwin();
-    printf("Log file at: ~/%s\n", LOG_FILE_RELATIVE_PATH);
-    return 0;
-  } else if (argc == 2 && (strcmp(argv[1], "-lc") == 0 || strcmp(argv[1], "--log-clear") == 0)) {
-    endwin();
-    char termbuf[256];
-    snprintf(termbuf, 256, "echo '' > ~/%s", LOG_FILE_RELATIVE_PATH);
-    system(termbuf);
-    printf("Cleared log for LiteFM.\n"); // will implement this later
-    return 0;
-  } else {
-    get_current_working_directory(current_path, sizeof(current_path));
+  
+  if (handle_arguments(argc, argv, current_path) == 0) {
+        return 0;
   }
   // Create a new window with a border
   int startx = 0, starty = 0;

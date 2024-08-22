@@ -1,8 +1,9 @@
-#// // // // // // 
-#//             //
-#//   LITE FM   //
-#//             //
-#// // // // // // 
+## ## ## ## ## ##
+##             ##
+##   LITE FM   ##
+##             ##
+## ## ## ## ## ##
+
 
 #/*
 # * ---------------------------------------------------------------------------
@@ -19,6 +20,7 @@
 # * 
 # *  Revision History:
 # *      31/07/24 - Initial creation.
+# *      22/08/24 - Added ASan + other deps
 # *
 # * ---------------------------------------------------------------------------
 # */
@@ -30,6 +32,18 @@ project(litefm)
 
 # Specify the C standard
 set(CMAKE_C_STANDARD 99)
+
+# ---------------------------------------------------------------------------------------
+#                                    IMPORTANT
+#
+# Ensure that you modify this CMakeLists.txt iff:
+#
+# 1. You are on a Debian distribution and UNICODE does NOT show up properly
+#    -> You will need the `ncursesw5` package with wide character support
+# 2. If some package has a different name (OR) pkg-config is NOT able to find it 
+# 3. Obviously modify this at your own discretion and do what it takes to make it work.
+# 
+# ---------------------------------------------------------------------------------------
 
 # Find required packages
 find_package(Curses REQUIRED)
@@ -55,3 +69,14 @@ target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYA
 
 # Add additional compiler flags
 target_compile_options(litefm PRIVATE -Wall -Wextra -Wpedantic)
+
+# Enable AddressSanitizer (ASan) for memory error detection
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+
+# Optionally, make AddressSanitizer toggleable (uncomment if needed)
+# option(ENABLE_ASAN "Enable AddressSanitizer" ON)
+# if(ENABLE_ASAN)
+#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+#     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+# endif()

@@ -6,13 +6,8 @@
 #include <string.h>
 #include <sys/utsname.h>
 
-// Define ANSI escape codes for colors
-#define COLOR_RESET "\033[0m"
-#define COLOR_BLUE "\033[1;34m"
-#define COLOR_GREEN "\033[1;32m"
-#define COLOR_RED "\033[1;31m"
-
 void show_help();
 void show_version();
+int handle_arguments(int argc, char *argv[], char *current_path);
 
 #endif

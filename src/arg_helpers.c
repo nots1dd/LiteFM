@@ -1,5 +1,7 @@
 
 #include "../include/arg_helpers.h"
+#include "../include/dircontrol.h"
+#include "../include/logging.h"
 
 void show_help()
 {
@@ -71,22 +73,22 @@ const char* current_display_server()
 void show_version()
 {
   // Print the version of LiteFM
-  printf("\n%sLiteFM Version - v2.2%s\n", COLOR_BLUE, COLOR_RESET);
+  printf("\nLiteFM Version - v2.2\n");
 
   // Print OS and Kernel Information
   struct utsname sysinfo;
   if (uname(&sysinfo) == 0)
   {
-    printf("\n%sOperating System:%s %s\n", COLOR_GREEN, COLOR_RESET, sysinfo.sysname);
-    printf("%sKernel Version:%s %s\n", COLOR_GREEN, COLOR_RESET, sysinfo.release);
+    printf("\nOperating System: %s\n", sysinfo.sysname);
+    printf("Kernel Version: %s\n", sysinfo.release);
   }
   else
   {
-    printf("%sError retrieving OS information.%s\n", COLOR_RED, COLOR_RESET);
+    printf("Error retrieving OS information.\n");
   }
 
   // Check and print the package manager
-  printf("\n%sPackage Manager:%s ", COLOR_GREEN, COLOR_RESET);
+  printf("\nPackage Manager: ");
   if (command_exists("apt"))
   {
     printf("APT (Debian/Ubuntu)\n");
@@ -109,10 +111,10 @@ void show_version()
   }
 
   // Check and print the display server
-  printf("\n%sDisplay Server:%s %s\n", COLOR_GREEN, COLOR_RESET, current_display_server());
+  /*printf("\n%sDisplay Server:%s %s\n",  current_display_server());*/
 
   // Print filesystem type
-  printf("\n%sFilesystem Type:%s ", COLOR_GREEN, COLOR_RESET);
+  printf("\nFilesystem Type: ");
   FILE* fp = popen("df -T / | awk 'NR==2 {print $2}'", "r");
   if (fp)
   {
@@ -133,18 +135,52 @@ void show_version()
   }
 
   // Check for specific libraries/tools
-  printf("\n%srsync:%s %s\n", COLOR_GREEN, COLOR_RESET,
-         command_exists("rsync") ? "Installed" : "Not Installed");
-  printf("%sncurses:%s %s\n", COLOR_GREEN, COLOR_RESET,
-         library_installed("libncurses") ? "Installed" : "Not Installed");
-  printf("%slibarchive:%s %s\n", COLOR_GREEN, COLOR_RESET,
-         library_installed("libarchive") ? "Installed" : "Not Installed");
-  printf("%slibyaml:%s %s\n", COLOR_GREEN, COLOR_RESET,
-         library_installed("libyaml") ? "Installed" : "Not Installed");
+  printf("\nRSYNC:      %s\n", command_exists("rsync") ? "Installed" : "Not Installed");
+  printf("NCURSES:      %s\n", library_installed("libncurses") ? "Installed" : "Not Installed");
+  printf("LIBARCHIVE:   %s\n", library_installed("libarchive") ? "Installed" : "Not Installed");
+  printf("LIBYAML:      %s\n", library_installed("libyaml") ? "Installed" : "Not Installed");
   printf("--------------------------------------\n");
-  printf("%sunzip:%s %s\n", COLOR_GREEN, COLOR_RESET,
-         library_installed("zip") ? "Installed" : "Not Installed");
-  printf("%star:%s %s\n", COLOR_GREEN, COLOR_RESET,
-         library_installed("tar") ? "Installed" : "Not Installed");
+  printf("UNZIP:        %s\n", library_installed("zip") ? "Installed" : "Not Installed");
+  printf("TAR:          %s\n", library_installed("tar") ? "Installed" : "Not Installed");
   // Add checks for other libraries or tools similarly
+}
+
+int handle_arguments(int argc, char* argv[], char* current_path)
+{
+  if (argc == 2)
+  {
+    if (is_directory(argv[1]))
+    {
+      realpath(argv[1], current_path);
+    }
+    else if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)
+    {
+      endwin();
+      show_help();
+      return 0;
+    }
+    else if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0)
+    {
+      endwin();
+      show_version();
+      return 0;
+    }
+    else if (strcmp(argv[1], "-l") == 0 || strcmp(argv[1], "--log-dir") == 0)
+    {
+      endwin();
+      printf("Log file at: ~/%s\n", LOG_FILE_RELATIVE_PATH);
+      return 0;
+    }
+    else if (strcmp(argv[1], "-lc") == 0 || strcmp(argv[1], "--log-clear") == 0)
+    {
+      endwin();
+      char termbuf[256];
+      snprintf(termbuf, sizeof(termbuf), "echo '' > ~/%s", LOG_FILE_RELATIVE_PATH);
+      system(termbuf);
+      printf("Cleared log for LiteFM.\n");
+      return 0;
+    }
+  }
+  get_current_working_directory(current_path, PATH_MAX);
+  return 1;
 }

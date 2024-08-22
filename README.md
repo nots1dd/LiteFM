@@ -158,6 +158,30 @@ make
 ./litefm
 ```
 
+#### Building with Meson:
+
+-> Ensure that you have `meson` and `ninja` (or `ninja-build`) installed in your distribution.
+
+```sh
+mkdir build && cd build 
+meson ..
+ninja
+sudo ninja install
+```
+
+NOTE: Running `sudo ninja install` will MOVE the litefm executable to `/usr/local/bin` directory. 
+
+If you DO NOT want this, ignore the last step and simple run `./litefm`
+
+In any case, to uninstall (stay in the build dir):
+
+```sh
+sudo ninja uninstall
+```
+
+-> Run the executable `litefm` and enjoy!
+
+
 #### Adding Man Page (Optional):
 
 You can add the man page for LiteFM in your system by the following commands:
