@@ -43,8 +43,40 @@
 #include <time.h>
 #include <unistd.h>
 
-// Constants
+/* Constants */
 #define MAX_PATH_LENGTH 256
+
+/* COLOR PAIRS DEF */
+
+#define FILE_COLOR_PAIR 1
+#define DIR_COLOR_PAIR 2
+#define ARCHIVE_COLOR_PAIR 3
+#define AUDIO_COLOR_PAIR 4
+#define IMAGE_COLOR_PAIR 5
+#define SYMLINK_COLOR_PAIR 6
+#define AQUA_COLOR_PAIR 7
+#define VIOLET_COLOR_PAIR 8
+#define DARK_BG_COLOR_PAIR 9
+#define MAGENTA_COLOR_PAIR 10
+#define SPECIAL_COLOR_PAIR 11
+#define ERROR_COLOR_PAIR 12
+#define CUSTOM_COLOR_PAIR 13
+#define TITLE_COLOR_PAIR 14
+#define HIGHLIGHT_COLOR_PAIR 15
+
+/* COMPRESSION OPTIONS COLOR PAIR + MISC DEF */
+
+#define STEP_SELECT_FORMAT 0
+#define STEP_SELECT_ACTION 1
+
+#define COMP_COLOR_TITLE        31
+#define COMP_COLOR_HIGHLIGHT    32
+#define COMP_COLOR_NORMAL       33
+#define COMP_COLOR_FOOTER       34
+
+#define OPTION_TAR         1
+#define OPTION_ZIP         2
+#define OPTION_EXIT        0
 
 // Function Prototypes
 void    show_message(WINDOW* win, const char* message);

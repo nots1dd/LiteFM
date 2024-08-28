@@ -53,6 +53,19 @@
 #define MAX_HISTORY 256
 #define MAX_ITEM_NAME_LENGTH 80  // Define a maximum length for item names
 
+/* UNICODES DEF */
+
+#define UNICODE_DISK "💾"
+#define UNICODE_FOLDER "📁"
+#define UNICODE_SYMLINK "🔗"
+#define UNICODE_ARCHIVE "📦"
+#define UNICODE_AUDIO "🎵 "
+#define UNICODE_IMAGE "🖼️"
+#define UNICODE_FILE "📄"
+#define UNICODE_VIDEO "🎥"
+#define UNICODE_SEARCH "🔍"
+
+
 const char * err_message[] = {
   " _   _  ___    _____ ___ _     _____ ____    __  ____ ___ ____  ____      ",
   "| \\ | |/ _ \\  |  ___|_ _| |   | ____/ ___|  / / |  _ \\_ _|  _ \\/ ___|     ",
@@ -194,12 +207,12 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
     color_pair_init();
 
     // Print title
-    wattron(win, COLOR_PAIR(9));
+    wattron(win, COLOR_PAIR(DARK_BG_COLOR_PAIR));
     char *cur_user = get_current_user();
     char *cur_hostname = get_hostname();
-    wattron(win, A_BOLD | COLOR_PAIR(14));
+    wattron(win, A_BOLD | COLOR_PAIR(TITLE_COLOR_PAIR));
     mvwprintw(win, 0, 2, " 🗄️ LITE FM: ");
-    wattroff(win, A_BOLD | COLOR_PAIR(14));
+    wattroff(win, A_BOLD | COLOR_PAIR(TITLE_COLOR_PAIR));
 
     char sanitizedCurPath[PATH_MAX];
     if (strncmp(current_path, "//", 2) == 0) {
@@ -210,29 +223,29 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
 
     // Print current path and hidden directories status
     wattron(win, A_BOLD);
-    wattron(win, COLOR_PAIR(8));
+    wattron(win, COLOR_PAIR(VIOLET_COLOR_PAIR));
     mvwprintw(win, 2, 2, " %s@%s ", cur_hostname, cur_user);
-    wattroff(win, COLOR_PAIR(8));
-    wattron(win, COLOR_PAIR(9));
+    wattroff(win, COLOR_PAIR(VIOLET_COLOR_PAIR));
+    wattron(win, COLOR_PAIR(DARK_BG_COLOR_PAIR));
     print_limited(win, 2, 20, sanitizedCurPath);
-    wattroff(win, COLOR_PAIR(9));
-    wattron(win, COLOR_PAIR(9));
+    wattroff(win, COLOR_PAIR(DARK_BG_COLOR_PAIR));
+    wattron(win, COLOR_PAIR(DARK_BG_COLOR_PAIR));
     mvwprintw(win, LINES - 3, (COLS / 2) - 55, " Hidden Dirs: %s ", hidden_dir);
-    mvwprintw(win, LINES - 3, (COLS / 2) - 30, " 💾 %.2f / %.2f GiB ", systemFreeSpace, totalSystemSpace);
-    wattroff(win, COLOR_PAIR(9));
+    mvwprintw(win, LINES - 3, (COLS / 2) - 30, " %s %.2f / %.2f GiB ", UNICODE_DISK, systemFreeSpace, totalSystemSpace);
+    wattroff(win, COLOR_PAIR(DARK_BG_COLOR_PAIR));
     wattroff(win, A_BOLD);
 
     // Print items
     if (count == 0) {
-        wattron(win, COLOR_PAIR(3));
+        wattron(win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
         int err_msg_size = sizeof(err_message) / sizeof(err_message[0]);
         for (int i = 0; i < err_msg_size; i++) {
             mvwprintw(win, i + 5, 2, "%s", err_message[i]);
         }
-        wattroff(win, COLOR_PAIR(3));
-        wattron(win, A_BOLD | COLOR_PAIR(5));
+        wattroff(win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
+        wattron(win, A_BOLD | COLOR_PAIR(IMAGE_COLOR_PAIR));
         mvwprintw(win, 15, 2, "<== PRESS H or <-");
-        wattroff(win, A_BOLD | COLOR_PAIR(5));
+        wattroff(win, A_BOLD | COLOR_PAIR(IMAGE_COLOR_PAIR));
     } else {
         for (int i = 0; i < height - 7 && i + scroll_position < count; i++) {
             int index = i + scroll_position;
@@ -244,31 +257,34 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
             
             // Apply color based on file type
             if (items[index].is_dir) {
-                wattron(win, COLOR_PAIR(2));
-                mvwprintw(win, i + 4, 5, "📁");
+                wattron(win, COLOR_PAIR(DIR_COLOR_PAIR));
+                mvwprintw(win, i + 4, 5, "%s", UNICODE_FOLDER);
             } else if (is_symlink(full_path)) {
-                wattron(win, COLOR_PAIR(6));  // Choose an appropriate color pair for symlinks
-                mvwprintw(win, i + 4, 5, "🔗"); // Unicode for symlink
+                wattron(win, COLOR_PAIR(SYMLINK_COLOR_PAIR));  // Choose an appropriate color pair for symlinks
+                mvwprintw(win, i + 4, 5, "%s", UNICODE_SYMLINK); // Unicode for symlink
             } else {
                 // Determine file type by extension
                 char *extension = strrchr(items[index].name, '.');
                 if (extension) {
                     if (strcmp(extension, ".zip") == 0 || strcmp(extension, ".7z") == 0 || strcmp(extension, ".tar") == 0 || strcmp(extension, ".xz") == 0 || strcmp(extension, ".gz") == 0 || strcmp(extension, ".jar") == 0) {
-                        wattron(win, COLOR_PAIR(3));
-                        mvwprintw(win, i + 4, 5, "📦");
-                    } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".mp4") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
-                        wattron(win, COLOR_PAIR(4));
-                        mvwprintw(win, i + 4, 5, "🎵 ");
+                        wattron(win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
+                        mvwprintw(win, i + 4, 5, "%s", UNICODE_ARCHIVE);
+                    } else if (strcmp(extension, ".mp3") == 0 || strcmp(extension, ".wav") == 0 || strcmp(extension, ".flac") == 0 || strcmp(extension, ".opus") == 0) {
+                        wattron(win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+                        mvwprintw(win, i + 4, 5, "%s", UNICODE_AUDIO);
                     } else if (strcmp(extension, ".png") == 0 || strcmp(extension, ".jpg") == 0 || strcmp(extension, ".webp") == 0 || strcmp(extension, ".gif") == 0) {
-                        wattron(win, COLOR_PAIR(5));
-                        mvwprintw(win, i + 4, 5, "🖼️");
+                        wattron(win, COLOR_PAIR(IMAGE_COLOR_PAIR));
+                        mvwprintw(win, i + 4, 5, "%s", UNICODE_IMAGE);
+                    } else if (strcmp(extension, ".mp4") == 0 || strcmp(extension, ".m4v") == 0 || strcmp(extension, ".mkv") == 0 || strcmp(extension, ".avi") == 0) {
+                        wattron(win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+                        mvwprintw(win, i+4, 5, "%s", UNICODE_VIDEO);
                     } else {
-                        wattron(win, COLOR_PAIR(1));
-                        mvwprintw(win, i + 4, 5, "📄");
+                        wattron(win, COLOR_PAIR(FILE_COLOR_PAIR));
+                        mvwprintw(win, i + 4, 5, "%s", UNICODE_FILE);
                     }
                 } else {
-                    wattron(win, COLOR_PAIR(1));
-                    mvwprintw(win, i + 4, 5, "📄");
+                    wattron(win, COLOR_PAIR(FILE_COLOR_PAIR));
+                    mvwprintw(win, i + 4, 5, "%s", UNICODE_FILE);
                 }
             }
 
@@ -285,13 +301,13 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
 
             // Turn off color attributes
             wattroff(win, A_BOLD);
-            wattroff(win, COLOR_PAIR(1));
-            wattroff(win, COLOR_PAIR(2));
-            wattroff(win, COLOR_PAIR(3));
-            wattroff(win, COLOR_PAIR(4));
-            wattroff(win, COLOR_PAIR(5));
-            wattroff(win, COLOR_PAIR(6)); // Turn off the color pair for symlinks
-            wattroff(win, COLOR_PAIR(9));
+            wattroff(win, COLOR_PAIR(FILE_COLOR_PAIR));
+            wattroff(win, COLOR_PAIR(DIR_COLOR_PAIR));
+            wattroff(win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
+            wattroff(win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+            wattroff(win, COLOR_PAIR(IMAGE_COLOR_PAIR));
+            wattroff(win, COLOR_PAIR(SYMLINK_COLOR_PAIR)); // Turn off the color pair for symlinks
+            wattroff(win, COLOR_PAIR(DARK_BG_COLOR_PAIR));
 
             if (index == highlight)
                 wattroff(win, A_REVERSE);
@@ -421,48 +437,48 @@ void get_file_info_popup(WINDOW * main_win,
   colorLine(info_win, "File Information: ", 1, 1, 2); /* colorLine params: win, string, color_pair, x, y */
   colorLine(info_win, "Name: ", 3, 3, 2);
 
-  wattron(info_win, COLOR_PAIR(4));
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, "%s", filename);
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
   colorLine(info_win, "Size: ", 3, 4, 2);
-  wattron(info_win, COLOR_PAIR(4));
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, "%s", format_file_size(file_stat.st_size));
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
   const char * file_ext = strrchr(filename, '.');
-  colorLine(info_win, "Extension: ", 3, 5, 2);
-  wattron(info_win, COLOR_PAIR(4));
+  colorLine(info_win, "File Type: ", 3, 5, 2);
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   if (file_ext != NULL) {
-    wprintw(info_win, "%s", file_ext + 1);
+    wprintw(info_win, "%s", determine_file_type(full_path));
   } else {
     wprintw(info_win, "none");
   }
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
   colorLine(info_win, "Last Modified: ", 3, 6, 2);
-  wattron(info_win, COLOR_PAIR(4));
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   char mod_time[20];
   strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime( & file_stat.st_mtime));
   wprintw(info_win, "%s", mod_time);
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
   colorLine(info_win, "Permissions: ", 3, 7, 2);
   print_permissions(info_win, &file_stat);
 
   colorLine(info_win, "Inode: ", 3, 8, 2);
-  wattron(info_win, COLOR_PAIR(4));
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, "%lu", file_stat.st_ino);
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
   // Additional file attributes can be displayed here
   struct passwd * pwd = getpwuid(file_stat.st_uid);
-  wattron(info_win, COLOR_PAIR(3));
+  wattron(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
   mvwprintw(info_win, 9, 2, "Owner: ");
-  wattroff(info_win, COLOR_PAIR(3));
-  wattron(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, "%s (%d)", pwd -> pw_name, file_stat.st_uid);
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
   colorLine(info_win, "Press any key to close this window.", 2, info_win_height - 2, 2);
   wrefresh(info_win);
@@ -521,54 +537,54 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
 
     clearLine(info_win, 3, 2);
     colorLine(info_win, "Name: ", 3, 3, 2);
-    wattron(info_win, COLOR_PAIR(4));
+    wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
     wprintw(info_win, "%s", truncated_file_name);
-    wattroff(info_win, COLOR_PAIR(4));
+    wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
     clearLine(info_win, 4, 2);
     colorLine(info_win, "Size: ", 3, 4, 2);
-    wattron(info_win, COLOR_PAIR(4));
+    wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
     wprintw(info_win, "%s", format_file_size(file_stat.st_size));
-    wattroff(info_win, COLOR_PAIR(4));
+    wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
     const char *file_ext = strrchr(filename, '.');
     clearLine(info_win, 5, 2);
-    colorLine(info_win, "Extension: ", 3, 5, 2);
-    wattron(info_win, COLOR_PAIR(4));
-    if (file_ext != NULL && !S_ISDIR(file_stat.st_mode)) {
-        wprintw(info_win, "%s", file_ext + 1);
+    colorLine(info_win, "Inode Type: ", 3, 5, 2);
+    wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+    if (!S_ISDIR(file_stat.st_mode)) {
+        wprintw(info_win, "%s", determine_file_type(full_path));
     } else {
-        wprintw(info_win, "none");
+        wprintw(info_win, "Directory");
     }
-    wattroff(info_win, COLOR_PAIR(4));
+    wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
     char mod_time[20];
     strftime(mod_time, sizeof(mod_time), "%Y-%m-%d %H:%M:%S", localtime(&file_stat.st_mtime));
     clearLine(info_win, 6, 2);
     colorLine(info_win, "Last Modified: ", 3, 6, 2);
-    wattron(info_win, COLOR_PAIR(4));
+    wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
     wprintw(info_win, "%s", mod_time);
-    wattroff(info_win, COLOR_PAIR(4));
+    wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
     colorLine(info_win, "Inode: ", 3, 7, 2);
-    wattron(info_win, COLOR_PAIR(4));
+    wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
     wprintw(info_win, "%lu", file_stat.st_ino);
-    wattroff(info_win, COLOR_PAIR(4));
+    wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
     clearLine(info_win, 8, 2);
     colorLine(info_win, "Group: ", 3, 8, 2);
-    wattron(info_win, COLOR_PAIR(4));
+    wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
     struct group *grp = getgrgid(file_stat.st_gid);
     if (grp != NULL) {
         wprintw(info_win, "%s", grp->gr_name);
     } else {
         wprintw(info_win, "Unknown");
     }
-    wattroff(info_win, COLOR_PAIR(4));
+    wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
     clearLine(info_win, 9, 2);
     colorLine(info_win, "Type: ", 3, 9, 2);
-    wattron(info_win, COLOR_PAIR(5));
+    wattron(info_win, COLOR_PAIR(IMAGE_COLOR_PAIR));
     if (S_ISREG(file_stat.st_mode)) {
         wprintw(info_win, "Regular File");
 
@@ -578,15 +594,15 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
             display_archive_contents(info_win, full_path, file_ext);
         }
     } else if (S_ISDIR(file_stat.st_mode)) {
-        wattron(info_win, COLOR_PAIR(11));
+        wattron(info_win, COLOR_PAIR(SPECIAL_COLOR_PAIR));
         wprintw(info_win, "Directory");
-        wattroff(info_win, COLOR_PAIR(11));
+        wattroff(info_win, COLOR_PAIR(SPECIAL_COLOR_PAIR));
 
         // Horizontal Layout for Parent Directories and Subdirectories
-        wattron(info_win, A_BOLD | COLOR_PAIR(9));
-        mvwprintw(info_win, 11, 2, " Parent Directories: ");
-        mvwprintw(info_win, 11, getmaxx(info_win) / 2, " Children: ");
-        wattroff(info_win, A_BOLD | COLOR_PAIR(9));
+        wattron(info_win, A_BOLD | COLOR_PAIR(DARK_BG_COLOR_PAIR));
+        mvwprintw(info_win, 12, 2, " Parent Directories: ");
+        mvwprintw(info_win, 12, getmaxx(info_win) / 2, " Children: ");
+        wattroff(info_win, A_BOLD | COLOR_PAIR(DARK_BG_COLOR_PAIR));
 
         char parent_dir[PATH_MAX];
         char current_path[PATH_MAX];
@@ -597,8 +613,8 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         // Make a copy of the parent directory path to avoid modifying the original path
         strncpy(parent_dir, parent_dir_ptr, sizeof(parent_dir));
         parent_dir[sizeof(parent_dir) - 1] = '\0'; // Ensure null termination
-        int line = 12;
-        int sub_dir_line = 12;
+        int line = 13;
+        int sub_dir_line = 13;
         int max_y, max_x;
         getmaxyx(info_win, max_y, max_x);
 
@@ -606,12 +622,12 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
         DIR *dir = opendir(parent_dir);
         struct dirent *entry;
         if (dir != NULL) {
-            wattron(info_win, A_BOLD | COLOR_PAIR(9));
+            wattron(info_win, A_BOLD | COLOR_PAIR(DARK_BG_COLOR_PAIR));
             mvwprintw(info_win, 10, 2, " Parent Directories: ");
-            wattroff(info_win, A_BOLD | COLOR_PAIR(9));
+            wattroff(info_win, A_BOLD | COLOR_PAIR(DARK_BG_COLOR_PAIR));
 
             int col = 2; // Starting column
-            wattron(info_win, A_BOLD | COLOR_PAIR(2));
+            wattron(info_win, A_BOLD | COLOR_PAIR(DIR_COLOR_PAIR));
             while ((entry = readdir(dir)) != NULL) {
                 if (entry->d_type == DT_DIR) {
                     // Exclude the current directory and the special entries "." and ".."
@@ -629,7 +645,7 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
                 }
             }
             closedir(dir);
-            wattroff(info_win, A_BOLD | COLOR_PAIR(2));
+            wattroff(info_win, A_BOLD | COLOR_PAIR(DIR_COLOR_PAIR));
         } else {
             show_message(info_win, "Error opening parent directory.");
         }
@@ -647,9 +663,9 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
                         } else {
                             snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%s", entry->d_name);
                         }
-                        wattron(info_win, A_BOLD | COLOR_PAIR(2));
+                        wattron(info_win, A_BOLD | COLOR_PAIR(DIR_COLOR_PAIR));
                         mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_sub_dir_name);
-                        wattroff(info_win, A_BOLD | COLOR_PAIR(2));
+                        wattroff(info_win, A_BOLD | COLOR_PAIR(DIR_COLOR_PAIR));
                     }
                 }
             }
@@ -663,9 +679,9 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
                     } else {
                         snprintf(truncated_file_name, sizeof(truncated_file_name), "%s", entry->d_name);
                     }
-                    wattron(info_win, A_BOLD | COLOR_PAIR(1));
+                    wattron(info_win, A_BOLD | COLOR_PAIR(FILE_COLOR_PAIR));
                     mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_file_name);
-                    wattroff(info_win, A_BOLD | COLOR_PAIR(1));
+                    wattroff(info_win, A_BOLD | COLOR_PAIR(FILE_COLOR_PAIR));
                 }
             }
             closedir(dir);
@@ -673,20 +689,20 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
             show_message(info_win, "Error opening directory.");
         }
     } else if (S_ISLNK(file_stat.st_mode)) {
-        wattron(info_win, COLOR_PAIR(6));
+        wattron(info_win, COLOR_PAIR(SYMLINK_COLOR_PAIR));
         wprintw(info_win, "Symbolic Link");
 
         // Read the symlink target
         len = readlink(full_path, symlink_target, sizeof(symlink_target) - 1);
         if (len != -1) {
             symlink_target[len] = '\0'; // Null-terminate the string
-            wattron(info_win, COLOR_PAIR(4));
+            wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
             wprintw(info_win, "  to  %s", symlink_target);
-            wattroff(info_win, COLOR_PAIR(4));
+            wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
         } else {
             show_message(info_win, "Error reading symlink target.");
         }
-        wattroff(info_win, COLOR_PAIR(6));
+        wattroff(info_win, COLOR_PAIR(SYMLINK_COLOR_PAIR));
     } else if (S_ISFIFO(file_stat.st_mode)) {
         wprintw(info_win, "FIFO");
     } else if (S_ISCHR(file_stat.st_mode)) {
@@ -698,12 +714,12 @@ void get_file_info(WINDOW *info_win, const char *path, const char *filename) {
     } else {
         wprintw(info_win, "Unknown");
     }
-    wattroff(info_win, COLOR_PAIR(5));
+    wattroff(info_win, COLOR_PAIR(IMAGE_COLOR_PAIR));
 
     clearLine(info_win, 10, 2);
-    wattron(info_win, COLOR_PAIR(3));
+    wattron(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
     mvwprintw(info_win, 10, 2, "Permissions: ");
-    wattroff(info_win, COLOR_PAIR(3));
+    wattroff(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
     print_permissions(info_win, &file_stat);
 
     box(info_win, 0, 0);
@@ -982,7 +998,7 @@ int main(int argc, char* argv[]) {
             if (result == 0) {
               char msg[256];
               log_message(LOG_LEVEL_INFO, "File created successfully for `%s`", name_input);
-              snprintf(msg, sizeof(msg), "📄 File '%s' created at %s.", name_input, timestamp);
+              snprintf(msg, sizeof(msg), "%s File '%s' created at %s.", UNICODE_FILE, name_input, timestamp);
               show_term_message(msg, 0);
             } else if (result == 1) {
               log_message(LOG_LEVEL_WARN, "File `%s` already exists", name_input);
@@ -1077,9 +1093,9 @@ int main(int argc, char* argv[]) {
       break;
       case '/': // Find file or directory
       { 
-        wattron(win, A_BOLD | COLOR_PAIR(7));
-        mvwprintw(win, LINES - 3, (COLS / 2) - 75, "🔍 Search ON ");
-        wattroff(win, A_BOLD | COLOR_PAIR(7));
+        wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+        mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
+        wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
         wrefresh(win);
         char query[NAME_MAX];
         get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
@@ -1296,9 +1312,9 @@ int main(int argc, char* argv[]) {
               scroll_position = 0;
             }
             else if (nextch == '/') {
-              wattron(win, A_BOLD | COLOR_PAIR(7));
-              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "🔍 Search ON ");
-              wattroff(win, A_BOLD | COLOR_PAIR(7));
+              wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
+              wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
               wrefresh(win);
               char query[NAME_MAX];
               get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
@@ -1426,9 +1442,9 @@ int main(int argc, char* argv[]) {
               scroll_position = 0;
             }
             else if (nextch == '/') {
-              wattron(win, A_BOLD | COLOR_PAIR(7));
-              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "🔍 Search ON ");
-              wattroff(win, A_BOLD | COLOR_PAIR(7));
+              wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
+              wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
               wrefresh(win);
               char query[NAME_MAX];
               get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);

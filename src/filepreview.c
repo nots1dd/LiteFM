@@ -44,7 +44,7 @@ const char* get_file_extension(const char* filename)
 const char* determine_file_type(const char* filename)
 {
   static char file_type[MAX_FILE_TYPE_LENGTH];
-  char        *command;
+  char*       command;
 
   // Construct the command to run the 'file' command with the provided filename
   asprintf(&command, "file --brief --mime-type \"%s\"", filename);
@@ -217,9 +217,9 @@ void display_file(WINDOW* info_win, const char* filename)
   {
     strcpy(sanitizedCurPath, filename);
   }
-  wattron(info_win, A_BOLD | COLOR_PAIR(9));
+  wattron(info_win, A_BOLD | COLOR_PAIR(DARK_BG_COLOR_PAIR));
   print_limited(info_win, 1, 1, sanitizedCurPath);
-  wattroff(info_win, A_BOLD | COLOR_PAIR(9));
+  wattroff(info_win, A_BOLD | COLOR_PAIR(DARK_BG_COLOR_PAIR));
 
   // Initialize color pairs for syntax highlighting
   start_color();
@@ -516,7 +516,7 @@ void launch_env_var(WINDOW* win, const char* current_path, const char* filename,
 void print_permissions(WINDOW* info_win, struct stat* file_stat)
 {
 
-  wattron(info_win, COLOR_PAIR(4));
+  wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, (S_ISDIR(file_stat->st_mode)) ? "d" : "-");
   wprintw(info_win, (file_stat->st_mode & S_IRUSR) ? "r" : "-");
   wprintw(info_win, (file_stat->st_mode & S_IWUSR) ? "w" : "-");
@@ -527,7 +527,7 @@ void print_permissions(WINDOW* info_win, struct stat* file_stat)
   wprintw(info_win, (file_stat->st_mode & S_IROTH) ? "r" : "-");
   wprintw(info_win, (file_stat->st_mode & S_IWOTH) ? "w" : "-");
   wprintw(info_win, (file_stat->st_mode & S_IXOTH) ? "x" : "-");
-  wattroff(info_win, COLOR_PAIR(4));
+  wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 }
 
 /*
@@ -585,14 +585,14 @@ void display_archive_contents(WINDOW* info_win, const char* full_path, const cha
   }
 
   // Construct the command
-  /* 
+  /*
    * Using ASPRINTF:
    *
-   * ASPRINTF IS THE GNU VERSION OF SPRINTF 
+   * ASPRINTF IS THE GNU VERSION OF SPRINTF
    *
-   * IT DYNAMICALLY ALLOCATES MEMORY BASED ON THE INPUT STRING TO AVOID OVERFLOWS 
+   * IT DYNAMICALLY ALLOCATES MEMORY BASED ON THE INPUT STRING TO AVOID OVERFLOWS
    *
-   * SAFER TO USE ASPRINTF OVER SPRINTF AND SNPRINTF 
+   * SAFER TO USE ASPRINTF OVER SPRINTF AND SNPRINTF
    *
    */
   char* cmd;

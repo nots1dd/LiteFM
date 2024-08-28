@@ -62,216 +62,216 @@ void colorLine(WINDOW* win, const char* info, int colorpair, int x, int y)
 
 int show_compression_options(WINDOW* parent_win)
 {
-  WINDOW* options_win;
-  int     choice;
-  int     highlight = 0;
-  int     c;
-  int     step = 0; // 0 for selecting format, 1 for selecting action
+    WINDOW* options_win;
+    int     choice;
+    int     highlight = 0;
+    int     c;
+    int     step = STEP_SELECT_FORMAT; // 0 for selecting format, 1 for selecting action
 
-  // Define window size and position
-  int win_height = 10;
-  int win_width  = 40;
-  int win_y      = (LINES - win_height) / 2;
-  int win_x      = (COLS - win_width) / 2;
+    // Define window size and position
+    int win_height = 10;
+    int win_width  = 40;
+    int win_y      = (LINES - win_height) / 2;
+    int win_x      = (COLS - win_width) / 2;
 
-  // Create a new window for displaying options
-  options_win = newwin(win_height, win_width, win_y, win_x);
-  box(options_win, 0, 0);
-  keypad(options_win, TRUE); // Enable special keys (e.g., arrow keys)
-  draw_3d_info_win(options_win, win_y, win_x, win_height, win_width, 2, 4);
-
-  // Define colors
-  init_pair(31, COLOR_BLACK, COLOR_BLUE);  // Title
-  init_pair(32, COLOR_BLACK, COLOR_GREEN); // Highlighted option
-  init_pair(33, COLOR_WHITE, COLOR_BLACK); // Normal text
-  init_pair(34, COLOR_RED, COLOR_BLACK);   // Footer text
-
-  const char* top_options[]    = {"TAR (.tar)", "ZIP (.zip)"};
-  const char* bottom_options[] = {"COMPRESS", "EXIT"};
-
-  int  num_top_options    = sizeof(top_options) / sizeof(top_options[0]);
-  int  num_bottom_options = sizeof(bottom_options) / sizeof(bottom_options[0]);
-  char title_buf[60];
-
-  while (1)
-  {
-    // Clear the window
-    werase(options_win);
-
-    // Draw the box again
+    // Create a new window for displaying options
+    options_win = newwin(win_height, win_width, win_y, win_x);
     box(options_win, 0, 0);
+    keypad(options_win, TRUE); // Enable special keys (e.g., arrow keys)
+    draw_3d_info_win(options_win, win_y, win_x, win_height, win_width, 2, 4);
 
-    if (step == 0)
+    // Define colors
+    init_pair(COMP_COLOR_TITLE, COLOR_BLACK, COLOR_BLUE);    // Title
+    init_pair(COMP_COLOR_HIGHLIGHT, COLOR_BLACK, COLOR_GREEN); // Highlighted option
+    init_pair(COMP_COLOR_NORMAL, COLOR_WHITE, COLOR_BLACK);  // Normal text
+    init_pair(COMP_COLOR_FOOTER, COLOR_RED, COLOR_BLACK);    // Footer text
+
+    const char* top_options[]    = {"TAR (.tar)", "ZIP (.zip)"};
+    const char* bottom_options[] = {"COMPRESS", "EXIT"};
+
+    int  num_top_options    = sizeof(top_options) / sizeof(top_options[0]);
+    int  num_bottom_options = sizeof(bottom_options) / sizeof(bottom_options[0]);
+    char title_buf[60];
+
+    while (1)
     {
-      // Display title
-      wattron(options_win, COLOR_PAIR(31));
-      mvwprintw(options_win, 1, (win_width - strlen(" Compression format: ")) / 2,
-                " Compression format: ");
-      wattroff(options_win, COLOR_PAIR(31));
+        // Clear the window
+        werase(options_win);
 
-      // Display top options
-      for (int i = 0; i < num_top_options; ++i)
-      {
-        if (i == highlight)
+        // Draw the box again
+        box(options_win, 0, 0);
+
+        if (step == STEP_SELECT_FORMAT)
         {
-          wattron(options_win, COLOR_PAIR(32) | A_BOLD);
-        }
-        else
-        {
-          wattron(options_win, COLOR_PAIR(33));
-        }
-        mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, " %s ",
-                  top_options[i]);
-        wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
-      }
+            // Display title
+            wattron(options_win, COLOR_PAIR(COMP_COLOR_TITLE));
+            mvwprintw(options_win, 1, (win_width - strlen(" Compression format: ")) / 2,
+                      " Compression format: ");
+            wattroff(options_win, COLOR_PAIR(COMP_COLOR_TITLE));
 
-      // Display bottom options
-      int bottom_y = win_height - 2;
-      int left_x   = 2;
-      int right_x  = win_width - strlen(bottom_options[1]) - 2;
-
-      // Left bottom option (COMPRESS)
-      wattron(options_win, COLOR_PAIR(33));
-      mvwprintw(options_win, bottom_y, left_x, "%s", bottom_options[0]);
-      wattroff(options_win, COLOR_PAIR(33));
-
-      // Right bottom option (EXIT)
-      wattron(options_win, COLOR_PAIR(33));
-      mvwprintw(options_win, bottom_y, right_x, "%s", bottom_options[1]);
-      wattroff(options_win, COLOR_PAIR(33));
-
-      // Refresh and wait for user input
-      wrefresh(options_win);
-      c = wgetch(options_win);
-
-      switch (c)
-      {
-        case KEY_UP:
-          if (highlight > 0)
-          {
-            highlight--;
-          }
-          break;
-        case KEY_DOWN:
-          if (highlight < num_top_options - 1)
-          {
-            highlight++;
-          }
-          break;
-        case 10:    // Enter key
-          step = 1; // Move to next step
-          snprintf(title_buf, 60, " Select %s action: ", top_options[highlight]);
-          choice    = highlight + 1;
-          highlight = num_top_options; // Set default highlight to COMPRESS
-          break;
-        case 27: // ESC key
-          delwin(options_win);
-          refresh(); // Refresh the main window to ensure no artifacts remain
-          return -1;
-      }
-    }
-    else if (step == 1)
-    {
-      // Display title
-      wattron(options_win, COLOR_PAIR(31));
-      mvwprintw(options_win, 1, (win_width - strlen(title_buf)) / 2, title_buf);
-      wattroff(options_win, COLOR_PAIR(31));
-
-      // Display top options
-      for (int i = 0; i < num_top_options; ++i)
-      {
-        if (i == highlight)
-        {
-          wattron(options_win, COLOR_PAIR(32) | A_BOLD);
-        }
-        else
-        {
-          wattron(options_win, COLOR_PAIR(33));
-        }
-        mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, " %s ",
-                  top_options[i]);
-        wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
-      }
-
-      // Display bottom options
-      int bottom_y = win_height - 2;
-      int left_x   = 2;
-      int right_x  = win_width - strlen(bottom_options[1]) - 2;
-
-      // Left bottom option (COMPRESS)
-      if (highlight == num_top_options)
-      {
-        wattron(options_win, COLOR_PAIR(32) | A_BOLD);
-      }
-      else
-      {
-        wattron(options_win, COLOR_PAIR(33));
-      }
-      mvwprintw(options_win, bottom_y, left_x, " %s ", bottom_options[0]);
-      wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
-
-      // Right bottom option (EXIT)
-      if (highlight == num_top_options + 1)
-      {
-        wattron(options_win, COLOR_PAIR(32) | A_BOLD);
-      }
-      else
-      {
-        wattron(options_win, COLOR_PAIR(33));
-      }
-      mvwprintw(options_win, bottom_y, right_x, "%s", bottom_options[1]);
-      wattroff(options_win, COLOR_PAIR(32) | COLOR_PAIR(33) | A_BOLD);
-
-      // Refresh and wait for user input
-      wrefresh(options_win);
-      c = wgetch(options_win);
-
-      switch (c)
-      {
-        case KEY_LEFT:
-          if (highlight == num_top_options + 1)
-          {
-            highlight = num_top_options; // Move to COMPRESS
-          }
-          break;
-        case KEY_RIGHT:
-          if (highlight == num_top_options)
-          {
-            highlight = num_top_options + 1; // Move to EXIT
-          }
-          break;
-        case 10: // Enter key
-          if (highlight == num_top_options)
-          {
-            // Handle compression logic
-            delwin(options_win);
-            refresh(); // Refresh the main window to ensure no artifacts remain
-            if (choice == 1)
+            // Display top options
+            for (int i = 0; i < num_top_options; ++i)
             {
-              return 1; // return 1 (compression type: tar)
+                if (i == highlight)
+                {
+                    wattron(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | A_BOLD);
+                }
+                else
+                {
+                    wattron(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+                }
+                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, " %s ",
+                          top_options[i]);
+                wattroff(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | COLOR_PAIR(COMP_COLOR_NORMAL) | A_BOLD);
+            }
+
+            // Display bottom options
+            int bottom_y = win_height - 2;
+            int left_x   = 2;
+            int right_x  = win_width - strlen(bottom_options[1]) - 2;
+
+            // Left bottom option (COMPRESS)
+            wattron(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+            mvwprintw(options_win, bottom_y, left_x, "%s", bottom_options[0]);
+            wattroff(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+
+            // Right bottom option (EXIT)
+            wattron(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+            mvwprintw(options_win, bottom_y, right_x, "%s", bottom_options[1]);
+            wattroff(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+
+            // Refresh and wait for user input
+            wrefresh(options_win);
+            c = wgetch(options_win);
+
+            switch (c)
+            {
+                case KEY_UP:
+                    if (highlight > 0)
+                    {
+                        highlight--;
+                    }
+                    break;
+                case KEY_DOWN:
+                    if (highlight < num_top_options - 1)
+                    {
+                        highlight++;
+                    }
+                    break;
+                case 10:    // Enter key
+                    step = STEP_SELECT_ACTION; // Move to next step
+                    snprintf(title_buf, 60, " Select %s action: ", top_options[highlight]);
+                    choice    = highlight + OPTION_TAR; // Assign OPTION_TAR (1) or OPTION_ZIP (2)
+                    highlight = num_top_options; // Set default highlight to COMPRESS
+                    break;
+                case 27: // ESC key
+                    delwin(options_win);
+                    refresh(); // Refresh the main window to ensure no artifacts remain
+                    return -1;
+            }
+        }
+        else if (step == STEP_SELECT_ACTION)
+        {
+            // Display title
+            wattron(options_win, COLOR_PAIR(COMP_COLOR_TITLE));
+            mvwprintw(options_win, 1, (win_width - strlen(title_buf)) / 2, title_buf);
+            wattroff(options_win, COLOR_PAIR(COMP_COLOR_TITLE));
+
+            // Display top options
+            for (int i = 0; i < num_top_options; ++i)
+            {
+                if (i == highlight)
+                {
+                    wattron(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | A_BOLD);
+                }
+                else
+                {
+                    wattron(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+                }
+                mvwprintw(options_win, i + 3, (win_width - strlen(top_options[i])) / 2, " %s ",
+                          top_options[i]);
+                wattroff(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | COLOR_PAIR(COMP_COLOR_NORMAL) | A_BOLD);
+            }
+
+            // Display bottom options
+            int bottom_y = win_height - 2;
+            int left_x   = 2;
+            int right_x  = win_width - strlen(bottom_options[1]) - 2;
+
+            // Left bottom option (COMPRESS)
+            if (highlight == num_top_options)
+            {
+                wattron(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | A_BOLD);
             }
             else
             {
-              return 2; // return 2 (compression type: zip)
+                wattron(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
             }
-          }
-          else if (highlight == num_top_options + 1)
-          {
-            delwin(options_win);
-            refresh(); // Refresh the main window to ensure no artifacts remain
-            return 0;  // Indicate "EXIT" was chosen
-          }
-          break;
-        case 27: // ESC key
-          delwin(options_win);
-          refresh(); // Refresh the main window to ensure no artifacts remain
-          return -1;
-      }
-    }
-  }
+            mvwprintw(options_win, bottom_y, left_x, " %s ", bottom_options[0]);
+            wattroff(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | COLOR_PAIR(COMP_COLOR_NORMAL) | A_BOLD);
 
-  delwin(options_win);
-  wrefresh(parent_win);
+            // Right bottom option (EXIT)
+            if (highlight == num_top_options + 1)
+            {
+                wattron(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | A_BOLD);
+            }
+            else
+            {
+                wattron(options_win, COLOR_PAIR(COMP_COLOR_NORMAL));
+            }
+            mvwprintw(options_win, bottom_y, right_x, "%s", bottom_options[1]);
+            wattroff(options_win, COLOR_PAIR(COMP_COLOR_HIGHLIGHT) | COLOR_PAIR(COMP_COLOR_NORMAL) | A_BOLD);
+
+            // Refresh and wait for user input
+            wrefresh(options_win);
+            c = wgetch(options_win);
+
+            switch (c)
+            {
+                case KEY_LEFT:
+                    if (highlight == num_top_options + 1)
+                    {
+                        highlight = num_top_options; // Move to COMPRESS
+                    }
+                    break;
+                case KEY_RIGHT:
+                    if (highlight == num_top_options)
+                    {
+                        highlight = num_top_options + 1; // Move to EXIT
+                    }
+                    break;
+                case 10: // Enter key
+                    if (highlight == num_top_options)
+                    {
+                        // Handle compression logic
+                        delwin(options_win);
+                        refresh(); // Refresh the main window to ensure no artifacts remain
+                        if (choice == OPTION_TAR)
+                        {
+                            return OPTION_TAR; // return 1 (compression type: tar)
+                        }
+                        else
+                        {
+                            return OPTION_ZIP; // return 2 (compression type: zip)
+                        }
+                    }
+                    else if (highlight == num_top_options + 1)
+                    {
+                        delwin(options_win);
+                        refresh(); // Refresh the main window to ensure no artifacts remain
+                        return OPTION_EXIT;  // Indicate "EXIT" was chosen
+                    }
+                    break;
+                case 27: // ESC key
+                    delwin(options_win);
+                    refresh(); // Refresh the main window to ensure no artifacts remain
+                    return -1;
+            }
+        }
+    }
+
+    delwin(options_win);
+    wrefresh(parent_win);
 }
 
 void show_term_message(const char* message, int err)
@@ -340,23 +340,22 @@ void init_custom_color(short color_index, int r, int g, int b)
 
 void color_pair_init()
 {
-  // Define color pairs
-  init_pair(1, COLOR_GREEN, COLOR_BLACK); // File color (Green)
-  init_pair(2, COLOR_BLUE, COLOR_BLACK);  // Directory color (Blue)
-  init_pair(3, 167, 235);                 // Unextracted archives (Red)
-  init_pair(4, 175, 235);                 // Audio files (Pink)
-  init_pair(5, 214, 235);                 // Image files (yellow)
-  init_pair(6, 108, 235);                 // bright blue gruvbox type
-  init_pair(7, 108, 235);                 // aqua gruvbox
-  init_pair(8, 61, 234);                  // violet base03
-  init_pair(9, 234, 230);
-  // init_pair(9, 235, 223); // gruvbox dark bg, white fg
-  init_pair(10, 125, 234); // magenta
-  init_pair(11, 168, COLOR_BLACK);
-  init_pair(12, COLOR_RED, COLOR_BLACK);   // Regular color red
-  init_custom_color(13, 0xDC, 0x9A, 0x1F); // #BDAE93 #DC9A1F
-  init_pair(14, 235, 175);                 // ping bg, black fg
-  init_pair(15, 175, 175);
+  // Define color pairs with descriptive names
+  init_pair(FILE_COLOR_PAIR, COLOR_GREEN, COLOR_BLACK);   // File color (Green)
+  init_pair(DIR_COLOR_PAIR, COLOR_BLUE, COLOR_BLACK);     // Directory color (Blue)
+  init_pair(ARCHIVE_COLOR_PAIR, 167, 235);                // Unextracted archives (Red)
+  init_pair(AUDIO_COLOR_PAIR, 175, 235);                  // Audio files (Pink)
+  init_pair(IMAGE_COLOR_PAIR, 214, 235);                  // Image files (Yellow)
+  init_pair(SYMLINK_COLOR_PAIR, 108, 235);                // Bright blue (Gruvbox type)
+  init_pair(AQUA_COLOR_PAIR, 108, 235);                   // Aqua (Gruvbox)
+  init_pair(VIOLET_COLOR_PAIR, 61, 234);                  // Violet (Base03)
+  init_pair(DARK_BG_COLOR_PAIR, 234, 230);                // Dark background, light foreground
+  init_pair(MAGENTA_COLOR_PAIR, 125, 234);                // Magenta
+  init_pair(SPECIAL_COLOR_PAIR, 168, COLOR_BLACK);        // Special color (e.g., Orange)
+  init_pair(ERROR_COLOR_PAIR, COLOR_RED, COLOR_BLACK);    // Error messages (Red)
+  init_custom_color(CUSTOM_COLOR_PAIR, 0xDC, 0x9A, 0x1F); // Custom color (#DC9A1F)
+  init_pair(TITLE_COLOR_PAIR, 235, 175);                  // Pink background, black foreground
+  init_pair(HIGHLIGHT_COLOR_PAIR, 175, 175);              // Highlight color
 }
 
 int confirm_action(WINDOW* win, const char* message)

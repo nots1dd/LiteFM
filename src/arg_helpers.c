@@ -184,7 +184,9 @@ int handle_arguments(int argc, char* argv[], char* current_path)
     {
       get_current_working_directory(current_path, PATH_MAX);
     }
-  } else {
+  }
+  else
+  {
     get_current_working_directory(current_path, PATH_MAX);
   }
   return 1;
