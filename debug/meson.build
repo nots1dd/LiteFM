@@ -50,7 +50,8 @@ src_files = files(
   '../src/highlight.c',
   '../src/hashtable.c',
   '../src/arg_helpers.c',
-  '../src/musicpreview.c'
+  '../src/musicpreview.c',
+  '../src/inodeinfo.c'
 )
 
 # UNCOMMENT LINES 59, 60, 68, 69 to ENABLE ASAN Memory leak VERBOSE output
