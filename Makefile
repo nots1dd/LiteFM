@@ -38,8 +38,8 @@ YAML_INCS = $(shell pkg-config --cflags yaml-0.1)
 
 SDL2_LIBS = $(shell pkg-config --libs sdl2)
 SDL2_INCS = $(shell pkg-config --cflags sdl2)
-SDL2_MIXER_LIBS = $(shell pkg-config --libs sdl2_mixer)
-SDL2_MIXER_INCS = $(shell pkg-config --cflags sdl2_mixer)
+SDL2_MIXER_LIBS = $(shell pkg-config --libs SDL2_mixer)
+SDL2_MIXER_INCS = $(shell pkg-config --cflags SDL2_mixer)
 
 # Source files
 SRCS = lfm.c \
@@ -53,7 +53,8 @@ SRCS = lfm.c \
        src/highlight.c \
        src/hashtable.c \
        src/arg_helpers.c \
-       src/musicpreview.c
+       src/musicpreview.c \
+			 src/inodeinfo.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)

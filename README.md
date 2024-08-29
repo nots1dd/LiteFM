@@ -56,11 +56,11 @@ Written in C with NCurses, libyaml, rsync and more!
 > 
 > ### Yanking
 > 
-> Every Yanking function only work with `WAYLAND` and `X11` display servers!!
+> The yank function `y (getting file location)` only work with `WAYLAND` and `X11` display servers!!
 > 
 > If you are on other display servers like `Mir`, `SurfaceFlinger` and yanking does NOT work:
 > 
-> You can create an issue or even submit a PR as per `CONTRIBUTION.md`
+> You can create an issue or even submit a PR as per **[CONTRIBUTION.md](https://github.com/nots1dd/blob/main/CONTRIBUTION.md)**
 > 
 > ### Environment Vars
 > 
@@ -81,33 +81,33 @@ Written in C with NCurses, libyaml, rsync and more!
 As LiteFM can only be built manually, here is a table of all deps used:
 
 
-| Package Manager | Debian                  | Fedora (rpm)             | Arch Linux (arch)       |
-|-----------------|-------------------------|--------------------------|-------------------------|
-| **64-bit**      |                         |                          |                         |
-|                 | `libncursesw5-dev`      | `ncurses-devel`          | `ncurses`               |
-|                 | `cmake`                 | `cmake`                  | `cmake`                 |
-|                 | `make`                  | `make`                   | `make`                  |
-|                 | `libarchive-dev`        | `libarchive-devel`       | `libarchive`            |
-|                 | `libyaml-dev`           | `libyaml-devel`          | `yaml-cpp`              |
-|                 | `rsync`                 | `rsync`                  | `rsync`                 |
-|                 | `pkg-config`            | `pkg-config`             | `pkg-config`            |
-| **32-bit**      |                         |                          |                         |
-|                 | `libncurses5-dev`       | `ncurses-libs`           | `lib32-ncurses5`        |
-|                 | `libarchive-dev:i386`   | `libarchive-devel.i686`  | `lib32-libarchive`      |
-|                 | `libyaml-dev:i386`      | `libyaml-devel.i686`     | `lib32-yaml-cpp`        |
-|                 | `rsync:i386`            | `rsync.i686`             | `lib32-rsync`           |
-|                 | `pkg-config:i386`       | `pkg-config.i686`        | `lib32-pkg-config`      |
+| Package Manager | Debian                    | Fedora (RPM)             | Arch Linux              |
+|-----------------|---------------------------|--------------------------|-------------------------|
+| **64-bit**      |                           |                          |                         |
+|                 | libncursesw5-dev          | ncurses-devel            | ncurses                 |
+|                 | cmake                     | cmake                    | cmake                   |
+|                 | make                      | make                     | make                    |
+|                 | libarchive-dev            | libarchive-devel         | libarchive              |
+|                 | libyaml-dev               | libyaml-devel            | yaml-cpp                |
+|                 | rsync                     | rsync                    | rsync                   |
+|                 | pkg-config                | pkg-config               | pkg-config              |
+| **32-bit**      |                           |                          |                         |
+|                 | libncurses5-dev           | ncurses-libs             | lib32-ncurses5          |
+|                 | libarchive-dev:i386       | libarchive-devel.i686    | lib32-libarchive        |
+|                 | libyaml-dev:i386          | libyaml-devel.i686       | lib32-yaml-cpp          |
+|                 | rsync:i386                | rsync.i686               | lib32-rsync             |
+|                 | pkg-config:i386           | pkg-config.i686          | lib32-pkg-config        |
 
 
 The above are the listed **32-bit** and **64-bit** libraries that are used in this project.
 
 ->Only 64-bit libs have been tested to fruition so far 
 
-Refer to this table to understand the **Building** procedure better
+Refer to this table to understand the **[Building](https://github.com/nots1dd/LiteFM?tab=readme-ov-file#building)** procedure better
 
 ## Building
 
-REFER TO **Dependencies** TO BETTER UNDERSTAND THE BUILDING PROCESS AND FLOW.
+REFER TO **[Dependencies](https://github.com/nots1dd/LiteFM?tab=readme-ov-file#dependencies)** TO BETTER UNDERSTAND THE BUILDING PROCESS AND FLOW.
 
 LiteFM cannot be installed in any UNIX-like distribution but can be easily built!
 
@@ -116,9 +116,11 @@ LiteFM cannot be installed in any UNIX-like distribution but can be easily built
 > 
 > The script contains every method of installation, logging and setup of litefm
 > 
-> Just run `chmod +x build.sh` 
-> 
-> Execute it by `./build.sh` 
+> Just run: 
+> ```sh 
+> chmod +x build.sh
+> ./build.sh 
+> ```
 > 
 > Just wait for it to setup and answer a few questions, thats it!
 
@@ -163,10 +165,9 @@ make
 -> Ensure that you have `meson` and `ninja` (or `ninja-build`) installed in your distribution.
 
 ```sh
-mkdir build && cd build 
-meson ..
-ninja
-sudo ninja install
+meson setup build/
+meson compile -C build/
+./build/litefm
 ```
 
 NOTE: Running `sudo ninja install` will MOVE the litefm executable to `/usr/local/bin` directory. 
@@ -195,9 +196,10 @@ You can add the man page for LiteFM in your system by the following commands:
 
 [NOTE: You will have to keep updating this man page manually every time a new functionality is introduced.]
 
-`sudo cp components/litefm.1 /usr/share/man/man1`
-
-`cd /usr/share/man/man1/ && sudo gzip litefm.1`
+```sh 
+sudo cp components/litefm.1 /usr/share/man/man1
+cd /usr/share/man/man1/ && sudo gzip litefm.1
+```
 
 Thats it! The man page is ready to be used via `man litefm`
 
