@@ -8,9 +8,9 @@
  * ---------------------------------------------------------------------------
  *  File:        logging.h
  *  Description: This header file provides the interface for logging
- * functionality in the LiteFM file manager. It includes declarations for
- * functions to manage logging, including creating necessary directories and
- *                files, and writing log messages with various levels of
+ *               functionality in the LiteFM file manager. It includes declarations for
+ *               functions to manage logging, including creating necessary directories and
+ *               files, and writing log messages with various levels of
  * severity.
  *
  *  Author:      Siddharth Karanam
@@ -20,16 +20,16 @@
  *
  *  License:     <GNU GPL v3>
  *
- *  IMPORTANT NOTE ::
+ *                 **IMPORTANT NOTE**
  *
  *  If you do not have $HOME/.cache/litefm/log/litefm.log and did not use
  * `build.sh`, it may break LiteFM! Ensure that you have that directory created
  * by running `build.sh` for LiteFM to function correctly.
  *
  *  Notes:       The logging functions in this header manage log file creation,
- *                directory setup, and log message formatting. Ensure that your
- *                system permissions allow the creation and modification of
- * files in the specified log directory.
+ *               directory setup, and log message formatting. Ensure that your
+ *               system permissions allow the creation and modification of
+ *               files in the specified log directory.
  *
  *  Revision History:
  *      <31/07/24> - Initial creation and function declarations added.

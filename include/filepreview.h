@@ -56,7 +56,7 @@
 const char* get_file_extension(const char* filename);
 void        display_file(WINDOW* info_win, const char* filename);
 const char* determine_file_type(const char* filename);
-int         is_readable_extension(const char* filename);
+const char* is_readable_extension(const char* filename, const char* current_path);
 const char* format_file_size(off_t size);
 int         is_image(const char* filename);
 int         is_audio(const char* filename);

@@ -32,10 +32,10 @@
  */
 
 #include <sys/types.h>
-#include <fcntl.h>
 
 /* LITEFM DEDICATED HEADERS */
 
+#include "include/structs.h"
 #include "src/getFreeSpace.c"
 #include "include/cursesutils.h"
 #include "include/filepreview.h"
@@ -49,22 +49,23 @@
 #include "include/arg_helpers.h"
 #include "include/musicpreview.h"
 #include "include/inodeinfo.h"
+#include "include/kbinput.h"
 
-#define MAX_ITEMS 1024
-#define MAX_HISTORY 256
+#define MAX_ITEMS            1024
+#define MAX_HISTORY          256
 #define MAX_ITEM_NAME_LENGTH 80  // Define a maximum length for item names
 
 /* UNICODES DEF */
 
-#define UNICODE_DISK "💾"
-#define UNICODE_FOLDER "📁"
+#define UNICODE_DISK    "💾"
+#define UNICODE_FOLDER  "📁"
 #define UNICODE_SYMLINK "🔗"
 #define UNICODE_ARCHIVE "📦"
-#define UNICODE_AUDIO "🎵 "
-#define UNICODE_IMAGE "🖼️"
-#define UNICODE_FILE "📄"
-#define UNICODE_VIDEO "🎥"
-#define UNICODE_SEARCH "🔍"
+#define UNICODE_AUDIO   "🎵 "
+#define UNICODE_IMAGE   "🖼️"
+#define UNICODE_FILE    "📄"
+#define UNICODE_VIDEO   "🎥"
+#define UNICODE_SEARCH  "🔍"
 
 
 const char * err_message[] = {
@@ -75,18 +76,6 @@ const char * err_message[] = {
   "|_| \\_|\\___/  |_|   |___|_____|_____|____/_/    |____/___|_| \\_\\____/  (_)",
   " "
 };
-
-typedef struct {
-  char name[NAME_MAX];
-  int is_dir;
-}
-FileItem;
-
-typedef struct {
-  char path[PATH_MAX];
-  int highlight;
-}
-DirHistory;
 
 void list_dir(WINDOW *win, const char *path, FileItem items[], int *count, int show_hidden) {
     DIR *dir;
@@ -164,21 +153,6 @@ void list_dir(WINDOW *win, const char *path, FileItem items[], int *count, int s
     wrefresh(win);
 }
 
-int is_symlink(const char *path) {
-    struct stat statbuf;
-    char tmpPath[MAX_PATH_LENGTH];
-    strcpy(tmpPath, path);
-    truncate_symlink_name(tmpPath);
-    // Use lstat to check for symbolic links
-    if (lstat(tmpPath, &statbuf) == 0) {
-        if (S_ISLNK(statbuf.st_mode)) {
-            return 1; // Return 1 (true) if it's a symbolic link
-        }
-    }
-
-    return 0; // Return 0 (false) if it's not a symbolic link or lstat fails
-}
-
 void print_items(WINDOW *win, FileItem items[], int count, int highlight,
                  const char *current_path, int show_hidden, int scroll_position, int height) {
     char *hidden_dir;
@@ -248,8 +222,8 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
                 wattron(win, COLOR_PAIR(DIR_COLOR_PAIR));
                 mvwprintw(win, i + 4, 5, "%s", UNICODE_FOLDER);
             } else if (is_symlink(full_path)) {
-                wattron(win, COLOR_PAIR(SYMLINK_COLOR_PAIR));  // Choose an appropriate color pair for symlinks
-                mvwprintw(win, i + 4, 5, "%s", UNICODE_SYMLINK); // Unicode for symlink
+                wattron(win, COLOR_PAIR(SYMLINK_COLOR_PAIR));
+                mvwprintw(win, i + 4, 5, "%s", UNICODE_SYMLINK);
             } else {
                 // Determine file type by extension
                 char *extension = strrchr(items[index].name, '.');
@@ -303,84 +277,6 @@ void print_items(WINDOW *win, FileItem items[], int count, int highlight,
     }
 }
 
-int find_item(const char *query, FileItem items[], int item_count, int *start_index, int direction) {
-    char lower_query[NAME_MAX];
-    for (int i = 0; query[i] && i < NAME_MAX; i++) {
-        lower_query[i] = tolower(query[i]);
-    }
-    lower_query[strlen(query)] = '\0'; 
-
-    if (direction == 1) { // Forward search
-        for (int i = *start_index; i < item_count; i++) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-        for (int i = 0; i < *start_index; i++) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-    } else if (direction == -1) { // Backward search
-        for (int i = *start_index; i >= 0; i--) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-        for (int i = item_count - 1; i > *start_index; i--) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-    }
-
-    return -1; // Not found
-}
-
 void refreshMainWin(WINDOW *win, WINDOW *info_win, FileItem items[], int item_count, int highlight, const char *current_path, int show_hidden, int scroll_position, int height, int info_height, int info_width, int info_starty, int info_startx) {
   check_term_size(win, info_win);
   werase(win);
@@ -401,7 +297,8 @@ void refreshMainWin(WINDOW *win, WINDOW *info_win, FileItem items[], int item_co
   if (item_count > 0) {
     werase(info_win);
     box(info_win, 0, 0);
-    if (is_readable_extension(items[highlight].name) && !items[highlight].is_dir) {
+    const char *file_type = is_readable_extension(items[highlight].name, current_path);
+    if (file_type != NULL && strcmp(file_type, "READ") == 0 && !items[highlight].is_dir) {
         char full_path_info[PATH_MAX];
         snprintf(full_path_info, sizeof(full_path_info), "%s/%s", current_path, items[highlight].name); 
         // Load syntax elements from YAML file
@@ -466,27 +363,15 @@ int main(int argc, char* argv[]) {
       switch (choice) {
       case KEY_UP:
       case 'k':
-        show_term_message("", -1);
-        if (highlight > 0) {
-          highlight--;
-          if (highlight < scroll_position) {
-            scroll_position--;
-          }
-        }
+        handleInputScrollUp(&highlight, &scroll_position);
         break;
       case KEY_DOWN:
       case 'j':
-        show_term_message("", -1);
-        if (highlight < item_count - 1) {
-          highlight++;
-          if (highlight >= scroll_position + height - 8) {
-            scroll_position++;
-          }
-        }
+        handleInputScrollDown(&highlight, &scroll_position, &item_count, &height);
         break;
-      
       case KEY_LEFT:
       case 'h':
+      { 
           show_term_message("", -1);
 
           if (history_count > 0) {
@@ -520,9 +405,9 @@ int main(int argc, char* argv[]) {
           // List the contents of the new directory
           list_dir(win, current_path, items, &item_count, show_hidden);
           scroll_position = 0;
+          list_dir(win, current_path, items, &item_count, show_hidden);
           break;
-
-      
+      }
       case KEY_RIGHT:
       case 'l':
         show_term_message("", -1);
@@ -556,14 +441,14 @@ int main(int argc, char* argv[]) {
               highlight = 0;
               scroll_position = 0;
             } else {
-              if ((is_readable_extension(items[highlight].name) || !is_image(items[highlight].name)) && !items[highlight].is_dir && !is_audio(items[highlight].name)) {
+              if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") == 0) {
                 firstKeyPress = true;
                 launch_env_var(win, current_path, items[highlight].name, "EDITOR");
                 /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
-            } else if (is_image(items[highlight].name) && !items[highlight].is_dir) {
+            } else if ((strcmp(is_readable_extension(items[highlight].name, current_path), "IMAGE") == 0)  && !items[highlight].is_dir) {
               firstKeyPress = true;
               launch_env_var(win, current_path, items[highlight].name, "VISUAL");
-            } else if (is_audio(items[highlight].name) && !items[highlight].is_dir) {
+            } else if ((strcmp(is_readable_extension(items[highlight].name, current_path), "AUDIO") == 0) && !items[highlight].is_dir) {
               char file_path[MAX_PATH_LENGTH];
               snprintf(file_path, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
               show_term_message(" [PREVIEW] Previewing audio file. Press q to quit.", 0);
@@ -577,7 +462,8 @@ int main(int argc, char* argv[]) {
         }
       break; 
       case 'G':
-        highlight = item_count - 1; // will go to the last element in the currently displaying list
+        int max_y = getmaxy(win);
+        handleInputMovCursBtm(&highlight, &item_count, &scroll_position, &max_y);
         break;
       case 'g':
         show_term_message(" [!] g", -1);
@@ -585,6 +471,7 @@ int main(int argc, char* argv[]) {
         char nextch = getch();
         if (nextch == 'g') {
           show_term_message("", -1);
+          scroll_position = 0;
           highlight = 0; // will go to the top most element in the current displaying list
         } else if (nextch == 't') { // GO TO func
           char destination_path[PATH_MAX];
@@ -613,10 +500,8 @@ int main(int argc, char* argv[]) {
         }
         break;
       case '.':
-        show_hidden = !show_hidden; // Toggle show_hidden flag
+        handleInputToggleHidden(&show_hidden, &scroll_position, &highlight);
         list_dir(win, current_path, items, & item_count, show_hidden);
-        highlight = 0;
-        scroll_position = 0;
         break;
       case 'H':
         strcpy(current_path, "/");
@@ -757,7 +642,7 @@ int main(int argc, char* argv[]) {
 
         if (strlen(query) > 0) {
           int start_index = highlight + 1;
-          int found_index = find_item(query, items, item_count, & start_index, 1);
+          int found_index = find_item(query, items, &item_count, & start_index, 1);
           if (found_index != -1) {
             highlight = found_index;
             if (highlight >= scroll_position + height - 8) {
@@ -775,7 +660,7 @@ int main(int argc, char* argv[]) {
       case 'n':
         if (strlen(last_query) > 0) {
           int start_index = highlight + 1;
-          int found_index = find_item(last_query, items, item_count, & start_index, 1);
+          int found_index = find_item(last_query, items, &item_count, & start_index, 1);
           if (found_index != -1 && found_index != highlight) {
             highlight = found_index;
             if (highlight >= scroll_position + height - 8) {
@@ -792,7 +677,7 @@ int main(int argc, char* argv[]) {
       case 'N':
         if (strlen(last_query) > 0) {
           int start_index = highlight - 1;
-          int found_index = find_item(last_query, items, item_count, & start_index, -1);
+          int found_index = find_item(last_query, items, &item_count, & start_index, -1);
           if (found_index != -1 && found_index != highlight) {
             highlight = found_index;
             if (highlight >= scroll_position + height - 8) {
@@ -976,7 +861,7 @@ int main(int argc, char* argv[]) {
 
               if (strlen(query) > 0) {
                 int start_index = highlight + 1;
-                int found_index = find_item(query, items, item_count, & start_index, 1);
+                int found_index = find_item(query, items, &item_count, & start_index, 1);
                 if (found_index != -1) {
                   highlight = found_index;
                   if (highlight >= scroll_position + height - 8) {
@@ -1015,7 +900,7 @@ int main(int argc, char* argv[]) {
           scroll_position = 0;
           break;
         } else {
-          if (is_readable_extension(items[highlight].name)) {
+          if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") != 0) {
             get_file_info_popup(win, current_path, items[highlight].name);
           } else {
             log_message(LOG_LEVEL_DEBUG, "Something went wrong...");
@@ -1106,7 +991,7 @@ int main(int argc, char* argv[]) {
 
               if (strlen(query) > 0) {
                 int start_index = highlight + 1;
-                int found_index = find_item(query, items, item_count, & start_index, 1);
+                int found_index = find_item(query, items, &item_count, & start_index, 1);
                 if (found_index != -1) {
                   highlight = found_index;
                   if (highlight >= scroll_position + height - 8) {

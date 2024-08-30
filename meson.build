@@ -51,7 +51,8 @@ src_files = files(
   'src/hashtable.c',
   'src/arg_helpers.c',
   'src/musicpreview.c',
-  'src/inodeinfo.c'
+  'src/inodeinfo.c',
+  'src/kbinput.c'
 )
 
 # Executable target

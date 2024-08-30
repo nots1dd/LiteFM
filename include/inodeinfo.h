@@ -25,7 +25,7 @@
  *      <29/08/24> - Initial creation and function declarations added.
  *
  * ---------------------------------------------------------------------------
- */ 
+ */
 
 #ifndef INODE_INFO_H
 #define INODE_INFO_H
@@ -40,5 +40,6 @@
 void get_file_info_popup(WINDOW* main_win, const char* path, const char* filename);
 void get_file_info(WINDOW* info_win, const char* path, const char* filename);
 void truncate_symlink_name(char* name);
+int  is_symlink(const char* path);
 
 #endif

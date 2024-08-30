@@ -68,13 +68,19 @@ Written in C with NCurses, libyaml, rsync and more!
 > 
 > Hence, ensure that you have your preferred display server and editor setup in your UNIX system so that LiteFM can be even more productive to you!
 > 
-> To set an env var: `echo 'export $EDITOR=/path/to/editor' >> ~/yourshellrc`
+> To set an env var: 
+```sh 
+echo 'export EDITOR=/sbin/nvim' >> ~/.bashrc
+```
+> You can set your desired **$EDITOR** and shell rc.
 > 
-> Setting your `$EDITOR` as any editor that creates a new window that resizes the main litefm window, will lead to litefm breaking so, (NOT LIKELY)
+> Setting your **$EDITOR** as any editor that creates a new window that resizes the main litefm window, will lead to litefm to look a bit weird (it will resize)
 > 
-> It is HIGHLY recommended that you pick a `terminal editor` like `nano`, `vi`, `vim`, `nvim`, so on
->
-> You can setup `$VISUAL` as whatever you please (even if it creates a new window and resizes litefm)
+> It is HIGHLY recommended that you pick a **terminal editor** like `nano`, `vi`, `vim`, `nvim`, so on
+> 
+> Also for **$VISUAL** it is recommended that you go for something minimal like `swappy`, `satty`, so on
+> 
+> You can setup **$VISUAL** as whatever you please (even if it creates a new window and resizes litefm)
 
 ## Dependencies
 

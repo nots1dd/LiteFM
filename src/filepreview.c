@@ -34,6 +34,10 @@ const char* get_file_extension(const char* filename)
     {
       return "sh"; // Return the extension for shell scripts
     }
+    else if (file_type && strcmp(file_type, "application/json") == 0)
+    {
+      return "json";
+    }
     return ""; // No extension found and not a shell script
   }
 
@@ -158,7 +162,11 @@ const char* get_keywords_file(const char* ext)
     {
       snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/c-keywords.yaml", project_dir);
     }
-    // Add more mappings as needed
+    else if (strcmp(ext, "toml") == 0 || strcmp(ext, "lock") == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/json-keywords.yaml",
+               project_dir);
+    }
     else
     {
       snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/%s-keywords.yaml", project_dir,
@@ -277,42 +285,48 @@ void display_file(WINDOW* info_win, const char* filename)
   wrefresh(info_win); // Refresh the window to show the content
 }
 
-int is_readable_extension(const char* filename)
-{
-  // List of supported extensions (excluding the dot)
-  const char* supported_extensions[] = {
-    "txt", "sh", "json",   "conf", "log", "md",   "c",    "h",   "hpp",  "cpp",
-    "cxx", "cc", "js",     "ts",   "jsx", "java", "dart", "asm", "py",   "rs",
-    "go",  "pl", "backup", "rasi", "nix", "yaml", "html", "css", "scss", NULL};
+const char* is_readable_extension(const char* filename, const char* current_path) { 
+    // Check file type based on MIME type
+    char filepath[PATH_MAX];
+    snprintf(filepath, PATH_MAX, "%s/%s", current_path, filename);
+    const char* file_type = determine_file_type(filepath);
+    
+    if (file_type) {
+        // Check for readable text files
+        if (strcmp(file_type, "text/plain") == 0 || strcmp(file_type, "text/x-shellscript") == 0 ||
+            strcmp(file_type, "application/json") == 0 || strcmp(file_type, "text/x-ruby") == 0 ||
+            strcmp(file_type, "text/x-c") == 0 || strcmp(file_type, "text/x-c++") == 0 ||
+            strcmp(file_type, "text/x-script.python") == 0 || strcmp(file_type, "text/x-java-source") == 0 ||
+            strcmp(file_type, "application/octet-stream") == 0 || strcmp(file_type, "text/x-makefile") == 0 ||
+            strcmp(file_type, "text/html") == 0 || strcmp(file_type, "text/css") == 0) {
+            return "READ";
+        }
+        
+        // Check for audio files
+        if (strcmp(file_type, "audio/mpeg") == 0 || strcmp(file_type, "audio/x-wav") == 0 ||
+            strcmp(file_type, "audio/x-aiff") == 0 || strcmp(file_type, "audio/ogg") == 0 ||
+            strcmp(file_type, "audio/flac") == 0 || strcmp(file_type, "audio/x-matroska") == 0) {
+            return "AUDIO";
+        }
 
-  // Check if the file has a supported extension
-  const char* ext = get_file_extension(filename);
-  if (ext[0] != '\0')
-  {
-    for (int i = 0; supported_extensions[i] != NULL; i++)
-    {
-      if (strcmp(ext, supported_extensions[i]) == 0)
-      { // Compare directly with the extension list
-        return 1;
-      }
+        // Check for video files
+        if (strcmp(file_type, "video/mp4") == 0 || strcmp(file_type, "video/x-msvideo") == 0 ||
+            strcmp(file_type, "video/x-matroska") == 0 || strcmp(file_type, "video/x-ms-wmv") == 0 ||
+            strcmp(file_type, "video/webm") == 0 || strcmp(file_type, "video/x-flv") == 0 ||
+            strcmp(file_type, "video/x-ms-asf") == 0) {
+            return "VIDEO";
+        }
+
+        // Check for image files
+        if (strcmp(file_type, "image/jpeg") == 0 || strcmp(file_type, "image/png") == 0 ||
+            strcmp(file_type, "image/gif") == 0 || strcmp(file_type, "image/bmp") == 0 ||
+            strcmp(file_type, "image/x-icon") == 0 || strcmp(file_type, "image/tiff") == 0 ||
+            strcmp(file_type, "image/webp") == 0) {
+            return "IMAGE";
+        }
     }
-  }
 
-  // Check file type based on MIME type
-  const char* file_type = determine_file_type(filename);
-  if (file_type &&
-      (strcmp(file_type, "text/plain") == 0 || strcmp(file_type, "text/x-shellscript") == 0 ||
-       strcmp(file_type, "application/json") == 0 ||
-       strcmp(file_type, "text/x-c") == 0 ||           // C source code
-       strcmp(file_type, "text/x-c++") == 0 ||         // C++ source code
-       strcmp(file_type, "text/x-python") == 0 ||      // Python script
-       strcmp(file_type, "text/x-java-source") == 0 || // Java source code
-       strcmp(file_type, "text/html") == 0 || strcmp(file_type, "text/css") == 0))
-  {
-    return 1;
-  }
-
-  return 0;
+    return NULL; // Return NULL if none of the conditions match
 }
 
 const char* format_file_size(off_t size)
@@ -339,62 +353,6 @@ const char* format_file_size(off_t size)
   return formatted_size;
 }
 
-int is_image(const char* filename)
-{
-  const char* image_extensions[] = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"};
-  size_t      num_extensions     = sizeof(image_extensions) / sizeof(image_extensions[0]);
-
-  const char* ext = strrchr(filename, '.');
-  if (!ext)
-    return 0;
-
-  char   ext_lower[16];
-  size_t i;
-  for (i = 0; ext[i] && i < sizeof(ext_lower) - 1; i++)
-  {
-    ext_lower[i] = tolower((unsigned char)ext[i]);
-  }
-  ext_lower[i] = '\0';
-
-  for (i = 0; i < num_extensions; i++)
-  {
-    if (strcmp(ext_lower, image_extensions[i]) == 0)
-    {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
-int is_audio(const char* filename)
-{
-  const char* image_extensions[] = {".mp3", ".wav", ".flac", ".opus", ".m4a"};
-  size_t      num_extensions     = sizeof(image_extensions) / sizeof(image_extensions[0]);
-
-  const char* ext = strrchr(filename, '.');
-  if (!ext)
-    return 0;
-
-  char   ext_lower[16];
-  size_t i;
-  for (i = 0; ext[i] && i < sizeof(ext_lower) - 1; i++)
-  {
-    ext_lower[i] = tolower((unsigned char)ext[i]);
-  }
-  ext_lower[i] = '\0';
-
-  for (i = 0; i < num_extensions; i++)
-  {
-    if (strcmp(ext_lower, image_extensions[i]) == 0)
-    {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
 bool is_valid_editor(const char* editor)
 {
   for (size_t i = 0; i < strlen(editor); ++i)
@@ -414,7 +372,6 @@ void launch_env_var(WINDOW* win, const char* current_path, const char* filename,
   int         isVISUAL = 0;
   if (strcmp(env_var, "VISUAL") == 0)
     isVISUAL = 1; // just getting info on what env_var is being launched based
-                  // on that will decide the delay
   /*
    * THIS IS BECAUSE WHEN WINDOW RESIZES, LITEFM HAS A FUNCTION TO RESIZE THE
    * WINDOWING SYSTEM

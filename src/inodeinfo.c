@@ -408,3 +408,21 @@ void truncate_symlink_name(char* name)
     *arrow = '\0'; // Truncate the name at the " -> " point
   }
 }
+
+int is_symlink(const char* path)
+{
+  struct stat statbuf;
+  char        tmpPath[MAX_PATH_LENGTH];
+  strcpy(tmpPath, path);
+  truncate_symlink_name(tmpPath);
+  // Use lstat to check for symbolic links
+  if (lstat(tmpPath, &statbuf) == 0)
+  {
+    if (S_ISLNK(statbuf.st_mode))
+    {
+      return 1; // Return 1 (true) if it's a symbolic link
+    }
+  }
+
+  return 0; // Return 0 (false) if it's not a symbolic link or lstat fails
+}
