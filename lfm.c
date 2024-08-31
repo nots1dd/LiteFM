@@ -65,7 +65,6 @@
 #define UNICODE_IMAGE   "🖼️"
 #define UNICODE_FILE    "📄"
 #define UNICODE_VIDEO   "🎥"
-#define UNICODE_SEARCH  "🔍"
 
 
 const char * err_message[] = {
@@ -441,21 +440,25 @@ int main(int argc, char* argv[]) {
               highlight = 0;
               scroll_position = 0;
             } else {
-              if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") == 0) {
-                firstKeyPress = true;
-                launch_env_var(win, current_path, items[highlight].name, "EDITOR");
-                /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
-            } else if ((strcmp(is_readable_extension(items[highlight].name, current_path), "IMAGE") == 0)  && !items[highlight].is_dir) {
-              firstKeyPress = true;
-              launch_env_var(win, current_path, items[highlight].name, "VISUAL");
-            } else if ((strcmp(is_readable_extension(items[highlight].name, current_path), "AUDIO") == 0) && !items[highlight].is_dir) {
-              char file_path[MAX_PATH_LENGTH];
-              snprintf(file_path, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
-              show_term_message(" [PREVIEW] Previewing audio file. Press q to quit.", 0);
-              preview_audio(file_path);
-              show_term_message("", -1);
+             if (strcmp(is_readable_extension(items[highlight].name, current_path), "NULL") == 0) {
+              show_term_message("Cannot do anything here.", 1);
             } else {
-              show_term_message("Cannot enter this directory/file.", 1);
+                if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") == 0) {
+                  firstKeyPress = true;
+                  launch_env_var(win, current_path, items[highlight].name, "EDITOR");
+                  /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh everything back to how it was */
+              } else if ((strcmp(is_readable_extension(items[highlight].name, current_path), "IMAGE") == 0)  && !items[highlight].is_dir) {
+                firstKeyPress = true;
+                launch_env_var(win, current_path, items[highlight].name, "VISUAL");
+              } else if ((strcmp(is_readable_extension(items[highlight].name, current_path), "AUDIO") == 0) && !items[highlight].is_dir) {
+                char file_path[MAX_PATH_LENGTH];
+                snprintf(file_path, MAX_PATH_LENGTH, "%s/%s", current_path, items[highlight].name);
+                show_term_message(" [PREVIEW] Previewing audio file. Press q to quit.", 0);
+                preview_audio(file_path);
+                show_term_message("", -1);
+              } else {
+                show_term_message("Cannot enter this directory/file.", 1);
+              }
             }
             check_term_size(win, info_win);
             werase(win);
@@ -633,65 +636,22 @@ int main(int argc, char* argv[]) {
       break;
       case '/': // Find file or directory
       { 
-        wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-        mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
-        wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-        wrefresh(win);
-        char query[NAME_MAX];
-        get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
-
-        if (strlen(query) > 0) {
-          int start_index = highlight + 1;
-          int found_index = find_item(query, items, &item_count, & start_index, 1);
-          if (found_index != -1) {
-            highlight = found_index;
-            if (highlight >= scroll_position + height - 8) {
-              scroll_position = highlight - height + 8;
-            } else if (highlight < scroll_position) {
-              scroll_position = highlight;
-            }
-            strncpy(last_query, query, NAME_MAX);
-          } else {
-            show_term_message("Item not found.", 1);
-          }
-        }
+        handleInputStringSearch(win, items, &item_count, &highlight, &scroll_position, &height, last_query, current_path);
+        break;
       }
       break;
       case 'n':
-        if (strlen(last_query) > 0) {
-          int start_index = highlight + 1;
-          int found_index = find_item(last_query, items, &item_count, & start_index, 1);
-          if (found_index != -1 && found_index != highlight) {
-            highlight = found_index;
-            if (highlight >= scroll_position + height - 8) {
-              scroll_position = highlight - height + 8;
-            } else if (highlight < scroll_position) {
-              scroll_position = highlight;
-            }
-          } else {
-            log_message(LOG_LEVEL_WARN, "No more NEXT occurances for `%s` found", last_query);
-            show_term_message("No more occurrences found.", 1);
-          }
-        }
+        /* FIRST PARAM OF handleInputStringSearch() is the direction
+         *
+         *  1 => Forward Search 
+         * -1 => Backward Search
+         *  
+         */
+        handleInputStringOccurance(1, last_query, items, &item_count, &highlight, &scroll_position, &height);
         break;
       case 'N':
-        if (strlen(last_query) > 0) {
-          int start_index = highlight - 1;
-          int found_index = find_item(last_query, items, &item_count, & start_index, -1);
-          if (found_index != -1 && found_index != highlight) {
-            highlight = found_index;
-            if (highlight >= scroll_position + height - 8) {
-              scroll_position = highlight - height + 8;
-            } else if (highlight < scroll_position) {
-              scroll_position = highlight;
-            }
-          } else {
-            log_message(LOG_LEVEL_WARN, "No more PREV occurances for `%s` found", last_query);
-            show_term_message("No previous occurrences found.", 1);
-          }
-        }
+        handleInputStringOccurance(-1, last_query, items, &item_count, &highlight, &scroll_position, &height);
         break;
-
       case 'E':
         if (!items[highlight].is_dir) {
           // Check if it's an archive file
@@ -830,50 +790,16 @@ int main(int argc, char* argv[]) {
                 } 
             }
             else if (nextch == 'k' || nextch == KEY_UP) {
-              if (highlight > 0) {
-                highlight--;
-                if (highlight < scroll_position) {
-                  scroll_position--;
-                }
-              }
+               handleInputScrollUp(&highlight, &scroll_position);
             }
             else if (nextch == 'j' || nextch == KEY_DOWN) {
-              if (highlight < item_count - 1) {
-                highlight++;
-                if (highlight >= scroll_position + height - 8) {
-                  scroll_position++;
-                }
-              }
+              handleInputScrollDown(&highlight, &scroll_position, &item_count, &height);
             }
             else if (nextch == '.') {
-              show_hidden = !show_hidden; // Toggle show_hidden flag
-              list_dir(win, current_path, items, & item_count, show_hidden);
-              highlight = 0;
-              scroll_position = 0;
+              handleInputToggleHidden(&show_hidden, &scroll_position, &highlight);
             }
             else if (nextch == '/') {
-              wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
-              wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-              wrefresh(win);
-              char query[NAME_MAX];
-              get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
-
-              if (strlen(query) > 0) {
-                int start_index = highlight + 1;
-                int found_index = find_item(query, items, &item_count, & start_index, 1);
-                if (found_index != -1) {
-                  highlight = found_index;
-                  if (highlight >= scroll_position + height - 8) {
-                    scroll_position = highlight - height + 8;
-                  } else if (highlight < scroll_position) {
-                    scroll_position = highlight;
-                  }
-                  strncpy(last_query, query, NAME_MAX);
-                } else {
-                  show_term_message("Item not found.", 1);
-                }
-              }
+              handleInputStringSearch(win, items, &item_count, &highlight, &scroll_position, &height, last_query, current_path);
             }
             else if (nextch == 10) {
               break;
@@ -960,50 +886,17 @@ int main(int argc, char* argv[]) {
                 } 
             }
             else if (nextch == 'k' || nextch == KEY_UP) {
-              if (highlight > 0) {
-                highlight--;
-                if (highlight < scroll_position) {
-                  scroll_position--;
-                }
-              }
+               handleInputScrollUp(&highlight, &scroll_position);
             }
             else if (nextch == 'j' || nextch == KEY_DOWN) {
-              if (highlight < item_count - 1) {
-                highlight++;
-                if (highlight >= scroll_position + height - 8) {
-                  scroll_position++;
-                }
-              }
+              handleInputScrollDown(&highlight, &scroll_position, &item_count, &height);
             }
             else if (nextch == '.') {
-              show_hidden = !show_hidden; // Toggle show_hidden flag
-              list_dir(win, current_path, items, & item_count, show_hidden);
-              highlight = 0;
-              scroll_position = 0;
+              handleInputToggleHidden(&show_hidden, &scroll_position, &highlight);
+              list_dir(win, current_path, items, &item_count, show_hidden);
             }
             else if (nextch == '/') {
-              wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-              mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
-              wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-              wrefresh(win);
-              char query[NAME_MAX];
-              get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
-
-              if (strlen(query) > 0) {
-                int start_index = highlight + 1;
-                int found_index = find_item(query, items, &item_count, & start_index, 1);
-                if (found_index != -1) {
-                  highlight = found_index;
-                  if (highlight >= scroll_position + height - 8) {
-                    scroll_position = highlight - height + 8;
-                  } else if (highlight < scroll_position) {
-                    scroll_position = highlight;
-                  }
-                  strncpy(last_query, query, NAME_MAX);
-                } else {
-                  show_term_message("Item not found.", 1);
-                }
-              }
+              handleInputStringSearch(win, items, &item_count, &highlight, &scroll_position, &height, last_query, current_path);
             }
             else if ((nextch == 10 || nextch == 'p')) {
               if (nextch == 'p' && !items[highlight].is_dir) {
@@ -1011,6 +904,7 @@ int main(int argc, char* argv[]) {
               }
               break;
             }
+          show_term_message(termMSG, 0); /* CONTINOUSLY SHOW THIS MSG */
           refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
 
         } while (nextch != 10);

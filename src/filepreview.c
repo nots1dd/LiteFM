@@ -286,47 +286,42 @@ void display_file(WINDOW* info_win, const char* filename)
 }
 
 const char* is_readable_extension(const char* filename, const char* current_path) { 
-    // Check file type based on MIME type
     char filepath[PATH_MAX];
     snprintf(filepath, PATH_MAX, "%s/%s", current_path, filename);
     const char* file_type = determine_file_type(filepath);
     
     if (file_type) {
-        // Check for readable text files
-        if (strcmp(file_type, "text/plain") == 0 || strcmp(file_type, "text/x-shellscript") == 0 ||
-            strcmp(file_type, "application/json") == 0 || strcmp(file_type, "text/x-ruby") == 0 ||
-            strcmp(file_type, "text/x-c") == 0 || strcmp(file_type, "text/x-c++") == 0 ||
-            strcmp(file_type, "text/x-script.python") == 0 || strcmp(file_type, "text/x-java-source") == 0 ||
-            strcmp(file_type, "application/octet-stream") == 0 || strcmp(file_type, "text/x-makefile") == 0 ||
-            strcmp(file_type, "text/html") == 0 || strcmp(file_type, "text/css") == 0) {
-            return "READ";
-        }
-        
-        // Check for audio files
-        if (strcmp(file_type, "audio/mpeg") == 0 || strcmp(file_type, "audio/x-wav") == 0 ||
-            strcmp(file_type, "audio/x-aiff") == 0 || strcmp(file_type, "audio/ogg") == 0 ||
-            strcmp(file_type, "audio/flac") == 0 || strcmp(file_type, "audio/x-matroska") == 0) {
-            return "AUDIO";
+        if (strcmp(file_type, MIME_TEXT_PLAIN) == 0 || strcmp(file_type, MIME_TEXT_SHELLSCRIPT) == 0 ||
+            strcmp(file_type, MIME_APPLICATION_JSON) == 0 || strcmp(file_type, MIME_TEXT_RUBY) == 0 ||
+            strcmp(file_type, MIME_TEXT_C) == 0 || strcmp(file_type, MIME_TEXT_CPP) == 0 ||
+            strcmp(file_type, MIME_TEXT_PYTHON) == 0 || strcmp(file_type, MIME_TEXT_JAVA) == 0 ||
+            strcmp(file_type, MIME_APPLICATION_OCTET_STREAM) == 0 || strcmp(file_type, MIME_TEXT_MAKEFILE) == 0 ||
+            strcmp(file_type, MIME_TEXT_HTML) == 0 || strcmp(file_type, MIME_TEXT_CSS) == 0 || strcmp(file_type, MIME_EMPTY) == 0) {
+            return READABLE;
         }
 
-        // Check for video files
-        if (strcmp(file_type, "video/mp4") == 0 || strcmp(file_type, "video/x-msvideo") == 0 ||
-            strcmp(file_type, "video/x-matroska") == 0 || strcmp(file_type, "video/x-ms-wmv") == 0 ||
-            strcmp(file_type, "video/webm") == 0 || strcmp(file_type, "video/x-flv") == 0 ||
-            strcmp(file_type, "video/x-ms-asf") == 0) {
-            return "VIDEO";
+        if (strcmp(file_type, MIME_AUDIO_MPEG) == 0 || strcmp(file_type, MIME_AUDIO_WAV) == 0 ||
+            strcmp(file_type, MIME_AUDIO_AIFF) == 0 || strcmp(file_type, MIME_AUDIO_OGG) == 0 ||
+            strcmp(file_type, MIME_AUDIO_FLAC) == 0 || strcmp(file_type, MIME_AUDIO_MATROSKA) == 0) {
+            return AUDIO;
         }
 
-        // Check for image files
-        if (strcmp(file_type, "image/jpeg") == 0 || strcmp(file_type, "image/png") == 0 ||
-            strcmp(file_type, "image/gif") == 0 || strcmp(file_type, "image/bmp") == 0 ||
-            strcmp(file_type, "image/x-icon") == 0 || strcmp(file_type, "image/tiff") == 0 ||
-            strcmp(file_type, "image/webp") == 0) {
-            return "IMAGE";
+        if (strcmp(file_type, MIME_VIDEO_MP4) == 0 || strcmp(file_type, MIME_VIDEO_AVI) == 0 ||
+            strcmp(file_type, MIME_VIDEO_MATROSKA) == 0 || strcmp(file_type, MIME_VIDEO_WMV) == 0 ||
+            strcmp(file_type, MIME_VIDEO_WEBM) == 0 || strcmp(file_type, MIME_VIDEO_FLV) == 0 ||
+            strcmp(file_type, MIME_VIDEO_ASF) == 0) {
+            return VIDEO;
+        }
+
+        if (strcmp(file_type, MIME_IMAGE_JPEG) == 0 || strcmp(file_type, MIME_IMAGE_PNG) == 0 ||
+            strcmp(file_type, MIME_IMAGE_GIF) == 0 || strcmp(file_type, MIME_IMAGE_BMP) == 0 ||
+            strcmp(file_type, MIME_IMAGE_ICON) == 0 || strcmp(file_type, MIME_IMAGE_TIFF) == 0 ||
+            strcmp(file_type, MIME_IMAGE_WEBP) == 0) {
+            return IMAGE;
         }
     }
 
-    return NULL; // Return NULL if none of the conditions match
+    return "NULL";
 }
 
 const char* format_file_size(off_t size)

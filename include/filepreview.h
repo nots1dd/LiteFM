@@ -28,6 +28,7 @@
  *
  *  Revision History:
  *      <31/07/24> - Initial creation and function declarations added.
+ *      <31/08/24> - Refactoring + streamlining of getting file type
  *
  * ---------------------------------------------------------------------------
  */
@@ -51,6 +52,58 @@
 // Constants
 #define MAX_LINES 60        // Define the maximum number of lines to display
 #define MAX_LINE_LENGTH 256 // Define the maximum line length
+
+/* TEXT FILE MIME TYPES */
+
+#define MIME_TEXT_PLAIN "text/plain"
+#define MIME_TEXT_SHELLSCRIPT "text/x-shellscript"
+#define MIME_APPLICATION_JSON "application/json"
+#define MIME_TEXT_RUBY "text/x-ruby"
+#define MIME_TEXT_C "text/x-c"
+#define MIME_TEXT_CPP "text/x-c++"
+#define MIME_TEXT_PYTHON "text/x-script.python"
+#define MIME_TEXT_JAVA "text/x-java-source"
+#define MIME_APPLICATION_OCTET_STREAM "application/octet-stream"
+#define MIME_TEXT_MAKEFILE "text/x-makefile"
+#define MIME_TEXT_HTML "text/html"
+#define MIME_TEXT_CSS "text/css"
+#define MIME_EMPTY "inode/x-empty"
+
+/* AUDIO FILE MIME TYPES */
+
+#define MIME_AUDIO_MPEG "audio/mpeg"
+#define MIME_AUDIO_WAV "audio/x-wav"
+#define MIME_AUDIO_AIFF "audio/x-aiff"
+#define MIME_AUDIO_OGG "audio/ogg"
+#define MIME_AUDIO_FLAC "audio/flac"
+#define MIME_AUDIO_MATROSKA "audio/x-matroska"
+
+/* VIDEO FILE MIME TYPES */
+
+#define MIME_VIDEO_MP4 "video/mp4"
+#define MIME_VIDEO_AVI "video/x-msvideo"
+#define MIME_VIDEO_MATROSKA "video/x-matroska"
+#define MIME_VIDEO_WMV "video/x-ms-wmv"
+#define MIME_VIDEO_WEBM "video/webm"
+#define MIME_VIDEO_FLV "video/x-flv"
+#define MIME_VIDEO_ASF "video/x-ms-asf"
+
+/* IMAGE FILE MIME TYPES */
+
+#define MIME_IMAGE_JPEG "image/jpeg"
+#define MIME_IMAGE_PNG "image/png"
+#define MIME_IMAGE_GIF "image/gif"
+#define MIME_IMAGE_BMP "image/bmp"
+#define MIME_IMAGE_ICON "image/x-icon"
+#define MIME_IMAGE_TIFF "image/tiff"
+#define MIME_IMAGE_WEBP "image/webp"
+
+/* CONST RETURN TYPES */
+
+#define READABLE "READ"
+#define AUDIO "AUDIO"
+#define VIDEO "VIDEO"
+#define IMAGE "IMAGE"
 
 // Function Prototypes
 const char* get_file_extension(const char* filename);

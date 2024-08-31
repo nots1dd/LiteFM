@@ -46,7 +46,6 @@ src_files = files(
   'src/archivecontrol.c',
   'src/clipboard.c',
   'src/logging.c',
-  'src/signalhandling.c',
   'src/highlight.c',
   'src/hashtable.c',
   'src/arg_helpers.c',

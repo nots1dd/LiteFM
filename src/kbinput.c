@@ -133,6 +133,61 @@ int find_item(const char *query, FileItem items[], int *item_count, int *start_i
     return -1; // Not found
 }
 
+void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int* highlight, int* scroll_position, int *height, char* last_query, const char* current_path) {
+    // Display search indicator
+    wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+    mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
+    wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+    wrefresh(win);
+
+    // Get user input for the search query
+    char query[NAME_MAX];
+    get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
+
+    // Perform the search if the query is not empty
+    if (strlen(query) > 0) {
+        int start_index = *highlight + 1;
+        int found_index = find_item(query, items, item_count, &start_index, 1);
+
+        if (found_index != -1) {
+            *highlight = found_index;
+
+            if (*highlight >= *scroll_position + *height - 8) {
+                *scroll_position = *highlight - *height + 8;
+            } else if (*highlight < *scroll_position) {
+                *scroll_position = *highlight;
+            }
+
+            // Store the last query
+            strncpy(last_query, query, NAME_MAX);
+        } else {
+            show_term_message("Item not found.", 1);
+        }
+    }
+}
+
+void handleInputStringOccurance(int direction, const char* last_query, FileItem items[], int* item_count, int* highlight, int* scroll_position, int *height) {
+    if (strlen(last_query) > 0) {
+        int start_index = *highlight + direction;
+        int found_index = find_item(last_query, items, item_count, &start_index, direction);
+
+        if (found_index != -1 && found_index != *highlight) {
+            *highlight = found_index;
+
+            if (*highlight >= *scroll_position + *height - 8) {
+                *scroll_position = *highlight - *height + 8;
+            } else if (*highlight < *scroll_position) {
+                *scroll_position = *highlight;
+            }
+        } else {
+            const char* message = (direction == 1) ? "No more NEXT occurrences found" : "No previous occurrences found";
+            log_message(LOG_LEVEL_WARN, "%s for `%s` found", message, last_query);
+            show_term_message(message, 1);
+        }
+    }
+}
+
+
 /*                   NOTE
  * SCOPES ARE NOT WORKING UNLESS IT IS IN MAIN FUNC
  *

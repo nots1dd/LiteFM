@@ -23,6 +23,7 @@
  *
  *  Revision History:
  *      <03/08/24> - <Initial Creation>
+ *      <31/08/24> - Made all funcs static
  *
  * ---------------------------------------------------------------------------
  */
@@ -35,7 +36,23 @@
 #include <stddef.h>
 #include <sys/wait.h>
 
-void ignore_sigwinch();
-void restore_sigwinch();
+static void ignore_sigwinch()
+{
+  struct sigaction sa;
+  sa.sa_handler = SIG_IGN;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGWINCH, &sa, NULL);
+}
+
+// Function to restore default SIGWINCH handler
+static void restore_sigwinch()
+{
+  struct sigaction sa;
+  sa.sa_handler = SIG_DFL;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGWINCH, &sa, NULL);
+}
 
 #endif
