@@ -16,7 +16,7 @@
  *
  *  License:     <GNU GPL v3>
  *
- *  Notes:      Some function calls that require a global scope need 
+ *  Notes:      Some function calls that require a global scope need
  *              proper implementation
  *
  *  Revision History:
@@ -34,15 +34,19 @@
 #include <stdio.h>
 
 #define MAX_HISTORY 256
-#define UNICODE_SEARCH  "🔍"
+#define UNICODE_SEARCH "🔍"
 
 void handleInputScrollUp(int* highlight, int* scroll_position);
 void handleInputScrollDown(int* highlight, int* scroll_position, int* item_count, int* height);
 void handleInputToggleHidden(int* show_hidden, int* scroll_position, int* highlight);
 void handleInputMovCursBtm(int* highlight, int* item_count, int* scroll_position, int* max_y);
-int find_item(const char *query, FileItem items[], int *item_count, int *start_index, int direction);
-void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int* highlight, int* scroll_position, int *height, char* last_query, const char* current_path);
-void handleInputStringOccurance(int direction, const char* last_query, FileItem items[], int* item_count, int* highlight, int* scroll_position, int *height);
+int  find_item(const char* query, FileItem items[], int* item_count, int* start_index,
+               int direction);
+void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int* highlight,
+                             int* scroll_position, int* height, char* last_query,
+                             const char* current_path);
+void handleInputStringOccurance(int direction, const char* last_query, FileItem items[],
+                                int* item_count, int* highlight, int* scroll_position, int* height);
 /* ------------------------------
  * void handleInputScopeBack(int* history_count, int* highlight, int* scroll_position, const char*
  * current_path, DirHistory history[]); void handleInputScopeForward(WINDOW *win, WINDOW *info_win,

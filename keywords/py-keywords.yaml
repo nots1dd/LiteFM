@@ -91,12 +91,6 @@ singlecomments:
 singlecommentslen:
   - '1'
 
-multicomments1:
-  - "\""
-
-multicomments2:
-  - "\"\""
-
 strings:
   - "\""
   - "'"

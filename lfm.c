@@ -826,7 +826,7 @@ int main(int argc, char* argv[]) {
           scroll_position = 0;
           break;
         } else {
-          if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") != 0) {
+          if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") == 0) {
             get_file_info_popup(win, current_path, items[highlight].name);
           } else {
             log_message(LOG_LEVEL_DEBUG, "Something went wrong...");

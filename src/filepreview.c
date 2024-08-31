@@ -144,7 +144,7 @@ const char* empty_message[] = {" _____ __  __ ____ _______   __  _____ ___ _    
                                "|_____|_|  |_|_|    |_|   |_|   |_|   |___|_____|_____| (_)",
                                " "};
 
-const char* get_keywords_file(const char* ext)
+const char* get_keywords_file(const char* mime_type)
 {
   static char keywords_file[256];
   char*       project_dir;
@@ -156,21 +156,55 @@ const char* get_keywords_file(const char* ext)
     // Get the directory where this source file is located
     project_dir = dirname(resolved_path);
 
-    // Map multiple extensions to the same YAML file
-    if (strcmp(ext, "h") == 0 || strcmp(ext, "hpp") == 0 || strcmp(ext, "cpp") == 0 ||
-        strcmp(ext, "c") == 0 || strcmp(ext, "cxx") == 0)
+    // Map MIME types to the corresponding YAML file
+    if (strcmp(mime_type, MIME_TEXT_C) == 0 || strcmp(mime_type, MIME_TEXT_CPP) == 0)
     {
       snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/c-keywords.yaml", project_dir);
     }
-    else if (strcmp(ext, "toml") == 0 || strcmp(ext, "lock") == 0)
+    else if (strcmp(mime_type, MIME_APPLICATION_JSON) == 0)
     {
       snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/json-keywords.yaml",
                project_dir);
     }
+    else if (strcmp(mime_type, MIME_TEXT_JAVASCRIPT) == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/js-keywords.yaml",
+               project_dir);
+    }
+    else if (strcmp(mime_type, MIME_TEXT_PYTHON) == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/py-keywords.yaml",
+               project_dir);
+    }
+    else if (strcmp(mime_type, MIME_TEXT_HTML) == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/html-keywords.yaml",
+               project_dir);
+    }
+    else if (strcmp(mime_type, MIME_TEXT_CSS) == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/css-keywords.yaml",
+               project_dir);
+    }
+    else if (strcmp(mime_type, MIME_TEXT_SHELLSCRIPT) == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/sh-keywords.yaml",
+               project_dir);
+    }
+    else if (strcmp(mime_type, MIME_TEXT_JAVA) == 0)
+    {
+      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/java-keywords.yaml",
+               project_dir);
+    }
+    /*else if (strcmp(mime_type, MIME_TEXT_MAKEFILE) == 0)*/
+    /*{*/
+    /*    snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/makefile-keywords.yaml",
+     * project_dir);*/
+    /*}*/
     else
     {
-      snprintf(keywords_file, sizeof(keywords_file), "%s/../keywords/%s-keywords.yaml", project_dir,
-               ext);
+      log_message(LOG_LEVEL_ERROR, " [LIBYAML] No desired yaml file found. Going default....");
+      return NULL;
     }
     log_message(LOG_LEVEL_DEBUG, " [SYNHASH] Loading in %s", keywords_file);
   }
@@ -205,7 +239,7 @@ void display_file(WINDOW* info_win, const char* filename)
     return;
   }
   char        keywords_file[256];
-  const char* ext                = get_file_extension(filename);
+  const char* ext                = determine_file_type(filename);
   const char* keywords_file_path = get_keywords_file(ext);
   bool        syntaxLoad =
     load_syntax(keywords_file_path, keywords, singlecomments, multicomments1, multicomments2,
@@ -285,43 +319,50 @@ void display_file(WINDOW* info_win, const char* filename)
   wrefresh(info_win); // Refresh the window to show the content
 }
 
-const char* is_readable_extension(const char* filename, const char* current_path) { 
-    char filepath[PATH_MAX];
-    snprintf(filepath, PATH_MAX, "%s/%s", current_path, filename);
-    const char* file_type = determine_file_type(filepath);
-    
-    if (file_type) {
-        if (strcmp(file_type, MIME_TEXT_PLAIN) == 0 || strcmp(file_type, MIME_TEXT_SHELLSCRIPT) == 0 ||
-            strcmp(file_type, MIME_APPLICATION_JSON) == 0 || strcmp(file_type, MIME_TEXT_RUBY) == 0 ||
-            strcmp(file_type, MIME_TEXT_C) == 0 || strcmp(file_type, MIME_TEXT_CPP) == 0 ||
-            strcmp(file_type, MIME_TEXT_PYTHON) == 0 || strcmp(file_type, MIME_TEXT_JAVA) == 0 ||
-            strcmp(file_type, MIME_APPLICATION_OCTET_STREAM) == 0 || strcmp(file_type, MIME_TEXT_MAKEFILE) == 0 ||
-            strcmp(file_type, MIME_TEXT_HTML) == 0 || strcmp(file_type, MIME_TEXT_CSS) == 0 || strcmp(file_type, MIME_EMPTY) == 0) {
-            return READABLE;
-        }
+const char* is_readable_extension(const char* filename, const char* current_path)
+{
+  char filepath[PATH_MAX];
+  snprintf(filepath, PATH_MAX, "%s/%s", current_path, filename);
+  const char* file_type = determine_file_type(filepath);
 
-        if (strcmp(file_type, MIME_AUDIO_MPEG) == 0 || strcmp(file_type, MIME_AUDIO_WAV) == 0 ||
-            strcmp(file_type, MIME_AUDIO_AIFF) == 0 || strcmp(file_type, MIME_AUDIO_OGG) == 0 ||
-            strcmp(file_type, MIME_AUDIO_FLAC) == 0 || strcmp(file_type, MIME_AUDIO_MATROSKA) == 0) {
-            return AUDIO;
-        }
-
-        if (strcmp(file_type, MIME_VIDEO_MP4) == 0 || strcmp(file_type, MIME_VIDEO_AVI) == 0 ||
-            strcmp(file_type, MIME_VIDEO_MATROSKA) == 0 || strcmp(file_type, MIME_VIDEO_WMV) == 0 ||
-            strcmp(file_type, MIME_VIDEO_WEBM) == 0 || strcmp(file_type, MIME_VIDEO_FLV) == 0 ||
-            strcmp(file_type, MIME_VIDEO_ASF) == 0) {
-            return VIDEO;
-        }
-
-        if (strcmp(file_type, MIME_IMAGE_JPEG) == 0 || strcmp(file_type, MIME_IMAGE_PNG) == 0 ||
-            strcmp(file_type, MIME_IMAGE_GIF) == 0 || strcmp(file_type, MIME_IMAGE_BMP) == 0 ||
-            strcmp(file_type, MIME_IMAGE_ICON) == 0 || strcmp(file_type, MIME_IMAGE_TIFF) == 0 ||
-            strcmp(file_type, MIME_IMAGE_WEBP) == 0) {
-            return IMAGE;
-        }
+  if (file_type)
+  {
+    if (strcmp(file_type, MIME_TEXT_PLAIN) == 0 || strcmp(file_type, MIME_TEXT_SHELLSCRIPT) == 0 ||
+        strcmp(file_type, MIME_APPLICATION_JSON) == 0 || strcmp(file_type, MIME_TEXT_RUBY) == 0 ||
+        strcmp(file_type, MIME_TEXT_C) == 0 || strcmp(file_type, MIME_TEXT_CPP) == 0 ||
+        strcmp(file_type, MIME_TEXT_PYTHON) == 0 || strcmp(file_type, MIME_TEXT_JAVA) == 0 ||
+        strcmp(file_type, MIME_TEXT_JAVASCRIPT) == 0 ||
+        strcmp(file_type, MIME_TEXT_MAKEFILE) == 0 || strcmp(file_type, MIME_TEXT_HTML) == 0 ||
+        strcmp(file_type, MIME_TEXT_CSS) == 0 || strcmp(file_type, MIME_EMPTY) == 0)
+    {
+      return READABLE;
     }
 
-    return "NULL";
+    if (strcmp(file_type, MIME_AUDIO_MPEG) == 0 || strcmp(file_type, MIME_AUDIO_WAV) == 0 ||
+        strcmp(file_type, MIME_AUDIO_AIFF) == 0 || strcmp(file_type, MIME_AUDIO_OGG) == 0 ||
+        strcmp(file_type, MIME_AUDIO_FLAC) == 0 || strcmp(file_type, MIME_AUDIO_MATROSKA) == 0)
+    {
+      return AUDIO;
+    }
+
+    if (strcmp(file_type, MIME_VIDEO_MP4) == 0 || strcmp(file_type, MIME_VIDEO_AVI) == 0 ||
+        strcmp(file_type, MIME_VIDEO_MATROSKA) == 0 || strcmp(file_type, MIME_VIDEO_WMV) == 0 ||
+        strcmp(file_type, MIME_VIDEO_WEBM) == 0 || strcmp(file_type, MIME_VIDEO_FLV) == 0 ||
+        strcmp(file_type, MIME_VIDEO_ASF) == 0)
+    {
+      return VIDEO;
+    }
+
+    if (strcmp(file_type, MIME_IMAGE_JPEG) == 0 || strcmp(file_type, MIME_IMAGE_PNG) == 0 ||
+        strcmp(file_type, MIME_IMAGE_GIF) == 0 || strcmp(file_type, MIME_IMAGE_BMP) == 0 ||
+        strcmp(file_type, MIME_IMAGE_ICON) == 0 || strcmp(file_type, MIME_IMAGE_TIFF) == 0 ||
+        strcmp(file_type, MIME_IMAGE_WEBP) == 0)
+    {
+      return IMAGE;
+    }
+  }
+
+  return "NULL";
 }
 
 const char* format_file_size(off_t size)

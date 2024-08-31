@@ -2,10 +2,10 @@
 #include "../include/kbinput.h"
 #include "../include/cursesutils.h"
 #include "../include/filepreview.h"
+#include "../include/inodeinfo.h"
 #include "../include/logging.h"
 #include "../include/musicpreview.h"
 #include "../include/structs.h"
-#include "../include/inodeinfo.h"
 
 void handleInputScrollUp(int* highlight, int* scroll_position)
 {
@@ -55,138 +55,174 @@ void handleInputMovCursBtm(int* highlight, int* item_count, int* scroll_position
   }
 }
 
-int find_item(const char *query, FileItem items[], int *item_count, int *start_index, int direction) {
-    char lower_query[NAME_MAX];
-    for (int i = 0; query[i] && i < NAME_MAX; i++) {
-        lower_query[i] = tolower(query[i]);
+int find_item(const char* query, FileItem items[], int* item_count, int* start_index, int direction)
+{
+  char lower_query[NAME_MAX];
+  for (int i = 0; query[i] && i < NAME_MAX; i++)
+  {
+    lower_query[i] = tolower(query[i]);
+  }
+  lower_query[strlen(query)] = '\0';
+
+  if (direction == 1)
+  { // Forward search
+    for (int i = *start_index; i < *item_count; i++)
+    {
+      char truncated_name[NAME_MAX];
+      strcpy(truncated_name, items[i].name);
+      truncate_symlink_name(truncated_name);
+
+      char lower_name[NAME_MAX];
+      for (int j = 0; truncated_name[j] && j < NAME_MAX; j++)
+      {
+        lower_name[j] = tolower(truncated_name[j]);
+      }
+      lower_name[strlen(truncated_name)] = '\0';
+
+      if (strstr(lower_name, lower_query) != NULL)
+      {
+        *start_index = i;
+        return i;
+      }
     }
-    lower_query[strlen(query)] = '\0'; 
+    for (int i = 0; i < *start_index; i++)
+    {
+      char truncated_name[NAME_MAX];
+      strcpy(truncated_name, items[i].name);
+      truncate_symlink_name(truncated_name);
 
-    if (direction == 1) { // Forward search
-        for (int i = *start_index; i < *item_count; i++) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
+      char lower_name[NAME_MAX];
+      for (int j = 0; truncated_name[j] && j < NAME_MAX; j++)
+      {
+        lower_name[j] = tolower(truncated_name[j]);
+      }
+      lower_name[strlen(truncated_name)] = '\0';
 
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-        for (int i = 0; i < *start_index; i++) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-    } else if (direction == -1) { // Backward search
-        for (int i = *start_index; i >= 0; i--) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
-        for (int i = *item_count - 1; i > *start_index; i--) {
-            char truncated_name[NAME_MAX];
-            strcpy(truncated_name, items[i].name);
-            truncate_symlink_name(truncated_name);
-
-            char lower_name[NAME_MAX];
-            for (int j = 0; truncated_name[j] && j < NAME_MAX; j++) {
-                lower_name[j] = tolower(truncated_name[j]);
-            }
-            lower_name[strlen(truncated_name)] = '\0';
-
-            if (strstr(lower_name, lower_query) != NULL) {
-                *start_index = i;
-                return i;
-            }
-        }
+      if (strstr(lower_name, lower_query) != NULL)
+      {
+        *start_index = i;
+        return i;
+      }
     }
+  }
+  else if (direction == -1)
+  { // Backward search
+    for (int i = *start_index; i >= 0; i--)
+    {
+      char truncated_name[NAME_MAX];
+      strcpy(truncated_name, items[i].name);
+      truncate_symlink_name(truncated_name);
 
-    return -1; // Not found
+      char lower_name[NAME_MAX];
+      for (int j = 0; truncated_name[j] && j < NAME_MAX; j++)
+      {
+        lower_name[j] = tolower(truncated_name[j]);
+      }
+      lower_name[strlen(truncated_name)] = '\0';
+
+      if (strstr(lower_name, lower_query) != NULL)
+      {
+        *start_index = i;
+        return i;
+      }
+    }
+    for (int i = *item_count - 1; i > *start_index; i--)
+    {
+      char truncated_name[NAME_MAX];
+      strcpy(truncated_name, items[i].name);
+      truncate_symlink_name(truncated_name);
+
+      char lower_name[NAME_MAX];
+      for (int j = 0; truncated_name[j] && j < NAME_MAX; j++)
+      {
+        lower_name[j] = tolower(truncated_name[j]);
+      }
+      lower_name[strlen(truncated_name)] = '\0';
+
+      if (strstr(lower_name, lower_query) != NULL)
+      {
+        *start_index = i;
+        return i;
+      }
+    }
+  }
+
+  return -1; // Not found
 }
 
-void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int* highlight, int* scroll_position, int *height, char* last_query, const char* current_path) {
-    // Display search indicator
-    wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-    mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
-    wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
-    wrefresh(win);
+void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int* highlight,
+                             int* scroll_position, int* height, char* last_query,
+                             const char* current_path)
+{
+  // Display search indicator
+  wattron(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+  mvwprintw(win, LINES - 3, (COLS / 2) - 75, "%s Search ON ", UNICODE_SEARCH);
+  wattroff(win, A_BOLD | COLOR_PAIR(AQUA_COLOR_PAIR));
+  wrefresh(win);
 
-    // Get user input for the search query
-    char query[NAME_MAX];
-    get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
+  // Get user input for the search query
+  char query[NAME_MAX];
+  get_user_input_from_bottom(stdscr, query, NAME_MAX, "search", current_path);
 
-    // Perform the search if the query is not empty
-    if (strlen(query) > 0) {
-        int start_index = *highlight + 1;
-        int found_index = find_item(query, items, item_count, &start_index, 1);
+  // Perform the search if the query is not empty
+  if (strlen(query) > 0)
+  {
+    int start_index = *highlight + 1;
+    int found_index = find_item(query, items, item_count, &start_index, 1);
 
-        if (found_index != -1) {
-            *highlight = found_index;
+    if (found_index != -1)
+    {
+      *highlight = found_index;
 
-            if (*highlight >= *scroll_position + *height - 8) {
-                *scroll_position = *highlight - *height + 8;
-            } else if (*highlight < *scroll_position) {
-                *scroll_position = *highlight;
-            }
+      if (*highlight >= *scroll_position + *height - 8)
+      {
+        *scroll_position = *highlight - *height + 8;
+      }
+      else if (*highlight < *scroll_position)
+      {
+        *scroll_position = *highlight;
+      }
 
-            // Store the last query
-            strncpy(last_query, query, NAME_MAX);
-        } else {
-            show_term_message("Item not found.", 1);
-        }
+      // Store the last query
+      strncpy(last_query, query, NAME_MAX);
     }
+    else
+    {
+      show_term_message("Item not found.", 1);
+    }
+  }
 }
 
-void handleInputStringOccurance(int direction, const char* last_query, FileItem items[], int* item_count, int* highlight, int* scroll_position, int *height) {
-    if (strlen(last_query) > 0) {
-        int start_index = *highlight + direction;
-        int found_index = find_item(last_query, items, item_count, &start_index, direction);
+void handleInputStringOccurance(int direction, const char* last_query, FileItem items[],
+                                int* item_count, int* highlight, int* scroll_position, int* height)
+{
+  if (strlen(last_query) > 0)
+  {
+    int start_index = *highlight + direction;
+    int found_index = find_item(last_query, items, item_count, &start_index, direction);
 
-        if (found_index != -1 && found_index != *highlight) {
-            *highlight = found_index;
+    if (found_index != -1 && found_index != *highlight)
+    {
+      *highlight = found_index;
 
-            if (*highlight >= *scroll_position + *height - 8) {
-                *scroll_position = *highlight - *height + 8;
-            } else if (*highlight < *scroll_position) {
-                *scroll_position = *highlight;
-            }
-        } else {
-            const char* message = (direction == 1) ? "No more NEXT occurrences found" : "No previous occurrences found";
-            log_message(LOG_LEVEL_WARN, "%s for `%s` found", message, last_query);
-            show_term_message(message, 1);
-        }
+      if (*highlight >= *scroll_position + *height - 8)
+      {
+        *scroll_position = *highlight - *height + 8;
+      }
+      else if (*highlight < *scroll_position)
+      {
+        *scroll_position = *highlight;
+      }
     }
+    else
+    {
+      const char* message =
+        (direction == 1) ? "No more NEXT occurrences found" : "No previous occurrences found";
+      log_message(LOG_LEVEL_WARN, "%s for `%s` found", message, last_query);
+      show_term_message(message, 1);
+    }
+  }
 }
-
 
 /*                   NOTE
  * SCOPES ARE NOT WORKING UNLESS IT IS IN MAIN FUNC
@@ -237,7 +273,8 @@ void handleInputScopeBack(int* history_count, int* highlight, int* scroll_positi
 
 /*void handleInputScopeForward(WINDOW* win, WINDOW* info_win, int* history_count, int* highlight,*/
 /*                             int* scroll_position, bool* firstKeyPress, FileItem items[],*/
-/*                             DirHistory history[], const char* cur_user, const char* current_path)*/
+/*                             DirHistory history[], const char* cur_user, const char*
+ * current_path)*/
 /*{*/
 /*  show_term_message("", -1);*/
 /*  char fullPath[MAX_PATH_LENGTH];*/
@@ -248,7 +285,8 @@ void handleInputScopeBack(int* history_count, int* highlight, int* scroll_positi
 /*  if (access(fullPath, R_OK) != 0)*/
 /*  {*/
 /*    // Log the message safely*/
-/*    log_message(LOG_LEVEL_ERROR, "[%s] Access denied for inode path %s: %s\n", cur_user, fullPath,*/
+/*    log_message(LOG_LEVEL_ERROR, "[%s] Access denied for inode path %s: %s\n", cur_user,
+ * fullPath,*/
 /*                strerror(errno));*/
 /**/
 /*    // Show the message to the user*/
@@ -279,7 +317,8 @@ void handleInputScopeBack(int* history_count, int* highlight, int* scroll_positi
 /*    {*/
 /*      *firstKeyPress = true;*/
 /*      launch_env_var(win, current_path, items[*highlight].name, "EDITOR");*/
-/*      /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just refresh*/
+/*      /* Since we have set firstKeyPress to true, it will not wgetch(), rather it will just
+ * refresh*/
 /*       * everything back to how it was */
 /*    }*/
 /*    else if (is_image(items[*highlight].name) && !items[*highlight].is_dir)*/

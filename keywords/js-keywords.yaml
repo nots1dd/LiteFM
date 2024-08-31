@@ -1,0 +1,107 @@
+keywords:
+  - break
+  - case
+  - catch
+  - class
+  - const
+  - continue
+  - debugger
+  - default
+  - delete
+  - do
+  - else
+  - enum
+  - export
+  - extends
+  - finally
+  - for
+  - function
+  - if
+  - import
+  - in
+  - instanceof
+  - let
+  - new
+  - 'null'
+  - return
+  - super
+  - switch
+  - this
+  - throw
+  - try
+  - typeof
+  - var
+  - void
+  - while
+  - with
+  - yield
+  - async
+  - await
+
+functions:
+  - 'console'
+  - 'log'
+  - 'parseInt'
+  - 'parseFloat'
+  - 'String'
+  - 'Number'
+  - 'Boolean'
+  - 'Array'
+  - 'Object'
+  - 'Function'
+  - 'Date'
+  - 'Math'
+  - 'setTimeout'
+  - 'setInterval'
+  - 'clearTimeout'
+  - 'clearInterval'
+  - 'Promise'
+  - 'async'
+  - 'await'
+
+operators:
+  - '+'
+  - '-'
+  - '*'
+  - '/'
+  - '%'
+  - '='
+  - '<'
+  - '>'
+  - '!'
+  - '&'
+  - '|'
+  - '^'
+  - '~'
+  - '?'
+  - ':'
+
+symbols:
+  - '('
+  - ')'
+  - '{'
+  - '}'
+  - '['
+  - ']'
+  - '.'
+  - ','
+  - ';'
+  - '='
+  - '@'
+
+singlecomments:
+  - '/'
+
+singlecommentslen: 
+  - '2'
+
+multicomments1:
+  - '/'
+
+multicomments2:
+  - '*'
+
+strings:
+  - "\""
+  - "'"
+  - "`"

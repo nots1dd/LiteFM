@@ -3,8 +3,9 @@
 #include "../include/cursesutils.h"
 #include "../include/logging.h"
 
-int multicomments1_length = 0;
-int multicomments2_length = 0;
+int  multicomments1_length = 0;
+int  multicomments2_length = 0;
+char string_delimiter      = '\0';
 
 // Load syntax from YAML file
 bool load_syntax(const char* path, HashTable* keywords, HashTable* singlecomments,
@@ -245,7 +246,18 @@ void highlight_code(WINDOW* win, int start_y, int start_x, const char* code, Has
     // Then check for strings
     else if (hash_table_contains(strings, cursor))
     {
-      in_string = !in_string;
+      if (!in_string)
+      {
+        // Start of a new string
+        in_string        = true;
+        string_delimiter = *cursor; // Remember whether it's " or '
+      }
+      else if (*cursor == string_delimiter)
+      {
+        // Closing the string
+        in_string = false;
+      }
+
       if (in_string && buffer_index > 0)
       {
         buffer[buffer_index] = '\0';
@@ -253,10 +265,12 @@ void highlight_code(WINDOW* win, int start_y, int start_x, const char* code, Has
         x += buffer_index;
         buffer_index = 0;
       }
+
       highlightLine(win, 22, y, x, (char[]){*cursor, '\0'});
       x++;
       cursor++;
     }
+
     // Then check for single line comments
     else if (hash_table_contains(singlecomments, cursor) && !in_string)
     {
