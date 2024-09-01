@@ -289,6 +289,7 @@ void handle_rename(WINDOW* win, const char* path)
     return;
   }
 
+  // Handle renaming for directories
   if (S_ISDIR(path_stat.st_mode))
   {
     // It's a directory, allow any new name (excluding special characters check)
@@ -298,13 +299,20 @@ void handle_rename(WINDOW* win, const char* path)
       return;
     }
   }
+  // Handle renaming for regular files
   else if (S_ISREG(path_stat.st_mode))
   {
     // It's a file, ensure the extension remains the same
     const char* old_ext = get_file_extension(old_name);
     const char* new_ext = get_file_extension(new_name);
 
-    if (strcmp(old_ext, new_ext) != 0)
+    if (strlen(new_ext) == 0 && strlen(old_ext) > 0)
+    {
+      // If the new name has no extension, append the old extension
+      strncat(new_name, ".", PATH_MAX - strlen(new_name) - 1);
+      strncat(new_name, old_ext, PATH_MAX - strlen(new_name) - 1);
+    }
+    else if (strcmp(old_ext, new_ext) != 0)
     {
       show_term_message("Extension change not allowed. Aborting rename.", 1);
       return;

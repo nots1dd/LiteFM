@@ -6,6 +6,7 @@
 #include "../include/logging.h"
 #include "../include/musicpreview.h"
 #include "../include/structs.h"
+#include "../include/dircontrol.h"
 
 void handleInputScrollUp(int* highlight, int* scroll_position)
 {
@@ -53,6 +54,13 @@ void handleInputMovCursBtm(int* highlight, int* item_count, int* scroll_position
   {
     *highlight = *item_count - 1;
   }
+}
+
+void handleInputMovCursTop(int *highlight, int *scroll_position) 
+{
+  show_term_message("", -1);
+  *highlight = 0;
+  *scroll_position = 0;
 }
 
 int find_item(const char* query, FileItem items[], int* item_count, int* start_index, int direction)
@@ -221,6 +229,25 @@ void handleInputStringOccurance(int direction, const char* last_query, FileItem 
       log_message(LOG_LEVEL_WARN, "%s for `%s` found", message, last_query);
       show_term_message(message, 1);
     }
+  }
+}
+
+void handleInputRename(int *item_count, int *highlight, int *scroll_position, const char* current_path, FileItem items[])
+{
+  if (*item_count > 0) {
+      const char *current_name = items[*highlight].name;
+      char full_path[PATH_MAX];
+      snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
+
+      // Call the handle_rename function
+      handle_rename(stdscr, full_path);
+
+      // Update file list after renaming
+      *scroll_position = 0;
+      return;
+  } else {
+      log_message(LOG_LEVEL_WARN, "No item selected for renaming");
+      show_term_message("No item selected for renaming.", 1);
   }
 }
 

@@ -1,8 +1,10 @@
 # Lite FM
 
-Light and fast file manager meant to be useful to power users 
+Curses based file manager that caters to power users 
 
-Written in C with NCurses, libyaml, rsync and more!
+Meant to be insanely FAST and LIGHTWEIGHT
+
+Licensed under **[GNU GPL v3](https://github.com/nots1dd/litefm/blob/main/LICENSE)**
 
 ## Features
 
@@ -68,10 +70,10 @@ Written in C with NCurses, libyaml, rsync and more!
 > 
 > Hence, ensure that you have your preferred display server and editor setup in your UNIX system so that LiteFM can be even more productive to you!
 > 
-> To set an env var: 
-```sh 
-echo 'export EDITOR=/sbin/nvim' >> ~/.bashrc
-```
+> To set an env var (EXAMPLE): 
+> ```sh 
+> echo 'export EDITOR=/sbin/nvim' >> ~/.bashrc
+> ```
 > You can set your desired **$EDITOR** and shell rc.
 > 
 > Setting your **$EDITOR** as any editor that creates a new window that resizes the main litefm window, will lead to litefm to look a bit weird (it will resize)
@@ -86,7 +88,6 @@ echo 'export EDITOR=/sbin/nvim' >> ~/.bashrc
 
 As LiteFM can only be built manually, here is a table of all deps used:
 
-
 | Package Manager | Debian                    | Fedora (RPM)             | Arch Linux              |
 |-----------------|---------------------------|--------------------------|-------------------------|
 | **64-bit**      |                           |                          |                         |
@@ -97,17 +98,21 @@ As LiteFM can only be built manually, here is a table of all deps used:
 |                 | libyaml-dev               | libyaml-devel            | yaml-cpp                |
 |                 | rsync                     | rsync                    | rsync                   |
 |                 | pkg-config                | pkg-config               | pkg-config              |
+|                 | libsdl2-dev               | SDL2-devel               | sdl2                    |
+|                 | libsdl2-mixer-dev         | SDL2_mixer-devel         | sdl2_mixer              |
 | **32-bit**      |                           |                          |                         |
 |                 | libncurses5-dev           | ncurses-libs             | lib32-ncurses5          |
 |                 | libarchive-dev:i386       | libarchive-devel.i686    | lib32-libarchive        |
 |                 | libyaml-dev:i386          | libyaml-devel.i686       | lib32-yaml-cpp          |
 |                 | rsync:i386                | rsync.i686               | lib32-rsync             |
 |                 | pkg-config:i386           | pkg-config.i686          | lib32-pkg-config        |
+|                 | libsdl2-dev:i386          | SDL2-devel.i686          | lib32-sdl2              |
+|                 | libsdl2-mixer-dev:i386    | SDL2_mixer-devel.i686    | lib32-sdl2_mixer        |
 
 
 The above are the listed **32-bit** and **64-bit** libraries that are used in this project.
 
-->Only 64-bit libs have been tested to fruition so far 
+-> Only 64-bit libs have been tested to fruition so far 
 
 Refer to this table to understand the **[Building](https://github.com/nots1dd/LiteFM?tab=readme-ov-file#building)** procedure better
 

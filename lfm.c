@@ -65,6 +65,7 @@
 #define UNICODE_IMAGE   "🖼️"
 #define UNICODE_FILE    "📄"
 #define UNICODE_VIDEO   "🎥"
+#define UNICODE_INODE   " "
 
 
 const char * err_message[] = {
@@ -320,6 +321,7 @@ int main(int argc, char* argv[]) {
   int show_hidden = 0; // Flag to toggle showing hidden files
   int scroll_position = 0; // Position of the first visible item
   char *cur_user = get_current_user();
+  char* home_dir = getenv("HOME");
   
   if (handle_arguments(argc, argv, current_path) == 0) {
         return 0;
@@ -347,7 +349,6 @@ int main(int argc, char* argv[]) {
   int find_index = 0;
   char last_query[NAME_MAX] = "";
   bool firstKeyPress = true;
-  bool firstPlay = true;
   log_message(LOG_LEVEL_DEBUG, "================ LITEFM INSTANCE STARTED =================");
   log_message(LOG_LEVEL_DEBUG, "Entering as USER: %s",cur_user);
 
@@ -356,7 +357,7 @@ int main(int argc, char* argv[]) {
     if (firstKeyPress) {
         refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
         show_term_message("", -1);
-    }
+    } 
     firstKeyPress = false;
     if (choice != ERR) {
       switch (choice) {
@@ -473,9 +474,7 @@ int main(int argc, char* argv[]) {
         halfdelay(100);
         char nextch = getch();
         if (nextch == 'g') {
-          show_term_message("", -1);
-          scroll_position = 0;
-          highlight = 0; // will go to the top most element in the current displaying list
+         handleInputMovCursTop(&highlight, &scroll_position);
         } else if (nextch == 't') { // GO TO func
           char destination_path[PATH_MAX];
           get_user_input_from_bottom(stdscr, destination_path, PATH_MAX, "goto", current_path);
@@ -491,7 +490,6 @@ int main(int argc, char* argv[]) {
           break;
         } else if (nextch == 'h') {
           show_term_message("", -1);
-          char* home_dir = getenv("HOME");
           strcpy(current_path, home_dir);
           list_dir(win, current_path, items, & item_count, show_hidden);
           highlight = 0;
@@ -526,7 +524,7 @@ int main(int argc, char* argv[]) {
             if (result == 0) {
               log_message(LOG_LEVEL_INFO, "Directory created successfully for `%s`", name_input);
               char msg[256];
-              snprintf(msg, sizeof(msg), "  Directory '%s' created at %s.", name_input, timestamp);
+              snprintf(msg, sizeof(msg), "%s Directory '%s' created at %s.", UNICODE_INODE, name_input, timestamp);
               show_term_message(msg, 0);
             } else if (result == 1) {
               log_message(LOG_LEVEL_WARN, "Directory `%s` already exists", name_input);
@@ -729,21 +727,8 @@ int main(int argc, char* argv[]) {
 
       case 'R': // Rename file or directory
       {
-          if (item_count > 0) {
-              const char *current_name = items[highlight].name;
-              char full_path[PATH_MAX];
-              snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
-
-              // Call the handle_rename function
-              handle_rename(stdscr, full_path);
-
-              // Update file list after renaming
-              list_dir(win, current_path, items, &item_count, show_hidden);
-              scroll_position = 0;
-          } else {
-              log_message(LOG_LEVEL_WARN, "No item selected for renaming");
-              show_term_message("No item selected for renaming.", 1);
-          }
+          handleInputRename(&item_count, &highlight, &scroll_position, current_path, items);
+          list_dir(win, current_path, items, &item_count, show_hidden);
           break;
       }
       case 'M':
@@ -754,7 +739,7 @@ int main(int argc, char* argv[]) {
         char basepath[MAX_PATH_LENGTH];
         strcpy(basepath, current_path);
         char termMSG[256];
-        snprintf(termMSG, 256, " [VISUAL]    Moving  %s     %s", basefile, basepath);
+        snprintf(termMSG, 256, " [VISUAL]    Moving  %s   %s %s", basefile, UNICODE_INODE, basepath);
 
         show_term_message(termMSG, 0);
         do { 
@@ -804,6 +789,7 @@ int main(int argc, char* argv[]) {
             else if (nextch == 10) {
               break;
             }
+          show_term_message(termMSG, 0);
           refreshMainWin(win, info_win, items, item_count, highlight, current_path, show_hidden, scroll_position, height, info_height, info_width, info_starty, info_startx);
 
         } while (nextch != 10);
@@ -829,8 +815,8 @@ int main(int argc, char* argv[]) {
           if (strcmp(is_readable_extension(items[highlight].name, current_path), "READ") == 0) {
             get_file_info_popup(win, current_path, items[highlight].name);
           } else {
-            log_message(LOG_LEVEL_DEBUG, "Something went wrong...");
-            show_term_message("Something went wrong....", 1);
+            log_message(LOG_LEVEL_DEBUG, "Nothing to do here....");
+            show_term_message("Nothing to here....", 1);
           }
           break;
         }

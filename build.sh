@@ -24,7 +24,7 @@ detect_distro() {
 }
 
 detect_nerd_fonts() {
-    FONT_CHECK=$(fc-list | grep -i "nerd")
+    FONT_CHECK=$(fc-list | grep -i "Nerd")
     if [ -n "$FONT_CHECK" ]; then
         echo -e "${CYAN}Nerd Fonts are installed and available.${RESET}"
     else
@@ -110,7 +110,7 @@ display_server=$(detect_display_server)
 echo -e "${PINK}${BOLD}Detected display server: $display_server${RESET}"
 
 # Define the required packages based on the distribution and display server
-required_packages=("libncursesw5-dev" "cmake" "make" "libarchive-dev" "libyaml-dev" "rsync" "pkg-config")
+required_packages=("libncursesw5-dev" "cmake" "make" "libarchive-dev" "libyaml-dev" "rsync" "pkg-config" "libsdl2-dev" "libsdl2-mixer-dev")
 
 case "$display_server" in
     wayland)
@@ -122,9 +122,9 @@ case "$display_server" in
 esac
 
 if [ "$distro" == "rpm" ]; then
-    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync" "pkg-config")
+    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync" "pkg-config" "SDL2-devel" "SDL2_mixer-devel")
 elif [ "$distro" == "arch" ]; then
-    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync" "pkg-config")
+    required_packages=("ncurses" "cmake" "make" "libarchive" "libyaml" "rsync" "pkg-config" "sdl2" "sdl2_mixer")
 fi
 
 # Check for required packages
