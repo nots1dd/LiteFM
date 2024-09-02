@@ -162,7 +162,7 @@ int add_directory_to_archive(struct archive* archive_writer, const char* dir_pat
     dir = opendir(dir_path);
     if (!dir)
     {
-        perror("opendir");
+        log_message(LOG_LEVEL_ERROR, "Failed to open directory: %s", dir_path);
         return -1;
     }
 
@@ -180,7 +180,25 @@ int add_directory_to_archive(struct archive* archive_writer, const char* dir_pat
         // Get file status
         if (lstat(full_path, &statbuf) == -1)
         {
-            perror("lstat");
+            log_message(LOG_LEVEL_ERROR, "Failed to get status of file: %s", full_path);
+            closedir(dir);
+            return -1;
+        }
+
+        // Re-open the directory/file to avoid TOCTOU vulnerability
+        int fd = open(full_path, O_RDONLY | O_NOFOLLOW);
+        if (fd == -1)
+        {
+            log_message(LOG_LEVEL_ERROR, "Failed to open file: %s", full_path);
+            closedir(dir);
+            return -1;
+        }
+
+        // Use fstat instead of lstat on the open file descriptor to recheck its status
+        if (fstat(fd, &statbuf) == -1)
+        {
+            log_message(LOG_LEVEL_ERROR, "Failed to get status of file after opening: %s", full_path);
+            close(fd);
             closedir(dir);
             return -1;
         }
@@ -188,6 +206,7 @@ int add_directory_to_archive(struct archive* archive_writer, const char* dir_pat
         if (S_ISDIR(statbuf.st_mode))
         {
             // Recursively add subdirectories
+            close(fd);
             if (add_directory_to_archive(archive_writer, full_path, base_path) != 0)
             {
                 closedir(dir);
@@ -211,7 +230,7 @@ int add_directory_to_archive(struct archive* archive_writer, const char* dir_pat
                 FILE* file = fopen(full_path, "rb");
                 if (!file)
                 {
-                    perror("fopen");
+                    log_message(LOG_LEVEL_ERROR, "Failed to open file for reading: %s", full_path);
                     archive_entry_free(entry);
                     closedir(dir);
                     return -1;
@@ -229,6 +248,8 @@ int add_directory_to_archive(struct archive* archive_writer, const char* dir_pat
 
             archive_entry_free(entry);
         }
+
+        close(fd);
     }
 
     closedir(dir);
