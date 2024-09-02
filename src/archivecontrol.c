@@ -151,109 +151,110 @@ int copy_data(struct archive* ar, struct archive* aw)
   }
 }
 
-int add_directory_to_archive(struct archive* archive_writer, const char* dir_path, const char* base_path)
+int add_directory_to_archive(struct archive* a, const char* dir_path, const char* base_path)
 {
-    struct dirent* entry;
-    struct stat    statbuf;
-    char           full_path[PATH_MAX];
-    DIR*           dir;
+  struct archive_entry* entry;
+  char                  full_path[PATH_MAX];
+  struct dirent*        dp;
+  DIR*                  dir;
+  struct stat           st;
 
-    // Open the directory
-    dir = opendir(dir_path);
-    if (!dir)
+  // Open the directory using file descriptor
+  int dir_fd = open(dir_path, O_RDONLY | O_DIRECTORY);
+  if (dir_fd == -1)
+  {
+    log_message(LOG_LEVEL_ERROR, "open");
+    return -1;
+  }
+
+  dir = fdopendir(dir_fd);
+  if (dir == NULL)
+  {
+    log_message(LOG_LEVEL_ERROR, "fdopendir");
+    close(dir_fd);
+    return -1;
+  }
+
+  while ((dp = readdir(dir)) != NULL)
+  {
+    // Skip "." and ".."
+    if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
     {
-        log_message(LOG_LEVEL_ERROR, "Failed to open directory: %s", dir_path);
+      continue;
+    }
+
+    snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, dp->d_name);
+    if (fstatat(dir_fd, dp->d_name, &st, 0) == -1)
+    {
+      log_message(LOG_LEVEL_ERROR, "fstatat");
+      closedir(dir);
+      close(dir_fd);
+      return -1;
+    }
+
+    entry = archive_entry_new();
+    archive_entry_set_pathname(entry, full_path + strlen(base_path) + 1);
+    archive_entry_set_size(entry, st.st_size);
+    archive_entry_set_filetype(entry, S_ISDIR(st.st_mode) ? AE_IFDIR : AE_IFREG);
+    archive_entry_set_perm(entry, st.st_mode & 0777);
+
+    if (archive_write_header(a, entry) != ARCHIVE_OK)
+    {
+      log_message(LOG_LEVEL_ERROR, "archive_write_header: %s", archive_error_string(a));
+      archive_entry_free(entry);
+      closedir(dir);
+      close(dir_fd);
+      return -1;
+    }
+
+    if (!S_ISDIR(st.st_mode))
+    {
+      int file_fd = openat(dir_fd, dp->d_name, O_RDONLY);
+      if (file_fd == -1)
+      {
+        log_message(LOG_LEVEL_ERROR, "openat");
+        archive_entry_free(entry);
+        closedir(dir);
+        close(dir_fd);
         return -1;
+      }
+
+      FILE* file = fdopen(file_fd, "rb");
+      if (file == NULL)
+      {
+        log_message(LOG_LEVEL_ERROR, "fdopen");
+        close(file_fd);
+        archive_entry_free(entry);
+        closedir(dir);
+        close(dir_fd);
+        return -1;
+      }
+
+      char    buffer[8192];
+      ssize_t len;
+      while ((len = fread(buffer, 1, sizeof(buffer), file)) > 0)
+      {
+        if (archive_write_data(a, buffer, len) != len)
+        {
+          log_message(LOG_LEVEL_ERROR, "archive_write_data: %s", archive_error_string(a));
+          fclose(file);
+          close(file_fd);
+          archive_entry_free(entry);
+          closedir(dir);
+          close(dir_fd);
+          return -1;
+        }
+      }
+      fclose(file);
+      close(file_fd);
     }
 
-    while ((entry = readdir(dir)) != NULL)
-    {
-        // Skip "." and ".."
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-        {
-            continue;
-        }
+    archive_entry_free(entry);
+  }
 
-        // Construct the full path of the file/directory
-        snprintf(full_path, PATH_MAX, "%s/%s", dir_path, entry->d_name);
-
-        // Get file status
-        if (lstat(full_path, &statbuf) == -1)
-        {
-            log_message(LOG_LEVEL_ERROR, "Failed to get status of file: %s", full_path);
-            closedir(dir);
-            return -1;
-        }
-
-        // Re-open the directory/file to avoid TOCTOU vulnerability
-        int fd = open(full_path, O_RDONLY | O_NOFOLLOW);
-        if (fd == -1)
-        {
-            log_message(LOG_LEVEL_ERROR, "Failed to open file: %s", full_path);
-            closedir(dir);
-            return -1;
-        }
-
-        // Use fstat instead of lstat on the open file descriptor to recheck its status
-        if (fstat(fd, &statbuf) == -1)
-        {
-            log_message(LOG_LEVEL_ERROR, "Failed to get status of file after opening: %s", full_path);
-            close(fd);
-            closedir(dir);
-            return -1;
-        }
-
-        if (S_ISDIR(statbuf.st_mode))
-        {
-            // Recursively add subdirectories
-            close(fd);
-            if (add_directory_to_archive(archive_writer, full_path, base_path) != 0)
-            {
-                closedir(dir);
-                return -1;
-            }
-        }
-        else
-        {
-            // Add file to archive
-            struct archive_entry* entry = archive_entry_new();
-            archive_entry_set_pathname(entry, full_path + strlen(base_path) + 1); // Relative path
-            archive_entry_set_size(entry, statbuf.st_size);
-            archive_entry_set_filetype(entry, statbuf.st_mode);
-            archive_entry_set_perm(entry, statbuf.st_mode);
-
-            archive_write_header(archive_writer, entry);
-
-            if (S_ISREG(statbuf.st_mode))
-            {
-                // Write file data to archive
-                FILE* file = fopen(full_path, "rb");
-                if (!file)
-                {
-                    log_message(LOG_LEVEL_ERROR, "Failed to open file for reading: %s", full_path);
-                    archive_entry_free(entry);
-                    closedir(dir);
-                    return -1;
-                }
-
-                char buffer[8192];
-                size_t bytes_read;
-                while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0)
-                {
-                    archive_write_data(archive_writer, buffer, bytes_read);
-                }
-
-                fclose(file);
-            }
-
-            archive_entry_free(entry);
-        }
-
-        close(fd);
-    }
-
-    closedir(dir);
-    return 0;
+  closedir(dir);
+  close(dir_fd);
+  return 0;
 }
 
 int compress_directory(const char* dir_path, const char* archive_path, int format)
