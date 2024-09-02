@@ -597,11 +597,8 @@ int main(int argc, char* argv[])
           }
           else if (nextch == 'h')
           {
-            show_term_message("", -1);
-            strcpy(current_path, home_dir);
+            handleInputGoToDir(current_path, home_dir, &highlight, &scroll_position);
             list_dir(win, current_path, items, &item_count, show_hidden);
-            highlight       = 0;
-            scroll_position = 0;
             break;
           }
           else
@@ -614,10 +611,8 @@ int main(int argc, char* argv[])
           list_dir(win, current_path, items, &item_count, show_hidden);
           break;
         case 'H':
-          strcpy(current_path, "/");
+          handleInputGoToDir(current_path, "/", &highlight, &scroll_position);
           list_dir(win, current_path, items, &item_count, show_hidden);
-          highlight       = 0;
-          scroll_position = 0;
           break;
         case 'a': // Add file or directory
         {
@@ -719,6 +714,7 @@ int main(int argc, char* argv[])
                   char delmsg[256];
                   log_message(LOG_LEVEL_INFO, "Directory `%s` deleted", deldir);
                   snprintf(delmsg, sizeof(delmsg), "Directory '%s' deleted", deldir);
+                  highlight--;
                   show_term_message(delmsg, 0);
                 }
               }
@@ -737,6 +733,7 @@ int main(int argc, char* argv[])
                   char msg[256];
                   log_message(LOG_LEVEL_INFO, "File `%s` deleted", delfile);
                   snprintf(msg, sizeof(msg), "File '%s' deleted", delfile);
+                  highlight--;
                   show_term_message(msg, 0);
                 }
               }
@@ -799,7 +796,10 @@ int main(int argc, char* argv[])
         }
         break;
         case 'n':
-          /* FIRST PARAM OF handleInputStringSearch() is the direction
+          /* 
+           * @STRING SEARCH 
+           *
+           * FIRST PARAM OF handleInputStringSearch() is the direction
            *
            *  1 => Forward Search
            * -1 => Backward Search
@@ -813,108 +813,15 @@ int main(int argc, char* argv[])
                                      &scroll_position, &height);
           break;
         case 'E':
-          if (!items[highlight].is_dir)
-          {
-            // Check if it's an archive file
-            const char* filename = items[highlight].name;
-            if (strstr(filename, ".zip") || strstr(filename, ".tar") || strstr(filename, ".7z") ||
-                strstr(filename, ".jar"))
-            {
-              char full_path[PATH_MAX];
-              snprintf(full_path, PATH_MAX, "%s/%s", current_path, filename);
-
-              // Confirm extraction
-              if (confirm_action(win, "Extract this archive? (y/n)"))
-              {
-                // Extract archive
-                if (extract_archive(full_path) == 0)
-                {
-                  log_message(LOG_LEVEL_INFO, "Extraction of `%s` successful", full_path);
-                  show_term_message("Extraction successful.", 0);
-                  // Update file list after extraction
-                  list_dir(win, current_path, items, &item_count, show_hidden);
-                  scroll_position = 0;
-                }
-                else
-                {
-                  log_message(LOG_LEVEL_ERROR, "Extraction of `%s` failed", last_query);
-                  show_term_message("Extraction failed.", 1);
-                }
-              }
-            }
-            else
-            {
-              log_message(LOG_LEVEL_WARN, "File %s is not a supported archive format", filename);
-              show_term_message("Not a supported archive format.", 1);
-            }
-          }
-          else
-          {
-            log_message(LOG_LEVEL_ERROR, "Cannot extract %s as it is is directory",
-                        items[highlight].name);
-            show_term_message("Cannot extract a directory.", 1);
-          }
+          handleInputExtractArchive(win, items, current_path, last_query, &scroll_position, &highlight);
+          list_dir(win, current_path, items, &item_count, show_hidden);
+          break;
+        case 'Z': 
+          handleInputCompressInode(win, items, current_path, &highlight, &scroll_position); 
+          list_dir(win, current_path, items, &item_count, show_hidden);
           break;
 
-        case 'Z':
-          if (items[highlight].is_dir)
-          {
-            // Check if the selected item is a directory
-            const char* dirname = items[highlight].name;
-            char        full_path[PATH_MAX];
-            snprintf(full_path, PATH_MAX, "%s/%s", current_path, dirname);
-
-            // Ask user for the compression format
-            int choice = show_compression_options(
-              win); // Implement this function to show options and get the user's choice
-
-            // Define the output archive path
-            char archive_path[PATH_MAX];
-            snprintf(archive_path, PATH_MAX, "%s/%s.%s", current_path, dirname,
-                     (choice == 1) ? "tar" : "zip");
-
-            // Confirm compression
-            if (choice == 1 || choice == 2)
-            {
-              // Compress the directory based on the user's choice
-              int result;
-              if (choice == 1)
-              {
-                // Compress as TAR
-                result = compress_directory(full_path, archive_path, 1);
-              }
-              else
-              {
-                // Compress as ZIP
-                result = compress_directory(full_path, archive_path, 2);
-              }
-
-              if (result == 0)
-              {
-                log_message(LOG_LEVEL_INFO, "Compression of %s (compression type: %d) successful",
-                            dirname, choice);
-                show_term_message("Compression successful.", 0);
-                // Update file list after compression
-                list_dir(win, current_path, items, &item_count, show_hidden);
-                scroll_position = 0;
-              }
-              else
-              {
-                log_message(LOG_LEVEL_ERROR, "Compression of %s (compression type: %d) failed",
-                            dirname, choice);
-                show_term_message("Compression failed.", 1);
-              }
-            }
-          }
-          else
-          {
-            log_message(LOG_LEVEL_WARN, "Selected item %s is not a directory",
-                        items[highlight].name);
-            show_term_message("Selected item is not a directory.", 1);
-          }
-          break;
-
-        case 'R': // Rename file or directory
+        case 'R':
         {
           handleInputRename(&item_count, &highlight, &scroll_position, current_path, items);
           list_dir(win, current_path, items, &item_count, show_hidden);

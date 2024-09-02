@@ -41,7 +41,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
+
+/* @COMPRESSION FORMATS */
+
+#define TAR_COMPRESSION_FORMAT 1
+#define ZIP_COMPRESSION_FORMAT 2
 
 long get_file_size(const char* file_path);
 int  extract_archive(const char* archive_path);

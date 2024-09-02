@@ -1,5 +1,6 @@
 
 #include "../include/kbinput.h"
+#include "../include/archivecontrol.h"
 #include "../include/cursesutils.h"
 #include "../include/dircontrol.h"
 #include "../include/filepreview.h"
@@ -232,6 +233,15 @@ void handleInputStringOccurance(int direction, const char* last_query, FileItem 
   }
 }
 
+void handleInputGoToDir(const char* current_path, const char* path, int* highlight,
+                        int* scroll_position)
+{
+  show_term_message("", -1);
+  strcpy(current_path, path);
+  *highlight       = 0;
+  *scroll_position = 0;
+}
+
 void handleInputRename(int* item_count, int* highlight, int* scroll_position,
                        const char* current_path, FileItem items[])
 {
@@ -252,6 +262,104 @@ void handleInputRename(int* item_count, int* highlight, int* scroll_position,
   {
     log_message(LOG_LEVEL_WARN, "No item selected for renaming");
     show_term_message("No item selected for renaming.", 1);
+  }
+}
+
+void handleInputExtractArchive(WINDOW* win, FileItem items[], const char* current_path,
+                               const char* last_query, int* scroll_position, int* highlight)
+{
+  const char* filename = items[*highlight].name;
+  if (strstr(filename, ".zip") || strstr(filename, ".tar") || strstr(filename, ".7z") ||
+      strstr(filename, ".jar"))
+  {
+    char full_path[PATH_MAX];
+    snprintf(full_path, PATH_MAX, "%s/%s", current_path, filename);
+
+    // Confirm extraction
+    if (confirm_action(win, "Extract this archive? (y/n)"))
+    {
+      // Extract archive
+      if (extract_archive(full_path) == 0)
+      {
+        *scroll_position = 0;
+      }
+      else
+      {
+        log_message(LOG_LEVEL_ERROR, "Extraction of `%s` failed", last_query);
+        show_term_message("Extraction failed.", 1);
+      }
+    }
+  }
+  else
+  {
+    log_message(LOG_LEVEL_ERROR, "Cannot extract %s as it is is directory", items[*highlight].name);
+    show_term_message("Cannot extract a directory.", 1);
+  }
+}
+
+void handleInputCompressInode(WINDOW* win, FileItem items[], const char* current_path,
+                              int* highlight, int* scroll_position)
+{
+  if (items[*highlight].is_dir)
+  {
+
+    const char* dirname = items[*highlight].name;
+    char        full_path[PATH_MAX];
+    snprintf(full_path, PATH_MAX, "%s/%s", current_path, dirname);
+
+    // Ask user for the compression format
+    int choice = show_compression_options(win);
+
+    // Define the output archive path
+    char archive_path[PATH_MAX];
+    snprintf(archive_path, PATH_MAX, "%s/%s.%s", current_path, dirname,
+             (choice == TAR_COMPRESSION_FORMAT) ? "tar" : "zip");
+
+    // Confirm compression
+    if (choice == TAR_COMPRESSION_FORMAT || choice == ZIP_COMPRESSION_FORMAT)
+    {
+      int result;
+      /*
+       * @COMPRESSION:
+       *
+       * compression_directory is a function in archivecontrol.h with params:
+       *
+       * compress_directory(const char* dir_path, const char* archive_path, int format)
+       *
+       * Format type:
+       *
+       * 1 ==> TAR COMPRESSION
+       * 2 ==> ZIP COMPRESSION
+       *
+       */
+      show_term_message("Compressing...(do not close)", 0);
+      if (choice == 1)
+      {
+        result = compress_directory(full_path, archive_path, 1);
+      }
+      else
+      {
+        result = compress_directory(full_path, archive_path, 2);
+      }
+
+      if (result == 0)
+      {
+        log_message(LOG_LEVEL_INFO, "Compression of %s (compression type: %d) successful", dirname,
+                    choice);
+        *scroll_position = 0;
+      }
+      else
+      {
+        log_message(LOG_LEVEL_ERROR, "Compression of %s (compression type: %d) failed", dirname,
+                    choice);
+        show_term_message("Compression failed.", 1);
+      }
+    }
+  }
+  else
+  {
+    log_message(LOG_LEVEL_WARN, "Selected item %s is not a directory", items[*highlight].name);
+    show_term_message("Selected item is not a directory.", 1);
   }
 }
 

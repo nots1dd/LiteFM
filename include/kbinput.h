@@ -41,6 +41,8 @@ void handleInputScrollDown(int* highlight, int* scroll_position, int* item_count
 void handleInputToggleHidden(int* show_hidden, int* scroll_position, int* highlight);
 void handleInputMovCursBtm(int* highlight, int* item_count, int* scroll_position, int* max_y);
 void handleInputMovCursTop(int* highlight, int* scroll_position);
+void handleInputGoToDir(const char* current_path, const char* path, int* highlight,
+                        int* scroll_position);
 void handleInputRename(int* item_count, int* highlight, int* scroll_position,
                        const char* current_path, FileItem items[]);
 int  find_item(const char* query, FileItem items[], int* item_count, int* start_index,
@@ -50,6 +52,10 @@ void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int
                              const char* current_path);
 void handleInputStringOccurance(int direction, const char* last_query, FileItem items[],
                                 int* item_count, int* highlight, int* scroll_position, int* height);
+void handleInputExtractArchive(WINDOW* win, FileItem items[], const char* current_path,
+                               const char* last_query, int* scroll_position, int* highlight);
+void handleInputCompressInode(WINDOW* win, FileItem items[], const char* current_path,
+                              int* highlight, int* scroll_position);
 /* ------------------------------
  * void handleInputScopeBack(int* history_count, int* highlight, int* scroll_position, const char*
  * current_path, DirHistory history[]); void handleInputScopeForward(WINDOW *win, WINDOW *info_win,

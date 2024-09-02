@@ -9,6 +9,7 @@
 #include "../include/dircontrol.h"
 #include "../include/cursesutils.h"
 #include "../include/filepreview.h"
+#include "../include/inodeinfo.h"
 #include "../include/logging.h"
 
 char* get_current_user()
@@ -81,6 +82,8 @@ int remove_file(const char* path, const char* filename)
   char full_path[PATH_MAX];
   snprintf(full_path, PATH_MAX, "%s/%s", path, filename);
 
+  truncate_symlink_name(full_path);
+
   // Remove the file
   if (unlink(full_path) == -1)
     return -1; // Error removing file
@@ -94,6 +97,8 @@ int remove_directory(const char* path, const char* dirname)
   char full_path[PATH_MAX];
   snprintf(full_path, PATH_MAX, "%s/%s", path, dirname);
 
+  truncate_symlink_name(full_path);
+
   // Remove the directory and its contents
   if (rmdir(full_path) == -1)
     return -1; // Error removing directory
@@ -102,6 +107,25 @@ int remove_directory(const char* path, const char* dirname)
 }
 
 /* probably the most dangerous function (it works pretty well tho) */
+
+/*
+ * @SYMLINKS and Recursive deletion
+ *
+ * Due to the way that LiteFM handles symlinks currently,
+ *
+ * We need to truncate every single filename to ensure any symlink formatted name
+ * (name ->symlinkName)
+ * is not given to fstat to check for status before deletion
+ *
+ * The log does a good job in giving concise information on the inodes deleted,
+ * the directories it attempts at deleting, so on
+ *
+ * Needless to say, this function can probably seem some improvements in the future
+ *
+ * But time wise :: WORKS ON PAR WITH `rm -rf` command
+ *
+ */
+
 int remove_directory_recursive(const char* base_path, const char* dirname, int parent_fd)
 {
   char full_path[PATH_MAX];
@@ -125,6 +149,8 @@ int remove_directory_recursive(const char* base_path, const char* dirname, int p
   int            num_files_deleted = 0;
   int            num_dirs_deleted  = 0;
 
+  log_message(LOG_LEVEL_INFO, "----- Removing Directory %s Recursively -----", full_path);
+
   while ((entry = readdir(dir)) != NULL)
   {
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -132,8 +158,10 @@ int remove_directory_recursive(const char* base_path, const char* dirname, int p
       continue;
     }
 
+    truncate_symlink_name(entry->d_name);
+
     struct stat statbuf;
-    if (fstatat(dir_fd, entry->d_name, &statbuf, 0) == 0)
+    if (fstatat(dir_fd, entry->d_name, &statbuf, AT_SYMLINK_NOFOLLOW) == 0)
     {
       if (S_ISDIR(statbuf.st_mode))
       {
@@ -145,33 +173,27 @@ int remove_directory_recursive(const char* base_path, const char* dirname, int p
           return -1;
         }
         num_dirs_deleted++;
-        char message[PATH_MAX];
-        snprintf(message, PATH_MAX, "%s directory removed successfully.", entry->d_name);
-        show_term_message(message, 0);
+        log_message(LOG_LEVEL_INFO, "   %s directory removed successfully.", entry->d_name);
       }
       else
       {
         // Remove file
         if (unlinkat(dir_fd, entry->d_name, 0) != 0)
         {
-          char message[PATH_MAX];
-          snprintf(message, PATH_MAX, "Error removing file: %s", entry->d_name);
-          show_term_message(message, 1);
+          log_message(LOG_LEVEL_ERROR, "   Error removing file: %s", entry->d_name);
+          show_term_message("Error removing a file. Check log for more..", 1);
           closedir(dir);
           close(dir_fd);
           return -1;
         }
         num_files_deleted++;
-        char message[PATH_MAX];
-        snprintf(message, PATH_MAX, "%s file removed successfully.", entry->d_name);
-        show_term_message(message, 0);
+        log_message(LOG_LEVEL_INFO, "   %s file removed successfully.", entry->d_name);
       }
     }
     else
     {
-      char message[PATH_MAX];
-      snprintf(message, PATH_MAX, "Error getting status of file: %s", entry->d_name);
-      show_term_message(message, 1);
+      log_message(LOG_LEVEL_ERROR, "   Error getting status of file: %s", entry->d_name);
+      show_term_message("Unable to get status of a file. Check log for more..", 1);
       closedir(dir);
       close(dir_fd);
       return -1;
@@ -185,20 +207,18 @@ int remove_directory_recursive(const char* base_path, const char* dirname, int p
   if (unlinkat(parent_fd, dirname, AT_REMOVEDIR) != 0)
   {
     char message[PATH_MAX];
+    log_message(LOG_LEVEL_ERROR, "   Error removing directory: %s", dirname);
     snprintf(message, PATH_MAX, "Error removing directory: %s", dirname);
     show_term_message(message, 1);
     return -1;
   }
   num_dirs_deleted++;
-  char message[PATH_MAX];
-  snprintf(message, PATH_MAX, "%s dir removed successfully.", dirname);
-  show_term_message(message, 0);
+  log_message(LOG_LEVEL_INFO, "   %s dir removed successfully.", dirname);
 
   char message2[PATH_MAX];
-  snprintf(message2, PATH_MAX, "Deleted %d files and %d directories", num_files_deleted,
-           num_dirs_deleted);
-  show_term_message(message2, 0);
-
+  log_message(LOG_LEVEL_INFO, "   Deleted %d files and %d directories", num_files_deleted,
+              num_dirs_deleted);
+  log_message(LOG_LEVEL_INFO, "----- Recursive deletion of %s done -----", full_path);
   return 0;
 }
 
@@ -212,7 +232,7 @@ int rename_file_or_dir(const char* old_path, const char* new_name)
   // Rename the file or directory
   if (rename(old_path, new_path) != 0)
   {
-    perror("rename");
+    log_message(LOG_LEVEL_ERROR, "Unable to rename %s to %s", old_path, new_path);
     return -1; // Return error code if rename fails
   }
 
@@ -228,10 +248,6 @@ void move_file_or_dir(WINDOW* win, const char* basepath, const char* current_pat
   // Construct the full path of the selected item
   snprintf(full_current_path, sizeof(full_current_path), "%s/%s", basepath, selected_item);
 
-  // Get the destination path from the user
-  /*get_user_input_from_bottom(stdscr, destination, MAX_PATH_LENGTH, "move",
-   * current_path);*/
-
   // Construct the full destination path
   snprintf(full_destination_path, sizeof(full_destination_path), "%s/%s", current_path,
            selected_item);
@@ -242,8 +258,8 @@ void move_file_or_dir(WINDOW* win, const char* basepath, const char* current_pat
     char msg[256];
     log_message(LOG_LEVEL_INFO, "Moved `%s` from `%s` to `%s`", selected_item, basepath,
                 current_path);
-    snprintf(msg, sizeof(msg), " Moved %s   %s     %s", selected_item, basepath,
-             current_path);
+    snprintf(msg, sizeof(msg), " Moved %s %s %s   %s %s", selected_item, UNICODE_INODE,
+             basepath, UNICODE_INODE, current_path);
     show_term_message(msg, 0);
   }
   else
@@ -262,6 +278,20 @@ int is_directory(const char* path)
   }
   return S_ISDIR(statbuf.st_mode);
 }
+
+/*
+ * @HANDLING RENAME
+ *
+ * Function is quite straight-forward
+ *
+ * Only thing to note is that:
+ *
+ * renames are ONLY allowed for the previous extension only!!!
+ *
+ * I will change this for a more wide scoped renaming function
+ * if I understand more about safer and proper file handling
+ *
+ */
 
 void handle_rename(WINDOW* win, const char* path)
 {
@@ -381,7 +411,7 @@ void resolve_path(const char* base_path, const char* relative_path, char* resolv
   // Resolve the absolute path
   if (realpath(full_path, resolved_path) == NULL)
   {
-    perror("Error resolving path");
+    log_message(LOG_LEVEL_ERROR, "Error resolving path");
     strcpy(resolved_path, ""); // Return an empty string on error
   }
 }

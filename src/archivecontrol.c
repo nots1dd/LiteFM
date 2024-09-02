@@ -9,6 +9,7 @@
 #include "../include/archivecontrol.h"
 #include "../include/cursesutils.h"
 #include "../include/dircontrol.h"
+#include "../include/logging.h"
 
 int copy_data(struct archive* ar, struct archive* aw);
 
@@ -46,6 +47,8 @@ int extract_archive(const char* archive_path)
   char                  archive_dir[PATH_MAX];
   char*                 archive_basename;
   char                  extraction_dir[PATH_MAX];
+  clock_t               start_time, end_time;
+  double                time_taken;
 
   // Get the directory of the archive
   strncpy(archive_dir, archive_path, PATH_MAX);
@@ -81,6 +84,10 @@ int extract_archive(const char* archive_path)
   }
 
   show_term_message("Extracting...", 0);
+  log_message(LOG_LEVEL_INFO, "---- Extracting %s ----", extraction_dir);
+
+  // Start measuring time
+  start_time = clock();
 
   while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
   {
@@ -91,7 +98,7 @@ int extract_archive(const char* archive_path)
 
     if ((r = archive_write_header(ext, entry)) != ARCHIVE_OK)
     {
-      fprintf(stderr, "%s\n", archive_error_string(ext));
+      log_message(LOG_LEVEL_ERROR, "  %s", archive_error_string(ext));
     }
     else
     {
@@ -100,10 +107,24 @@ int extract_archive(const char* archive_path)
     }
   }
 
+  // End measuring time
+  end_time   = clock();
+  time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+  // Close and free archives
   archive_read_close(a);
   archive_read_free(a);
   archive_write_close(ext);
   archive_write_free(ext);
+
+  // Log and display the extraction time
+  log_message(LOG_LEVEL_INFO, "Time taken for extraction: %.2f seconds", time_taken);
+  log_message(LOG_LEVEL_INFO, "---- Extraction done ----");
+
+  char extraction_message[100];
+  snprintf(extraction_message, sizeof(extraction_message),
+           "Extraction successful. Time taken: %.2f seconds.", time_taken);
+  show_term_message(extraction_message, 0);
 
   return 0; // Extraction successful
 }
@@ -124,159 +145,154 @@ int copy_data(struct archive* ar, struct archive* aw)
     r = archive_write_data_block(aw, buff, size, offset);
     if (r != ARCHIVE_OK)
     {
-      fprintf(stderr, "%s\n", archive_error_string(aw));
+      log_message(LOG_LEVEL_ERROR, "%s", archive_error_string(aw));
       return r;
     }
   }
 }
 
-int add_directory_to_archive(struct archive* a, const char* dir_path, const char* base_path)
+int add_directory_to_archive(struct archive* archive_writer, const char* dir_path, const char* base_path)
 {
-  struct archive_entry* entry;
-  char                  full_path[PATH_MAX];
-  struct dirent*        dp;
-  DIR*                  dir;
-  struct stat           st;
+    struct dirent* entry;
+    struct stat    statbuf;
+    char           full_path[PATH_MAX];
+    DIR*           dir;
 
-  // Open the directory using file descriptor
-  int dir_fd = open(dir_path, O_RDONLY | O_DIRECTORY);
-  if (dir_fd == -1)
-  {
-    perror("open");
-    return -1;
-  }
-
-  dir = fdopendir(dir_fd);
-  if (dir == NULL)
-  {
-    perror("fdopendir");
-    close(dir_fd);
-    return -1;
-  }
-
-  while ((dp = readdir(dir)) != NULL)
-  {
-    // Skip "." and ".."
-    if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+    // Open the directory
+    dir = opendir(dir_path);
+    if (!dir)
     {
-      continue;
-    }
-
-    snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, dp->d_name);
-    if (fstatat(dir_fd, dp->d_name, &st, 0) == -1)
-    {
-      perror("fstatat");
-      closedir(dir);
-      close(dir_fd);
-      return -1;
-    }
-
-    entry = archive_entry_new();
-    archive_entry_set_pathname(entry, full_path + strlen(base_path) + 1);
-    archive_entry_set_size(entry, st.st_size);
-    archive_entry_set_filetype(entry, S_ISDIR(st.st_mode) ? AE_IFDIR : AE_IFREG);
-    archive_entry_set_perm(entry, st.st_mode & 0777);
-
-    if (archive_write_header(a, entry) != ARCHIVE_OK)
-    {
-      fprintf(stderr, "archive_write_header: %s\n", archive_error_string(a));
-      archive_entry_free(entry);
-      closedir(dir);
-      close(dir_fd);
-      return -1;
-    }
-
-    if (!S_ISDIR(st.st_mode))
-    {
-      int file_fd = openat(dir_fd, dp->d_name, O_RDONLY);
-      if (file_fd == -1)
-      {
-        perror("openat");
-        archive_entry_free(entry);
-        closedir(dir);
-        close(dir_fd);
+        perror("opendir");
         return -1;
-      }
+    }
 
-      FILE* file = fdopen(file_fd, "rb");
-      if (file == NULL)
-      {
-        perror("fdopen");
-        close(file_fd);
-        archive_entry_free(entry);
-        closedir(dir);
-        close(dir_fd);
-        return -1;
-      }
-
-      char    buffer[8192];
-      ssize_t len;
-      while ((len = fread(buffer, 1, sizeof(buffer), file)) > 0)
-      {
-        if (archive_write_data(a, buffer, len) != len)
+    while ((entry = readdir(dir)) != NULL)
+    {
+        // Skip "." and ".."
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         {
-          fprintf(stderr, "archive_write_data: %s\n", archive_error_string(a));
-          fclose(file);
-          close(file_fd);
-          archive_entry_free(entry);
-          closedir(dir);
-          close(dir_fd);
-          return -1;
+            continue;
         }
-      }
-      fclose(file);
-      close(file_fd);
+
+        // Construct the full path of the file/directory
+        snprintf(full_path, PATH_MAX, "%s/%s", dir_path, entry->d_name);
+
+        // Get file status
+        if (lstat(full_path, &statbuf) == -1)
+        {
+            perror("lstat");
+            closedir(dir);
+            return -1;
+        }
+
+        if (S_ISDIR(statbuf.st_mode))
+        {
+            // Recursively add subdirectories
+            if (add_directory_to_archive(archive_writer, full_path, base_path) != 0)
+            {
+                closedir(dir);
+                return -1;
+            }
+        }
+        else
+        {
+            // Add file to archive
+            struct archive_entry* entry = archive_entry_new();
+            archive_entry_set_pathname(entry, full_path + strlen(base_path) + 1); // Relative path
+            archive_entry_set_size(entry, statbuf.st_size);
+            archive_entry_set_filetype(entry, statbuf.st_mode);
+            archive_entry_set_perm(entry, statbuf.st_mode);
+
+            archive_write_header(archive_writer, entry);
+
+            if (S_ISREG(statbuf.st_mode))
+            {
+                // Write file data to archive
+                FILE* file = fopen(full_path, "rb");
+                if (!file)
+                {
+                    perror("fopen");
+                    archive_entry_free(entry);
+                    closedir(dir);
+                    return -1;
+                }
+
+                char buffer[8192];
+                size_t bytes_read;
+                while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0)
+                {
+                    archive_write_data(archive_writer, buffer, bytes_read);
+                }
+
+                fclose(file);
+            }
+
+            archive_entry_free(entry);
+        }
     }
 
-    archive_entry_free(entry);
-  }
-
-  closedir(dir);
-  close(dir_fd);
-  return 0;
+    closedir(dir);
+    return 0;
 }
 
 int compress_directory(const char* dir_path, const char* archive_path, int format)
 {
-  struct archive* archive_writer;
-  int             r;
+    struct archive* archive_writer;
+    int             r;
+    struct timespec start_time, end_time;
+    double          elapsed_time;
 
-  // Create a new archive for writing
-  archive_writer = archive_write_new();
+    // Start the timer
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
 
-  if (format == 1)
-  {                                                          // TAR format
-    archive_write_set_format_pax_restricted(archive_writer); // Use TAR format
-  }
-  else if (format == 2)
-  {                                               // ZIP format
-    archive_write_set_format_zip(archive_writer); // Use ZIP format
-  }
-  else
-  {
-    archive_write_free(archive_writer);
-    return -1; // Unsupported format
-  }
+    // Create a new archive for writing
+    archive_writer = archive_write_new();
 
-  // Open the archive file for writing
-  if (archive_write_open_filename(archive_writer, archive_path) != ARCHIVE_OK)
-  {
-    archive_write_free(archive_writer);
-    return -1; // Error opening archive file
-  }
+    if (format == TAR_COMPRESSION_FORMAT)
+    {                                                          // TAR format
+        archive_write_set_format_pax_restricted(archive_writer); // Use TAR format
+    }
+    else if (format == ZIP_COMPRESSION_FORMAT)
+    {                                               // ZIP format
+        archive_write_set_format_zip(archive_writer); // Use ZIP format
+    }
+    else
+    {
+        archive_write_free(archive_writer);
+        return -1; // Unsupported format
+    }
 
-  // Add files/directories to the archive
-  r = add_directory_to_archive(archive_writer, dir_path, dir_path);
-  if (r != 0)
-  {
+    // Open the archive file for writing
+    if (archive_write_open_filename(archive_writer, archive_path) != ARCHIVE_OK)
+    {
+        archive_write_free(archive_writer);
+        return -1; // Error opening archive file
+    }
+
+    // Add files/directories to the archive
+    r = add_directory_to_archive(archive_writer, dir_path, dir_path);
+    if (r != 0)
+    {
+        archive_write_close(archive_writer);
+        archive_write_free(archive_writer);
+        return -1;
+    }
+
+    // Close and free the archive
     archive_write_close(archive_writer);
     archive_write_free(archive_writer);
-    return -1;
-  }
 
-  // Close and free the archive
-  archive_write_close(archive_writer);
-  archive_write_free(archive_writer);
+    // Stop the timer
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
 
-  return 0;
+    // Calculate elapsed time in seconds
+    elapsed_time =
+        (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
+
+    // Print the elapsed time
+    char message[PATH_MAX];
+    snprintf(message, PATH_MAX, "Directory compression completed in %.2f seconds.", elapsed_time);
+    show_term_message(message, 0);
+
+    return 0;
 }

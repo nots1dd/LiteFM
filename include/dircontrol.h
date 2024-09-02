@@ -46,6 +46,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#define UNICODE_INODE " "
+
 char* get_current_user();
 char* get_hostname();
 void  get_current_working_directory(char* cwd, size_t size);
