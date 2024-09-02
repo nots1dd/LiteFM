@@ -1,12 +1,12 @@
 
 #include "../include/kbinput.h"
 #include "../include/cursesutils.h"
+#include "../include/dircontrol.h"
 #include "../include/filepreview.h"
 #include "../include/inodeinfo.h"
 #include "../include/logging.h"
 #include "../include/musicpreview.h"
 #include "../include/structs.h"
-#include "../include/dircontrol.h"
 
 void handleInputScrollUp(int* highlight, int* scroll_position)
 {
@@ -56,10 +56,10 @@ void handleInputMovCursBtm(int* highlight, int* item_count, int* scroll_position
   }
 }
 
-void handleInputMovCursTop(int *highlight, int *scroll_position) 
+void handleInputMovCursTop(int* highlight, int* scroll_position)
 {
   show_term_message("", -1);
-  *highlight = 0;
+  *highlight       = 0;
   *scroll_position = 0;
 }
 
@@ -232,22 +232,26 @@ void handleInputStringOccurance(int direction, const char* last_query, FileItem 
   }
 }
 
-void handleInputRename(int *item_count, int *highlight, int *scroll_position, const char* current_path, FileItem items[])
+void handleInputRename(int* item_count, int* highlight, int* scroll_position,
+                       const char* current_path, FileItem items[])
 {
-  if (*item_count > 0) {
-      const char *current_name = items[*highlight].name;
-      char full_path[PATH_MAX];
-      snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
+  if (*item_count > 0)
+  {
+    const char* current_name = items[*highlight].name;
+    char        full_path[PATH_MAX];
+    snprintf(full_path, PATH_MAX, "%s/%s", current_path, current_name);
 
-      // Call the handle_rename function
-      handle_rename(stdscr, full_path);
+    // Call the handle_rename function
+    handle_rename(stdscr, full_path);
 
-      // Update file list after renaming
-      *scroll_position = 0;
-      return;
-  } else {
-      log_message(LOG_LEVEL_WARN, "No item selected for renaming");
-      show_term_message("No item selected for renaming.", 1);
+    // Update file list after renaming
+    *scroll_position = 0;
+    return;
+  }
+  else
+  {
+    log_message(LOG_LEVEL_WARN, "No item selected for renaming");
+    show_term_message("No item selected for renaming.", 1);
   }
 }
 

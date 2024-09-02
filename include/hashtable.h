@@ -2,7 +2,7 @@
 #define HASH_TABLE_H
 
 #define _POSIX_C_SOURCE 200809L
-#define TABLE_SIZE 1000
+#define TABLE_SIZE      1000
 
 /*
  * ---------------------------------------------------------------------------

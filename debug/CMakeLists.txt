@@ -28,7 +28,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Set the project name
-project(litefm)
+project(litefm-debug)
 
 # Specify the C standard
 set(CMAKE_C_STANDARD 99)
@@ -62,13 +62,13 @@ include_directories(${SDL2_MIXER_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 
 # Add the executable
-add_executable(litefm ../lfm.c ../src/cursesutils.c ../src/filepreview.c ../src/dircontrol.c ../src/archivecontrol.c ../src/clipboard.c ../src/logging.c ../src/highlight.c ../src/hashtable.c ../src/arg_helpers.c ../src/musicpreview.c ../src/inodeinfo.c)
+add_executable(litefm-debug ../lfm.c ../src/cursesutils.c ../src/filepreview.c ../src/dircontrol.c ../src/archivecontrol.c ../src/clipboard.c ../src/logging.c ../src/highlight.c ../src/hashtable.c ../src/arg_helpers.c ../src/musicpreview.c ../src/inodeinfo.c ../src/kbinput.c)
 
 # Link required libraries
-target_link_libraries(litefm ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYAML_LIBRARIES} ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
+target_link_libraries(litefm-debug ${CURSES_LIBRARIES} ${LIBARCHIVE_LIBRARIES} ${LIBYAML_LIBRARIES} ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
 
 # Add additional compiler flags
-target_compile_options(litefm PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(litefm-debug PRIVATE -Wall -Wextra -Wpedantic)
 
 # ENABLE AddressSanitizer (ASan) for memory error detection
 

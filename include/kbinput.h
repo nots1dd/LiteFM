@@ -33,15 +33,16 @@
 #include <ncurses.h>
 #include <stdio.h>
 
-#define MAX_HISTORY 256
+#define MAX_HISTORY    256
 #define UNICODE_SEARCH "🔍"
 
 void handleInputScrollUp(int* highlight, int* scroll_position);
 void handleInputScrollDown(int* highlight, int* scroll_position, int* item_count, int* height);
 void handleInputToggleHidden(int* show_hidden, int* scroll_position, int* highlight);
 void handleInputMovCursBtm(int* highlight, int* item_count, int* scroll_position, int* max_y);
-void handleInputMovCursTop(int *highlight, int *scroll_position);
-void handleInputRename(int *item_count, int *highlight, int *scroll_position, const char* current_path, FileItem items[]);
+void handleInputMovCursTop(int* highlight, int* scroll_position);
+void handleInputRename(int* item_count, int* highlight, int* scroll_position,
+                       const char* current_path, FileItem items[]);
 int  find_item(const char* query, FileItem items[], int* item_count, int* start_index,
                int direction);
 void handleInputStringSearch(WINDOW* win, FileItem items[], int* item_count, int* highlight,

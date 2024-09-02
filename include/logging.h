@@ -52,7 +52,7 @@
 #include <unistd.h>
 
 // Define the log directory and file paths relative to the home directory
-#define LOG_DIR_RELATIVE_PATH ".cache/litefm/log"
+#define LOG_DIR_RELATIVE_PATH  ".cache/litefm/log"
 #define LOG_FILE_RELATIVE_PATH ".cache/litefm/log/litefm.log"
 
 // Logging levels

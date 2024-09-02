@@ -12,12 +12,6 @@
 #include "../include/logging.h"
 #include "../include/signalhandling.h"
 
-#define MAX_LINES 60            // Define the maximum number of lines to display
-#define MAX_LINE_LENGTH 256     // Define the maximum line length
-#define MAX_FILE_HEADER_SIZE 18 // Maximum size needed for the longest signature
-#define BUFFER_SIZE 1024
-#define MAX_FILE_TYPE_LENGTH 256
-
 int singlecommentslen = 0;
 
 const char* determine_file_type(const char* filename);

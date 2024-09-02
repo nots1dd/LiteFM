@@ -50,7 +50,8 @@ src_files = files(
   '../src/hashtable.c',
   '../src/arg_helpers.c',
   '../src/musicpreview.c',
-  '../src/inodeinfo.c'
+  '../src/inodeinfo.c',
+  '../src/kbinput.c'
 )
 
 # UNCOMMENT LINES 59, 60, 68, 69 to ENABLE ASAN Memory leak VERBOSE output
@@ -60,7 +61,7 @@ asan_c_args = ['-fsanitize=address', '-fno-omit-frame-pointer']
 asan_link_args = ['-fsanitize=address']
 
 # Executable target
-executable('litefm', src_files,
+executable('litefm-debug', src_files,
   include_directories : inc_dirs,
   dependencies : [ncurses_dep, libarchive_dep, libyaml_dep, sdl2_dep, sdl2_mixer_dep],
   install : true,
