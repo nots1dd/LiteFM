@@ -31,8 +31,6 @@
  * ---------------------------------------------------------------------------
  */
 
-#include <sys/types.h>
-
 /* LITEFM DEDICATED HEADERS */
 
 #include "include/archivecontrol.h"
@@ -49,7 +47,7 @@
 #include "include/musicpreview.h"
 #include "include/signalhandling.h"
 #include "include/structs.h"
-#include "src/getFreeSpace.c"
+#include "include/systeminfo.h"
 
 #define MAX_ITEMS            1024
 #define MAX_HISTORY          256
@@ -482,7 +480,6 @@ int main(int argc, char* argv[])
           }
 
           // List the contents of the new directory
-          list_dir(win, current_path, items, &item_count, show_hidden);
           scroll_position = 0;
           list_dir(win, current_path, items, &item_count, show_hidden);
           break;
@@ -796,8 +793,8 @@ int main(int argc, char* argv[])
         }
         break;
         case 'n':
-          /* 
-           * @STRING SEARCH 
+          /*
+           * @STRING SEARCH
            *
            * FIRST PARAM OF handleInputStringSearch() is the direction
            *
@@ -813,11 +810,12 @@ int main(int argc, char* argv[])
                                      &scroll_position, &height);
           break;
         case 'E':
-          handleInputExtractArchive(win, items, current_path, last_query, &scroll_position, &highlight);
+          handleInputExtractArchive(win, items, current_path, last_query, &scroll_position,
+                                    &highlight);
           list_dir(win, current_path, items, &item_count, show_hidden);
           break;
-        case 'Z': 
-          handleInputCompressInode(win, items, current_path, &highlight, &scroll_position); 
+        case 'Z':
+          handleInputCompressInode(win, items, current_path, &highlight, &scroll_position);
           list_dir(win, current_path, items, &item_count, show_hidden);
           break;
 

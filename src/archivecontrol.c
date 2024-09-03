@@ -259,62 +259,62 @@ int add_directory_to_archive(struct archive* a, const char* dir_path, const char
 
 int compress_directory(const char* dir_path, const char* archive_path, int format)
 {
-    struct archive* archive_writer;
-    int             r;
-    struct timespec start_time, end_time;
-    double          elapsed_time;
+  struct archive* archive_writer;
+  int             r;
+  struct timespec start_time, end_time;
+  double          elapsed_time;
 
-    // Start the timer
-    clock_gettime(CLOCK_MONOTONIC, &start_time);
+  // Start the timer
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 
-    // Create a new archive for writing
-    archive_writer = archive_write_new();
+  // Create a new archive for writing
+  archive_writer = archive_write_new();
 
-    if (format == TAR_COMPRESSION_FORMAT)
-    {                                                          // TAR format
-        archive_write_set_format_pax_restricted(archive_writer); // Use TAR format
-    }
-    else if (format == ZIP_COMPRESSION_FORMAT)
-    {                                               // ZIP format
-        archive_write_set_format_zip(archive_writer); // Use ZIP format
-    }
-    else
-    {
-        archive_write_free(archive_writer);
-        return -1; // Unsupported format
-    }
+  if (format == TAR_COMPRESSION_FORMAT)
+  {                                                          // TAR format
+    archive_write_set_format_pax_restricted(archive_writer); // Use TAR format
+  }
+  else if (format == ZIP_COMPRESSION_FORMAT)
+  {                                               // ZIP format
+    archive_write_set_format_zip(archive_writer); // Use ZIP format
+  }
+  else
+  {
+    archive_write_free(archive_writer);
+    return -1; // Unsupported format
+  }
 
-    // Open the archive file for writing
-    if (archive_write_open_filename(archive_writer, archive_path) != ARCHIVE_OK)
-    {
-        archive_write_free(archive_writer);
-        return -1; // Error opening archive file
-    }
+  // Open the archive file for writing
+  if (archive_write_open_filename(archive_writer, archive_path) != ARCHIVE_OK)
+  {
+    archive_write_free(archive_writer);
+    return -1; // Error opening archive file
+  }
 
-    // Add files/directories to the archive
-    r = add_directory_to_archive(archive_writer, dir_path, dir_path);
-    if (r != 0)
-    {
-        archive_write_close(archive_writer);
-        archive_write_free(archive_writer);
-        return -1;
-    }
-
-    // Close and free the archive
+  // Add files/directories to the archive
+  r = add_directory_to_archive(archive_writer, dir_path, dir_path);
+  if (r != 0)
+  {
     archive_write_close(archive_writer);
     archive_write_free(archive_writer);
+    return -1;
+  }
 
-    // Stop the timer
-    clock_gettime(CLOCK_MONOTONIC, &end_time);
+  // Close and free the archive
+  archive_write_close(archive_writer);
+  archive_write_free(archive_writer);
 
-    // Calculate elapsed time in seconds
-    elapsed_time =
-        (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
+  // Stop the timer
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
 
-    // Print the elapsed time
-    char message[PATH_MAX];
-    snprintf(message, PATH_MAX, "Directory compression completed in %.2f seconds.", elapsed_time);
-    show_term_message(message, 0);
+  // Calculate elapsed time in seconds
+  elapsed_time =
+    (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
 
-    return 0;
+  // Print the elapsed time
+  char message[PATH_MAX];
+  snprintf(message, PATH_MAX, "Directory compression completed in %.2f seconds.", elapsed_time);
+  show_term_message(message, 0);
+
+  return 0;
 }
