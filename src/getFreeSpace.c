@@ -20,7 +20,7 @@ double system_free_space(const char* path)
     exit(EXIT_FAILURE);
   }
 
-  unsigned long free_space     = stat.f_bsize * stat.f_bavail;
+  unsigned long free_space     = stat.f_bsize * stat.f_bavail;//Total space available to non-superuser
   double        free_space_gib = (double)free_space / (1 << 30); // Convert to GiB
   return free_space_gib;
 }

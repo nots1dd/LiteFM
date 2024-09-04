@@ -70,10 +70,20 @@ void get_file_info_popup(WINDOW* main_win, const char* path, const char* filenam
   wprintw(info_win, "%s", mod_time);
   wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
 
-  colorLine(info_win, "Permissions: ", 3, 7, 2);
+ // Display Last Access Time
+colorLine(info_win, "Last Accessed: ", 3, 7, 2);
+wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+char access_time[20];
+strftime(access_time, sizeof(access_time), "%Y-%m-%d %H:%M%S", localtime(&file_stat.st_atime));
+wprintw(info_win, "%s", access_time); 
+wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+
+
+
+  colorLine(info_win, "Permissions: ", 3, 8, 2);
   print_permissions(info_win, &file_stat);
 
-  colorLine(info_win, "Inode: ", 3, 8, 2);
+  colorLine(info_win, "Inode: ", 3, 9, 2);
   wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, "%lu", file_stat.st_ino);
   wattroff(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
@@ -81,7 +91,7 @@ void get_file_info_popup(WINDOW* main_win, const char* path, const char* filenam
   // Additional file attributes can be displayed here
   struct passwd* pwd = getpwuid(file_stat.st_uid);
   wattron(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
-  mvwprintw(info_win, 9, 2, "Owner: ");
+  mvwprintw(info_win, 10, 2, "Owner: ");
   wattroff(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
   wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
   wprintw(info_win, "%s (%d)", pwd->pw_name, file_stat.st_uid);
@@ -386,6 +396,19 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
   mvwprintw(info_win, 10, 2, "Permissions: ");
   wattroff(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
   print_permissions(info_win, &file_stat);
+
+
+
+//  Last Accessed Time
+char access_time[20];
+strftime(access_time, sizeof(access_time), "%Y-%m-%d %H:%M:%S", localtime(&file_stat.st_atime));
+clearLine(info_win, 11, 2);
+wattron(info_win, COLOR_PAIR(ARCHIVE_COLOR_PAIR));
+mvwprintw(info_win, 11, 2, "Last Accessed: ");
+wattron(info_win, COLOR_PAIR(AUDIO_COLOR_PAIR));
+mvwprintw(info_win, 11, 17, "%s", access_time); 
+
+
 
   box(info_win, 0, 0);
   wrefresh(info_win);
