@@ -52,6 +52,7 @@ char* get_current_user();
 char* get_hostname();
 void  get_current_working_directory(char* cwd, size_t size);
 int   create_directory(const char* path, const char* dirname, char* timestamp);
+void  change_directory_with_popen(const char *path);
 int   remove_file(const char* path, const char* filename);
 int   remove_directory(const char* path, const char* dirname);
 int   remove_directory_recursive(const char* base_path, const char* dirname, int parent_fd);

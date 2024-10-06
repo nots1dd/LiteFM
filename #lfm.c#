@@ -73,6 +73,108 @@ const char* err_message[] = {
   "|_| \\_|\\___/  |_|   |___|_____|_____|____/_/    |____/___|_| \\_\\____/  (_)",
   " "};
 
+void list_dir(WINDOW* win, const char* path, FileItem items[], int* count, int show_hidden)
+{
+  DIR*           dir;
+  struct dirent* entry;
+  char           full_path[PATH_MAX];
+  struct stat    entry_stat;
+  char           symlink_target[PATH_MAX];
+
+  werase(win);
+
+  if (!(dir = opendir(path)))
+    return;
+
+  *count = 0;
+
+  // First pass: List directories and symlinks
+  while ((entry = readdir(dir)) != NULL)
+  {
+    // Skip hidden files if not showing hidden files
+    if ((!show_hidden && entry->d_name[0] == '.') || strcmp(entry->d_name, ".") == 0 ||
+        strcmp(entry->d_name, "..") == 0)
+      continue;
+
+    // Build the full path for the current entry
+    snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
+
+    // Get file information
+    if (lstat(full_path, &entry_stat) == -1)
+    {
+      // Handle error if necessary
+      continue;
+    }
+
+    if (S_ISLNK(entry_stat.st_mode))
+    {
+      // If it's a symlink, get the target
+      ssize_t len = readlink(full_path, symlink_target, sizeof(symlink_target) - 1);
+      if (len != -1)
+      {
+        symlink_target[len] = '\0'; // Null-terminate the symlink target string
+        snprintf(items[*count].name, sizeof(items[*count].name), "%s ->%s", entry->d_name,
+                 symlink_target);
+      }
+      else
+      {
+        snprintf(items[*count].name, sizeof(items[*count].name), "%s ->unknown", entry->d_name);
+      }
+      items[*count].is_dir = (entry_stat.st_mode & S_IFDIR) ? 1 : 0;
+      (*count)++;
+    }
+    else if (entry->d_type == DT_DIR)
+    {
+      strcpy(items[*count].name, entry->d_name);
+      items[*count].is_dir = 1;
+      (*count)++;
+    }
+  }
+
+  // Rewind directory stream for the second pass
+  rewinddir(dir);
+
+  // Second pass: List non-directory files
+  while ((entry = readdir(dir)) != NULL)
+  {
+    // Skip hidden files if not showing hidden files
+    if ((!show_hidden && entry->d_name[0] == '.') || strcmp(entry->d_name, ".") == 0 ||
+        strcmp(entry->d_name, "..") == 0)
+      continue;
+
+    // Build the full path for the current entry
+    snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
+
+    // Get file information
+    if (lstat(full_path, &entry_stat) == -1)
+    {
+      // Handle error if necessary
+      continue;
+    }
+
+    if (!S_ISLNK(entry_stat.st_mode) && entry->d_type != DT_DIR)
+    {
+      strcpy(items[*count].name, entry->d_name);
+      items[*count].is_dir = 0;
+      (*count)++;
+    }
+  }
+
+  closedir(dir);
+  wrefresh(win);
+}#include <ncurses.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+    char name[PATH_MAX];
+    int is_dir;
+} FileItem;
 
 void list_dir(WINDOW* win, const char* path, FileItem items[], int* count, int show_hidden) {
     DIR* dir;
@@ -125,7 +227,7 @@ void list_dir(WINDOW* win, const char* path, FileItem items[], int* count, int s
         }
         // Handle directories
         else if (S_ISDIR(entry_stat.st_mode)) {
-            snprintf(items[*count].name, sizeof(items[*count].name), "%s", entry->d_name);
+            snprintf(items[*count].name, sizeof(items[*count].name), "%s/", entry->d_name);
             items[*count].is_dir = 1;
             (*count)++;
         }

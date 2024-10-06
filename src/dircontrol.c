@@ -77,6 +77,49 @@ int create_directory(const char* path, const char* dirname, char* timestamp)
   return 0; // Directory created successfully
 }
 
+/*
+ * @CHDIR 
+ *
+ * Rather than using system, we can use 
+ * <unistd.h> to call chdir()
+ *
+ * It is a safer and more standard approach
+ *
+ * BUT THIS DIRECTORY CHANGE FUNCTION WILL 
+ * ONLY EFFECT THE CHILD PROCESS NOT THE 
+ * MAIN SHELL
+ *
+ */
+
+void change_directory_with_popen(const char *path) {
+    char command[512];
+    FILE *fp;
+    char result[128];
+
+    // Construct the shell command (check if the directory exists first)
+    snprintf(command, sizeof(command), "[ -d \"%s\" ] && cd \"%s\" || echo 'Directory does not exist'", path, path);
+
+    // Open a pipe to the shell to execute the command
+    fp = popen(command, "r");
+    if (fp == NULL) {
+        perror("Failed to run command");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read the output, if any (this will capture the "Directory does not exist" message)
+    if (fgets(result, sizeof(result), fp) != NULL) {
+        // If there's output, it means there was an error (since successful cd won't output anything)
+        printf("Error: %s", result);
+    } else {
+        // If no output, assume success
+        printf("Successfully changed directory to: %s\n", path);
+    }
+
+    // Close the pipe
+    pclose(fp);
+}
+
+
 int remove_file(const char* path, const char* filename)
 {
   char full_path[PATH_MAX];
