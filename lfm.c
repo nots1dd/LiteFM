@@ -313,13 +313,17 @@ void print_items(WINDOW* win, FileItem items[], int count, int highlight, const 
 
       // Truncate the item name if it exceeds MAX_ITEM_NAME_LENGTH
       char truncated_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
+      int length_cap = sizeof(truncated_name);
+      if (length_cap > ((COLS / 2) - 10)) {
+        length_cap = ((COLS / 2) - 10);
+      }
       if (strlen(items[index].name) > MAX_ITEM_NAME_LENGTH)
       {
-        snprintf(truncated_name, sizeof(truncated_name), "%.40s...", items[index].name);
+        snprintf(truncated_name, length_cap, "%.40s...", items[index].name);
       }
       else
       {
-        snprintf(truncated_name, sizeof(truncated_name), "%s", items[index].name);
+        snprintf(truncated_name, length_cap, "%s", items[index].name);
       }
 
       wattron(win, A_BOLD);
