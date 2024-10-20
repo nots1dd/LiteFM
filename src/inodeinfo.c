@@ -264,13 +264,17 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
           {
             // Truncate directory name if necessary
             char truncated_dir_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
+            int printable_length = sizeof(truncated_dir_name);
+            if (sizeof(truncated_dir_name) > ((COLS / 4) - 16)) {
+              printable_length = ((COLS / 4) - 4);
+            }
             if (strlen(entry->d_name) > MAX_ITEM_NAME_LENGTH)
             {
-              snprintf(truncated_dir_name, sizeof(truncated_dir_name), "%.40s...", entry->d_name);
+              snprintf(truncated_dir_name, printable_length, "%.40s...", entry->d_name);
             }
             else
             {
-              snprintf(truncated_dir_name, sizeof(truncated_dir_name), "%s", entry->d_name);
+              snprintf(truncated_dir_name, printable_length, "%s", entry->d_name);
             }
             // Print the directory name
             mvwprintw(info_win, line++, 2, "%s", truncated_dir_name);
@@ -297,14 +301,18 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
           {
             // Truncate directory name if necessary
             char truncated_sub_dir_name[MAX_ITEM_NAME_LENGTH + 4];
+            int printable_length = sizeof(truncated_sub_dir_name);
+            if (sizeof(truncated_sub_dir_name) > ((COLS / 4) - 16)) {
+              printable_length = ((COLS / 4) - 4);
+            }
             if (strlen(entry->d_name) > MAX_ITEM_NAME_LENGTH)
             {
-              snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%.40s...",
+              snprintf(truncated_sub_dir_name, printable_length, "%.40s...",
                        entry->d_name);
             }
             else
             {
-              snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%s", entry->d_name);
+              snprintf(truncated_sub_dir_name, printable_length, "%s", entry->d_name);
             }
             wattron(info_win, A_BOLD | COLOR_PAIR(DIR_COLOR_PAIR));
             mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_sub_dir_name);
@@ -319,13 +327,17 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
         {
           // Truncate file name if necessary
           char truncated_file_name[MAX_ITEM_NAME_LENGTH + 4];
+          int printable_length = sizeof(truncated_file_name);
+          if (sizeof(truncated_file_name) > ((COLS / 4) - 16)) {
+            printable_length = ((COLS / 4) - 4);
+          }
           if (strlen(entry->d_name) + sub_dir_line > MAX_ITEM_NAME_LENGTH)
           {
-            snprintf(truncated_file_name, sizeof(truncated_file_name), "%.40s...", entry->d_name);
+            snprintf(truncated_file_name, printable_length, "%.40s...", entry->d_name);
           }
           else
           {
-            snprintf(truncated_file_name, sizeof(truncated_file_name), "%s", entry->d_name);
+            snprintf(truncated_file_name, printable_length, "%s", entry->d_name);
           }
           wattron(info_win, A_BOLD | COLOR_PAIR(FILE_COLOR_PAIR));
           mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_file_name);
