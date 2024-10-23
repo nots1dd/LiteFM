@@ -313,10 +313,7 @@ void print_items(WINDOW* win, FileItem items[], int count, int highlight, const 
 
       // Truncate the item name if it exceeds MAX_ITEM_NAME_LENGTH
       char truncated_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
-      int printable_length = sizeof(truncated_name);
-      if (printable_length > ((COLS / 2) - 10)) {
-        printable_length = ((COLS / 2) - 10);
-      }
+      int printable_length = cap_label_length(sizeof(truncated_name), 0, 10);
       if (strlen(items[index].name) > MAX_ITEM_NAME_LENGTH)
       {
         snprintf(truncated_name, printable_length, "%.40s...", items[index].name);
