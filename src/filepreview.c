@@ -585,15 +585,15 @@ void display_archive_contents(WINDOW* info_win, const char* full_path, const cha
   char* cmd;
   if (strcmp(file_ext, ".zip") == 0)
   {
-    asprintf(&cmd, "unzip -l %s/%s", dir_name, file_name);
+    asprintf(&cmd, "unzip -l '%s/%s'", dir_name, file_name);
   }
   else if (strcmp(file_ext, ".7z") == 0)
   {
-    asprintf(&cmd, "7z l %s/%s", dir_name, file_name);
+    asprintf(&cmd, "7z l '%s/%s'", dir_name, file_name);
   }
   else
   {
-    asprintf(&cmd, "tar -tvf %s/%s", dir_name, file_name);
+    asprintf(&cmd, "tar -tvf '%s/%s'", dir_name, file_name);
   }
 
   // Execute the command and capture its output
