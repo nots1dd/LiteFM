@@ -15,11 +15,12 @@ const char* denied_message[] = {" .__   __.   ______           _______. __    __
 // Returns the printable length of a string (len should be given as a sizeof() operation) at the 
 // current time based on the current window size.
 // If `quarter` == 1, the length is adjusted for a quarter of the screen, else for half.   
-int cap_label_length(unsigned int len, unsigned int quarter, unsigned int margin) {
-  
+int cap_label_length(unsigned int len, unsigned int quarter, unsigned int margin) 
+{
   // Denominator == 2 if half, == 4 if quarter. 
   int denom = 2 + (2 * quarter);
   
+  // Cap length if too long for screen OR exceeds fixed maximum
   if (len > ((COLS / denom) - margin) || (len > MAX_ITEM_NAME_LENGTH + 4)) {
     return (COLS / denom) - margin;
   } else {
