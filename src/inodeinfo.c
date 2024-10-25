@@ -16,20 +16,15 @@ const char* denied_message[] = {" .__   __.   ______           _______. __    __
 // current time based on the current window size.
 // If `quarter` == 1, the length is adjusted for a quarter of the screen, else for half.   
 int cap_label_length(unsigned int len, unsigned int quarter, unsigned int margin) {
-  if (quarter == 1) {
-    if (len > ((COLS / 4) - margin)) {
-      return ((COLS / 4) - margin);
-    } else {
-      return len;
-    }
+  
+  // Denominator == 2 if half, == 4 if quarter. 
+  int denom = 2 + (2 * quarter);
+  
+  if (len > ((COLS / denom) - margin) || (len > MAX_ITEM_NAME_LENGTH + 4)) {
+    return (COLS / denom) - margin;
   } else {
-    if (len > (COLS / 2 - margin)) {
-      return ((COLS / 2) - margin);
-    } else {
-      return len;
-    }
+    return len;
   }
-
 }
 
 void get_file_info_popup(WINDOW* main_win, const char* path, const char* filename)
@@ -156,13 +151,11 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
 
   int printable_length = cap_label_length(sizeof(truncated_file_name), 0, 6);
 
-  // Truncate the filename if necessary
-  if (strlen(filename) > MAX_ITEM_NAME_LENGTH)
-  {
-    snprintf(truncated_file_name, printable_length, "%.80s...", filename);
-  }
-  else
-  {
+  // Truncate the filename and add if necessary
+  if (strlen(filename) > printable_length - 3) {
+    snprintf(truncated_file_name, printable_length - 3, "%s", filename);
+    snprintf(truncated_file_name + (printable_length - 6), 4, "...");
+  } else {
     snprintf(truncated_file_name, printable_length, "%s", filename);
   }
 
