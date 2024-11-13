@@ -12,6 +12,22 @@ const char* denied_message[] = {" .__   __.   ______           _______. __    __
                                 " |__| \\__|  \\______/     |_______/     \\______/  (__)",
                                 "                                                     "};
 
+// Returns the printable length of a string (len should be given as a sizeof() operation) at the 
+// current time based on the current window size.
+// If `quarter` == 1, the length is adjusted for a quarter of the screen, else for half.   
+int cap_label_length(unsigned int len, unsigned int quarter, unsigned int margin) 
+{
+  // Denominator == 2 if half, == 4 if quarter. 
+  int denom = 2 + (2 * quarter);
+  
+  // Cap length if too long for screen OR exceeds fixed maximum
+  if (len > ((COLS / denom) - margin) || (len > MAX_ITEM_NAME_LENGTH + 4)) {
+    return (COLS / denom) - margin;
+  } else {
+    return len;
+  }
+}
+
 void get_file_info_popup(WINDOW* main_win, const char* path, const char* filename)
 {
   struct stat file_stat;
@@ -134,14 +150,14 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
     return;
   }
 
-  // Truncate the filename if necessary
-  if (strlen(filename) > MAX_ITEM_NAME_LENGTH)
-  {
-    snprintf(truncated_file_name, sizeof(truncated_file_name), "%.80s...", filename);
-  }
-  else
-  {
-    snprintf(truncated_file_name, sizeof(truncated_file_name), "%s", filename);
+  int printable_length = cap_label_length(sizeof(truncated_file_name), 0, 6);
+
+  // Truncate the filename and add if necessary
+  if (strlen(filename) > printable_length - 3) {
+    snprintf(truncated_file_name, printable_length - 3, "%s", filename);
+    snprintf(truncated_file_name + (printable_length - 6), 4, "...");
+  } else {
+    snprintf(truncated_file_name, printable_length, "%s", filename);
   }
 
   // Display file information
@@ -264,13 +280,13 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
           {
             // Truncate directory name if necessary
             char truncated_dir_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
-            if (strlen(entry->d_name) > MAX_ITEM_NAME_LENGTH)
-            {
-              snprintf(truncated_dir_name, sizeof(truncated_dir_name), "%.40s...", entry->d_name);
-            }
-            else
-            {
-              snprintf(truncated_dir_name, sizeof(truncated_dir_name), "%s", entry->d_name);
+            int printable_length = cap_label_length(sizeof(truncated_dir_name), 1, 4);
+            
+            if (strlen(entry->d_name) > printable_length - 3) {
+              snprintf(truncated_dir_name, printable_length - 3, "%s", entry->d_name);
+              snprintf(truncated_dir_name + (printable_length - 6), 4, "...");
+            } else {
+              snprintf(truncated_dir_name, printable_length, "%s", entry->d_name);
             }
             // Print the directory name
             mvwprintw(info_win, line++, 2, "%s", truncated_dir_name);
@@ -297,14 +313,12 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
           {
             // Truncate directory name if necessary
             char truncated_sub_dir_name[MAX_ITEM_NAME_LENGTH + 4];
-            if (strlen(entry->d_name) > MAX_ITEM_NAME_LENGTH)
-            {
-              snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%.40s...",
-                       entry->d_name);
-            }
-            else
-            {
-              snprintf(truncated_sub_dir_name, sizeof(truncated_sub_dir_name), "%s", entry->d_name);
+            int printable_length = cap_label_length(sizeof(truncated_sub_dir_name), 1, 4);
+            if (strlen(entry->d_name) > printable_length - 3) {
+              snprintf(truncated_sub_dir_name, printable_length - 3, "%s", entry->d_name);
+              snprintf(truncated_sub_dir_name + (printable_length - 6), 4, "...");
+            } else {
+              snprintf(truncated_sub_dir_name, printable_length, "%s", entry->d_name);
             }
             wattron(info_win, A_BOLD | COLOR_PAIR(DIR_COLOR_PAIR));
             mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_sub_dir_name);
@@ -319,13 +333,12 @@ void get_file_info(WINDOW* info_win, const char* path, const char* filename)
         {
           // Truncate file name if necessary
           char truncated_file_name[MAX_ITEM_NAME_LENGTH + 4];
-          if (strlen(entry->d_name) + sub_dir_line > MAX_ITEM_NAME_LENGTH)
-          {
-            snprintf(truncated_file_name, sizeof(truncated_file_name), "%.40s...", entry->d_name);
-          }
-          else
-          {
-            snprintf(truncated_file_name, sizeof(truncated_file_name), "%s", entry->d_name);
+          int printable_length = cap_label_length(sizeof(truncated_file_name), 1, 4);
+          if (strlen(entry->d_name) > printable_length - 3) {
+            snprintf(truncated_file_name, printable_length - 3, "%s", entry->d_name);
+            snprintf(truncated_file_name + (printable_length - 6), 4, "...");
+          } else {
+            snprintf(truncated_file_name, printable_length, "%s", entry->d_name);
           }
           wattron(info_win, A_BOLD | COLOR_PAIR(FILE_COLOR_PAIR));
           mvwprintw(info_win, sub_dir_line++, max_x / 2, "  %s", truncated_file_name);

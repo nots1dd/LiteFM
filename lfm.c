@@ -313,13 +313,15 @@ void print_items(WINDOW* win, FileItem items[], int count, int highlight, const 
 
       // Truncate the item name if it exceeds MAX_ITEM_NAME_LENGTH
       char truncated_name[MAX_ITEM_NAME_LENGTH + 4]; // +4 for ellipsis and space
-      if (strlen(items[index].name) > MAX_ITEM_NAME_LENGTH)
-      {
-        snprintf(truncated_name, sizeof(truncated_name), "%.40s...", items[index].name);
-      }
-      else
-      {
-        snprintf(truncated_name, sizeof(truncated_name), "%s", items[index].name);
+      int printable_length = cap_label_length(sizeof(truncated_name), 0, 10);
+
+      if (strlen(items[index].name) > printable_length - 3) {
+        snprintf(truncated_name, printable_length - 3, "%s", items[index].name);
+        // why does the param need 6 subtracted from it? found by trial and error,
+        // but do not really understand how the "math is mathing".
+        snprintf(truncated_name + (printable_length - 6), 4, "...");
+      } else {
+        snprintf(truncated_name, printable_length, "%s", items[index].name);
       }
 
       wattron(win, A_BOLD);

@@ -37,6 +37,7 @@
 
 #define MAX_ITEM_NAME_LENGTH 80
 
+int cap_label_length(unsigned int len, unsigned int quarter, unsigned int margin);
 void get_file_info_popup(WINDOW* main_win, const char* path, const char* filename);
 void get_file_info(WINDOW* info_win, const char* path, const char* filename);
 void truncate_symlink_name(char* name);
